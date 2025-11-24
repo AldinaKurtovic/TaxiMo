@@ -1,0 +1,17 @@
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Services.deps.json
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Services.dll
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Services.pdb
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.AssemblyInfoInputs.cache
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.AssemblyInfo.cs
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.csproj.CoreCompileInputs.cache
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.dll
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\refint\TaxiMo.Services.dll
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.pdb
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\ref\TaxiMo.Services.dll
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Model.dll
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Model.pdb
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.csproj.AssemblyReference.cache
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.S.A9645DB2.Up2Date
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\bin\Debug\net8.0\TaxiMo.Services.runtimeconfig.json
+C:\Users\acer\source\repos\TaxiMo\TaxiMo.Services\obj\Debug\net8.0\TaxiMo.Services.genruntimeconfig.cache

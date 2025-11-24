@@ -1,0 +1,6 @@
+@TaxiMoWebAPI_HostAddress = http://localhost:5244
+
+GET {{TaxiMoWebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
