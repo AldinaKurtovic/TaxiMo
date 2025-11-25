@@ -23,11 +23,11 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/Review
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviews()
+        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviews([FromQuery] string? search = null, [FromQuery] decimal? minRating = null)
         {
             try
             {
-                var reviews = await _reviewService.GetAllAsync();
+                var reviews = await _reviewService.GetAllAsync(search, minRating);
                 var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
                 return Ok(reviewDtos);
             }

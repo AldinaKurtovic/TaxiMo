@@ -23,11 +23,11 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/PromoCode
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PromoCodeDto>>> GetPromoCodes()
+        public async Task<ActionResult<IEnumerable<PromoCodeDto>>> GetPromoCodes([FromQuery] string? search = null, [FromQuery] bool? isActive = null)
         {
             try
             {
-                var promoCodes = await _promoCodeService.GetAllAsync();
+                var promoCodes = await _promoCodeService.GetAllAsync(search, isActive);
                 var promoCodeDtos = _mapper.Map<List<PromoCodeDto>>(promoCodes);
                 return Ok(promoCodeDtos);
             }

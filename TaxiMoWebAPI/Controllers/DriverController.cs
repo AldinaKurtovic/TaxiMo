@@ -23,11 +23,11 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/driver
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DriverDto>>> GetDrivers()
+        public async Task<ActionResult<IEnumerable<DriverDto>>> GetDrivers([FromQuery] string? search = null, [FromQuery] bool? isActive = null, [FromQuery] string? licence = null)
         {
             try
             {
-                var drivers = await _driverService.GetAllAsync();
+                var drivers = await _driverService.GetAllAsync(search, isActive, licence);
                 var driverDtos = _mapper.Map<List<DriverDto>>(drivers);
                 return Ok(driverDtos);
             }

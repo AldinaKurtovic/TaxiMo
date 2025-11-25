@@ -23,11 +23,11 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/Ride
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<RideDto>>> GetRides()
+        public async Task<ActionResult<IEnumerable<RideDto>>> GetRides([FromQuery] string? search = null, [FromQuery] string? status = null)
         {
             try
             {
-                var rides = await _rideService.GetAllAsync();
+                var rides = await _rideService.GetAllAsync(search, status);
                 var rideDtos = _mapper.Map<List<RideDto>>(rides);
                 return Ok(rideDtos);
             }

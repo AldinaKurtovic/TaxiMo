@@ -1,9 +1,0 @@
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\bin\Debug\netstandard2.1\TaxiMo.Model.deps.json
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\bin\Debug\netstandard2.1\TaxiMo.Model.dll
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\bin\Debug\netstandard2.1\TaxiMo.Model.pdb
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.AssemblyInfoInputs.cache
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.AssemblyInfo.cs
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.csproj.CoreCompileInputs.cache
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.dll
-C:\Users\acer\source\repos\TaxiMo\TaxiMo.Model\obj\Debug\netstandard2.1\TaxiMo.Model.pdb

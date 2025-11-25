@@ -14,9 +14,33 @@ namespace TaxiMo.Services.Services
             _context = context;
         }
 
-        public async Task<List<User>> GetAllAsync()
+        public async Task<List<User>> GetAllAsync(string? search = null, bool? isActive = null)
         {
-            return await _context.Users.ToListAsync();
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(u =>
+                    u.FirstName.Contains(search) ||
+                    u.LastName.Contains(search) ||
+                    u.Email.Contains(search) ||
+                    u.Status.Contains(search));
+            }
+
+            if (isActive.HasValue)
+            {
+                if (isActive.Value)
+                {
+                    query = query.Where(u => u.Status.ToLower() == "active");
+                }
+                else
+                {
+                    query = query.Where(u => u.Status.ToLower() != "active");
+                }
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<User?> GetByIdAsync(int id)

@@ -25,11 +25,11 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/users
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] string? search = null, [FromQuery] bool? isActive = null)
         {
             try
             {
-                var users = await _userService.GetAllAsync();
+                var users = await _userService.GetAllAsync(search, isActive);
                 var userDtos = _mapper.Map<List<UserDto>>(users);
                 return Ok(userDtos);
             }

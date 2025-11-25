@@ -14,9 +14,28 @@ namespace TaxiMo.Services.Services
             _context = context;
         }
 
-        public async Task<List<Review>> GetAllAsync()
+        public async Task<List<Review>> GetAllAsync(string? search = null, decimal? minRating = null)
         {
-            return await _context.Reviews.ToListAsync();
+            var query = _context.Reviews
+                .Include(r => r.Driver)
+                .Include(r => r.Rider)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(r =>
+                    (r.Comment != null && r.Comment.Contains(search)) ||
+                    (r.Driver != null && (r.Driver.FirstName.Contains(search) || r.Driver.LastName.Contains(search))) ||
+                    (r.Rider != null && (r.Rider.FirstName.Contains(search) || r.Rider.LastName.Contains(search))));
+            }
+
+            if (minRating.HasValue)
+            {
+                query = query.Where(r => r.Rating >= minRating.Value);
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<Review?> GetByIdAsync(int id)
