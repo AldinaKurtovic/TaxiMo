@@ -8,7 +8,11 @@ namespace TaxiMo.Services.Database.Entities
     {
         [Key]
         public int UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
 
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = "User"; //admin, user
         [Required]
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;

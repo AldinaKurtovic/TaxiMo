@@ -1,6 +1,8 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
@@ -21,6 +23,19 @@ namespace TaxiMoWebAPI.Controllers
             _userService = userService;
             _mapper = mapper;
             _logger = logger;
+        }
+
+        private static string HashPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(hashedBytes);
+        }
+
+        private static bool VerifyPassword(string password, string hash)
+        {
+            var hashOfInput = HashPassword(password);
+            return hashOfInput == hash;
         }
 
         // GET: api/users
@@ -65,20 +80,43 @@ namespace TaxiMoWebAPI.Controllers
 
         // POST: api/users
         [HttpPost]
-        public async Task<ActionResult<UserDto>> CreateUser(UserCreateDto userCreateDto)
+        public async Task<ActionResult<object>> CreateUser(UserCreateDto userCreateDto)
         {
             try
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ModelState);
+                    var errors = ModelState
+                        .Where(x => x.Value?.Errors.Count > 0)
+                        .SelectMany(x => x.Value!.Errors.Select(e => new
+                        {
+                            Field = x.Key,
+                            Message = e.ErrorMessage
+                        }))
+                        .ToList();
+                    return BadRequest(new { message = "Validation failed.", errors });
+                }
+
+                // Check if email already exists
+                var existingUser = await _userService.GetByEmailAsync(userCreateDto.Email);
+                if (existingUser != null)
+                {
+                    return BadRequest(new { message = "A user with this email address already exists." });
                 }
 
                 var user = _mapper.Map<User>(userCreateDto);
+                user.PasswordHash = HashPassword(userCreateDto.Password);
+                
                 var createdUser = await _userService.CreateAsync(user);
                 var userDto = _mapper.Map<UserDto>(createdUser);
 
-                return CreatedAtAction(nameof(GetUser), new { id = userDto.UserId }, userDto);
+                return CreatedAtAction(
+                    nameof(GetUser), 
+                    new { id = userDto.UserId }, 
+                    new { 
+                        message = $"User '{userDto.FirstName} {userDto.LastName}' has been successfully created.",
+                        data = userDto 
+                    });
             }
             catch (Exception ex)
             {
@@ -89,30 +127,101 @@ namespace TaxiMoWebAPI.Controllers
 
         // PUT: api/users/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<UserDto>> UpdateUser(int id, UserUpdateDto userUpdateDto)
+        public async Task<ActionResult<object>> UpdateUser(int id, UserUpdateDto userUpdateDto, [FromQuery] bool isSelfUpdate = false)
         {
             try
             {
                 if (id != userUpdateDto.UserId)
                 {
-                    return BadRequest(new { message = "User ID mismatch" });
+                    return BadRequest(new { message = "User ID mismatch." });
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ModelState);
+                    var errors = ModelState
+                        .Where(x => x.Value?.Errors.Count > 0)
+                        .SelectMany(x => x.Value!.Errors.Select(e => new
+                        {
+                            Field = x.Key,
+                            Message = e.ErrorMessage
+                        }))
+                        .ToList();
+                    return BadRequest(new { message = "Validation failed.", errors });
                 }
 
                 try
                 {
-                    var user = _mapper.Map<User>(userUpdateDto);
-                    var updatedUser = await _userService.UpdateAsync(user);
-                    var userDto = _mapper.Map<UserDto>(updatedUser);
-                    return Ok(userDto);
+                    var existingUser = await _userService.GetByIdAsync(id);
+                    if (existingUser == null)
+                    {
+                        return NotFound(new { message = $"User with ID {id} not found." });
+                    }
+
+                    // Handle password change
+                    if (userUpdateDto.ChangePassword && !string.IsNullOrWhiteSpace(userUpdateDto.NewPassword))
+                    {
+                        // If user is updating their own password, verify old password
+                        if (isSelfUpdate)
+                        {
+                            if (string.IsNullOrWhiteSpace(userUpdateDto.OldPassword))
+                            {
+                                return BadRequest(new { message = "Old password is required when changing your own password." });
+                            }
+
+                            if (!VerifyPassword(userUpdateDto.OldPassword, existingUser.PasswordHash))
+                            {
+                                return BadRequest(new { message = "Old password is incorrect." });
+                            }
+                        }
+
+                        existingUser.PasswordHash = HashPassword(userUpdateDto.NewPassword);
+                    }
+
+                    // Update other properties only if provided (partial update support)
+                    if (!string.IsNullOrWhiteSpace(userUpdateDto.FirstName))
+                    {
+                        existingUser.FirstName = userUpdateDto.FirstName;
+                    }
+                    if (!string.IsNullOrWhiteSpace(userUpdateDto.LastName))
+                    {
+                        existingUser.LastName = userUpdateDto.LastName;
+                    }
+                    if (!string.IsNullOrWhiteSpace(userUpdateDto.Email))
+                    {
+                        // Check if email is already taken by another user
+                        var emailUser = await _userService.GetByEmailAsync(userUpdateDto.Email);
+                        if (emailUser != null && emailUser.UserId != id)
+                        {
+                            return BadRequest(new { message = "A user with this email address already exists." });
+                        }
+                        existingUser.Email = userUpdateDto.Email;
+                    }
+                    if (userUpdateDto.Phone != null)
+                    {
+                        existingUser.Phone = userUpdateDto.Phone;
+                    }
+                    if (userUpdateDto.DateOfBirth.HasValue)
+                    {
+                        existingUser.DateOfBirth = userUpdateDto.DateOfBirth;
+                    }
+                    if (!string.IsNullOrWhiteSpace(userUpdateDto.Status))
+                    {
+                        existingUser.Status = userUpdateDto.Status;
+                    }
+
+                    existingUser.UpdatedAt = DateTime.UtcNow;
+                    // Entity is already tracked, just save changes
+                    await _userService.UpdateAsync(existingUser);
+                    var userDto = _mapper.Map<UserDto>(existingUser);
+                    
+                    return Ok(new { 
+                        message = $"User '{userDto.FirstName} {userDto.LastName}' has been successfully updated.",
+                        data = userDto 
+                    });
                 }
                 catch (KeyNotFoundException)
                 {
-                    return NotFound(new { message = $"User with ID {id} not found" });
+                    return NotFound(new { message = $"User with ID {id} not found." });
                 }
             }
             catch (Exception ex)

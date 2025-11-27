@@ -63,6 +63,9 @@ namespace TaxiMo.Services.Database
                 .WithMany(u => u.Rides) 
                 .HasForeignKey(r => r.RiderId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Seed data
+            modelBuilder.Seed();
         }
 
     }

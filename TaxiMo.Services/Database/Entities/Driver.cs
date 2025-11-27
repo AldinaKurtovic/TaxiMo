@@ -6,9 +6,14 @@ namespace TaxiMo.Services.Database.Entities
     [Table("Drivers")]
     public class Driver
     {
+
         [Key]
         public int DriverId { get; set; }
+        public string Username { get; set; } = string.Empty;
 
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = "Driver";
         [Required]
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;
