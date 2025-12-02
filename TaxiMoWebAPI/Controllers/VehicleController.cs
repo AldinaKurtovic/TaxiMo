@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
@@ -8,6 +9,7 @@ namespace TaxiMoWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Driver")]
     public class VehicleController : ControllerBase
     {
         private readonly IVehicleService _vehicleService;

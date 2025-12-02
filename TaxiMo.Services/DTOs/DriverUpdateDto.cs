@@ -15,6 +15,9 @@ namespace TaxiMo.Services.DTOs
         [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters.")]
         [LettersOnly(ErrorMessage = "Last name must contain only letters.")]
         public string? LastName { get; set; }
+        [MaxLength(50, ErrorMessage = "Username cannot exceed 50 characters.")]
+        [LettersOnly(ErrorMessage = "Username must contain only letters.")]
+        public string? Username { get; set; }
 
         [MaxLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
         [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
@@ -46,6 +49,8 @@ namespace TaxiMo.Services.DTOs
 
         // Old password - required only when driver is changing their own password (handled in controller/service)
         public string? OldPassword { get; set; }
+        [Required(ErrorMessage = "RoleId is required.")]
+        public int RoleId { get; set; }
     }
 }
 

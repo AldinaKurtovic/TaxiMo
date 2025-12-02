@@ -11,9 +11,6 @@ namespace TaxiMo.Services.Database.Entities
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(20)]
-        public string Role { get; set; } = "User"; //admin, user
-        [Required]
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;
 
@@ -29,11 +26,14 @@ namespace TaxiMo.Services.Database.Entities
         [MaxLength(20)]
         public string? Phone { get; set; }
 
-        [Required]
-        [MaxLength(255)]
+        
         public string PasswordHash { get; set; } = string.Empty;
 
+        public string PasswordSalt { get; set; } = string.Empty;
+
         public DateTime? DateOfBirth { get; set; }
+
+        public DateTime? LastLoginAt { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -53,6 +53,7 @@ namespace TaxiMo.Services.Database.Entities
         public virtual ICollection<PromoUsage> PromoUsages { get; set; } = new List<PromoUsage>();
         public virtual ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
         public virtual ICollection<UserAuthToken> UserAuthTokens { get; set; } = new List<UserAuthToken>();
+        public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }
 

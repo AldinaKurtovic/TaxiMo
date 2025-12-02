@@ -43,6 +43,9 @@ namespace TaxiMo.Services.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -53,13 +56,16 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<string>("LicenseNumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
@@ -67,11 +73,6 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<decimal?>("RatingAvg")
                         .HasColumnType("decimal(3,2)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -91,98 +92,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasKey("DriverId");
 
                     b.ToTable("Drivers");
-
-                    b.HasData(
-                        new
-                        {
-                            DriverId = 1,
-                            CreatedAt = new DateTime(2024, 10, 23, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Email = "ahmed.hasanovic@taximo.ba",
-                            FirstName = "Ahmed",
-                            LastName = "Hasanovic",
-                            LicenseExpiry = new DateTime(2027, 11, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            LicenseNumber = "BIH-2020-001",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38762123456",
-                            RatingAvg = 4.8m,
-                            Role = "driver",
-                            Status = "active",
-                            TotalRides = 1250,
-                            UpdatedAt = new DateTime(2025, 11, 26, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "driver.ahmed"
-                        },
-                        new
-                        {
-                            DriverId = 2,
-                            CreatedAt = new DateTime(2024, 9, 3, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Email = "amina.kovacevic@taximo.ba",
-                            FirstName = "Amina",
-                            LastName = "Kovacevic",
-                            LicenseExpiry = new DateTime(2027, 5, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            LicenseNumber = "BIH-2019-045",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38762234567",
-                            RatingAvg = 4.9m,
-                            Role = "driver",
-                            Status = "active",
-                            TotalRides = 2100,
-                            UpdatedAt = new DateTime(2025, 11, 25, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "driver.amina"
-                        },
-                        new
-                        {
-                            DriverId = 3,
-                            CreatedAt = new DateTime(2024, 12, 12, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Email = "mirza.begic@taximo.ba",
-                            FirstName = "Mirza",
-                            LastName = "Begic",
-                            LicenseExpiry = new DateTime(2028, 11, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            LicenseNumber = "BIH-2021-078",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38762345678",
-                            RatingAvg = 4.6m,
-                            Role = "driver",
-                            Status = "active",
-                            TotalRides = 850,
-                            UpdatedAt = new DateTime(2025, 11, 24, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "driver.mirza"
-                        },
-                        new
-                        {
-                            DriverId = 4,
-                            CreatedAt = new DateTime(2024, 7, 15, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Email = "sara.dedic@taximo.ba",
-                            FirstName = "Sara",
-                            LastName = "Dedic",
-                            LicenseExpiry = new DateTime(2026, 7, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            LicenseNumber = "BIH-2018-112",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38762456789",
-                            RatingAvg = 4.7m,
-                            Role = "driver",
-                            Status = "offline",
-                            TotalRides = 1650,
-                            UpdatedAt = new DateTime(2025, 11, 17, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "driver.sara"
-                        },
-                        new
-                        {
-                            DriverId = 5,
-                            CreatedAt = new DateTime(2025, 3, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Email = "emir.jahic@taximo.ba",
-                            FirstName = "Emir",
-                            LastName = "Jahic",
-                            LicenseExpiry = new DateTime(2029, 11, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            LicenseNumber = "BIH-2022-023",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38762567890",
-                            RatingAvg = 4.5m,
-                            Role = "driver",
-                            Status = "active",
-                            TotalRides = 420,
-                            UpdatedAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "driver.emir"
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAuthToken", b =>
@@ -224,59 +133,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("DriverId");
 
                     b.ToTable("DriverAuthTokens");
-
-                    b.HasData(
-                        new
-                        {
-                            TokenId = 1,
-                            DeviceId = "mobile-app",
-                            DriverId = 1,
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.200",
-                            RefreshTokenHash = "fake_refresh_token_hash_driver_ahmed_001",
-                            TokenHash = "fake_token_hash_driver_ahmed_001"
-                        },
-                        new
-                        {
-                            TokenId = 2,
-                            DeviceId = "mobile-app",
-                            DriverId = 2,
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.201",
-                            RefreshTokenHash = "fake_refresh_token_hash_driver_amina_002",
-                            TokenHash = "fake_token_hash_driver_amina_002"
-                        },
-                        new
-                        {
-                            TokenId = 3,
-                            DeviceId = "mobile-app",
-                            DriverId = 3,
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.202",
-                            RefreshTokenHash = "fake_refresh_token_hash_driver_mirza_003",
-                            TokenHash = "fake_token_hash_driver_mirza_003"
-                        },
-                        new
-                        {
-                            TokenId = 4,
-                            DeviceId = "mobile-app",
-                            DriverId = 4,
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.203",
-                            RefreshTokenHash = "fake_refresh_token_hash_driver_sara_004",
-                            RevokedAt = new DateTime(2025, 11, 25, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            TokenHash = "fake_token_hash_driver_sara_004"
-                        },
-                        new
-                        {
-                            TokenId = 5,
-                            DeviceId = "mobile-app",
-                            DriverId = 5,
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.204",
-                            RefreshTokenHash = "fake_refresh_token_hash_driver_emir_005",
-                            TokenHash = "fake_token_hash_driver_emir_005"
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAvailability", b =>
@@ -310,55 +166,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("DriverId");
 
                     b.ToTable("DriverAvailabilities");
-
-                    b.HasData(
-                        new
-                        {
-                            AvailabilityId = 1,
-                            CurrentLat = 43.8563m,
-                            CurrentLng = 18.4131m,
-                            DriverId = 1,
-                            IsOnline = true,
-                            LastLocationUpdate = new DateTime(2025, 11, 27, 0, 2, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UpdatedAt = new DateTime(2025, 11, 27, 0, 2, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            AvailabilityId = 2,
-                            CurrentLat = 43.8586m,
-                            CurrentLng = 18.4281m,
-                            DriverId = 2,
-                            IsOnline = true,
-                            LastLocationUpdate = new DateTime(2025, 11, 26, 23, 57, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UpdatedAt = new DateTime(2025, 11, 26, 23, 57, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            AvailabilityId = 3,
-                            CurrentLat = 43.8517m,
-                            CurrentLng = 18.3889m,
-                            DriverId = 3,
-                            IsOnline = false,
-                            LastLocationUpdate = new DateTime(2025, 11, 26, 22, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UpdatedAt = new DateTime(2025, 11, 26, 22, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            AvailabilityId = 4,
-                            DriverId = 4,
-                            IsOnline = false,
-                            UpdatedAt = new DateTime(2025, 11, 26, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            AvailabilityId = 5,
-                            CurrentLat = 43.8625m,
-                            CurrentLng = 18.4103m,
-                            DriverId = 5,
-                            IsOnline = true,
-                            LastLocationUpdate = new DateTime(2025, 11, 26, 23, 52, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UpdatedAt = new DateTime(2025, 11, 26, 23, 52, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverNotification", b =>
@@ -397,58 +204,32 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("RecipientDriverId");
 
                     b.ToTable("DriverNotifications");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            NotificationId = 1,
-                            Body = "You have received a new ride request from John Doe.",
-                            IsRead = true,
-                            RecipientDriverId = 1,
-                            SentAt = new DateTime(2025, 10, 28, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "New Ride Request",
-                            Type = "ride_request"
-                        },
-                        new
-                        {
-                            NotificationId = 2,
-                            Body = "Payment of 8.50 BAM has been received for ride #1.",
-                            IsRead = true,
-                            RecipientDriverId = 1,
-                            SentAt = new DateTime(2025, 10, 28, 0, 32, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Payment Received",
-                            Type = "payment"
-                        },
-                        new
-                        {
-                            NotificationId = 3,
-                            Body = "You have received a new ride request from Sarajevo Airport.",
-                            IsRead = true,
-                            RecipientDriverId = 2,
-                            SentAt = new DateTime(2025, 11, 2, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "New Ride Request",
-                            Type = "ride_request"
-                        },
-                        new
-                        {
-                            NotificationId = 4,
-                            Body = "You received a 4.5 star rating from a passenger.",
-                            IsRead = false,
-                            RecipientDriverId = 2,
-                            SentAt = new DateTime(2025, 11, 2, 2, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Rating Received",
-                            Type = "rating"
-                        },
-                        new
-                        {
-                            NotificationId = 5,
-                            Body = "Scheduled maintenance will occur tonight from 2 AM to 4 AM.",
-                            IsRead = false,
-                            RecipientDriverId = 3,
-                            SentAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "System Maintenance",
-                            Type = "system"
-                        });
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverRole", b =>
+                {
+                    b.Property<int>("DriverRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DriverRoleId"));
+
+                    b.Property<DateTime>("DateAssigned")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DriverRoleId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("DriverRoles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Location", b =>
@@ -492,66 +273,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Locations");
-
-                    b.HasData(
-                        new
-                        {
-                            LocationId = 1,
-                            AddressLine = "Zmaja od Bosne 12",
-                            City = "Sarajevo",
-                            CreatedAt = new DateTime(2025, 5, 11, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Lat = 43.8563m,
-                            Lng = 18.4131m,
-                            Name = "Home",
-                            UpdatedAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            LocationId = 2,
-                            AddressLine = "Kurta Schorka 36",
-                            City = "Sarajevo",
-                            CreatedAt = new DateTime(2025, 5, 31, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Lat = 43.8247m,
-                            Lng = 18.3314m,
-                            Name = "Sarajevo Airport",
-                            UpdatedAt = new DateTime(2025, 11, 17, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            LocationId = 3,
-                            AddressLine = "Titova 15",
-                            City = "Sarajevo",
-                            CreatedAt = new DateTime(2025, 5, 21, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Lat = 43.8517m,
-                            Lng = 18.3889m,
-                            Name = "Work Office",
-                            UpdatedAt = new DateTime(2025, 11, 19, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            LocationId = 4,
-                            AddressLine = "Ferhadija 1",
-                            City = "Sarajevo",
-                            CreatedAt = new DateTime(2025, 6, 10, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Lat = 43.8586m,
-                            Lng = 18.4281m,
-                            Name = "City Center",
-                            UpdatedAt = new DateTime(2025, 11, 15, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            LocationId = 5,
-                            AddressLine = "Zmaja od Bosne 88",
-                            City = "Sarajevo",
-                            CreatedAt = new DateTime(2025, 6, 20, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Lat = 43.8625m,
-                            Lng = 18.4103m,
-                            Name = "Shopping Mall",
-                            UpdatedAt = new DateTime(2025, 11, 21, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Payment", b =>
@@ -600,65 +321,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Payments");
-
-                    b.HasData(
-                        new
-                        {
-                            PaymentId = 1,
-                            Amount = 8.50m,
-                            Currency = "BAM",
-                            Method = "online",
-                            PaidAt = new DateTime(2025, 10, 28, 0, 32, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RideId = 1,
-                            Status = "completed",
-                            TransactionRef = "TXN-2024-001",
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PaymentId = 2,
-                            Amount = 12.00m,
-                            Currency = "BAM",
-                            Method = "cash",
-                            PaidAt = new DateTime(2025, 11, 2, 0, 52, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RideId = 2,
-                            Status = "completed",
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PaymentId = 3,
-                            Amount = 8.50m,
-                            Currency = "BAM",
-                            Method = "online",
-                            RideId = 1,
-                            Status = "pending",
-                            TransactionRef = "TXN-2024-002",
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PaymentId = 4,
-                            Amount = 15.00m,
-                            Currency = "BAM",
-                            Method = "online",
-                            PaidAt = new DateTime(2025, 11, 2, 0, 57, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RideId = 2,
-                            Status = "refunded",
-                            TransactionRef = "TXN-2024-003",
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PaymentId = 5,
-                            Amount = 8.50m,
-                            Currency = "BAM",
-                            Method = "cash",
-                            PaidAt = new DateTime(2025, 10, 28, 0, 33, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RideId = 1,
-                            Status = "completed",
-                            UserId = 4
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.PromoCode", b =>
@@ -706,73 +368,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasKey("PromoId");
 
                     b.ToTable("PromoCodes");
-
-                    b.HasData(
-                        new
-                        {
-                            PromoId = 1,
-                            Code = "WELCOME10",
-                            CreatedAt = new DateTime(2025, 8, 19, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Description = "Welcome discount for new users",
-                            DiscountType = "percentage",
-                            DiscountValue = 10.00m,
-                            Status = "active",
-                            UsageLimit = 100,
-                            ValidFrom = new DateTime(2025, 8, 19, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            ValidUntil = new DateTime(2026, 6, 15, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            PromoId = 2,
-                            Code = "FIRST20",
-                            CreatedAt = new DateTime(2025, 9, 8, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Description = "20% off first ride",
-                            DiscountType = "percentage",
-                            DiscountValue = 20.00m,
-                            Status = "active",
-                            UsageLimit = 50,
-                            ValidFrom = new DateTime(2025, 9, 8, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            ValidUntil = new DateTime(2026, 3, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            PromoId = 3,
-                            Code = "FIXED5",
-                            CreatedAt = new DateTime(2025, 9, 28, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Description = "5 BAM off your ride",
-                            DiscountType = "fixed",
-                            DiscountValue = 5.00m,
-                            Status = "active",
-                            UsageLimit = 200,
-                            ValidFrom = new DateTime(2025, 9, 28, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            ValidUntil = new DateTime(2026, 4, 16, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            PromoId = 4,
-                            Code = "WEEKEND15",
-                            CreatedAt = new DateTime(2025, 10, 18, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Description = "15% off weekend rides",
-                            DiscountType = "percentage",
-                            DiscountValue = 15.00m,
-                            Status = "active",
-                            UsageLimit = 75,
-                            ValidFrom = new DateTime(2025, 10, 18, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            ValidUntil = new DateTime(2026, 1, 26, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        },
-                        new
-                        {
-                            PromoId = 5,
-                            Code = "EXPIRED",
-                            CreatedAt = new DateTime(2025, 5, 11, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Description = "Expired promo code",
-                            DiscountType = "percentage",
-                            DiscountValue = 10.00m,
-                            Status = "expired",
-                            UsageLimit = 100,
-                            ValidFrom = new DateTime(2025, 5, 11, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            ValidUntil = new DateTime(2025, 10, 8, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919)
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.PromoUsage", b =>
@@ -804,48 +399,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("PromoUsages");
-
-                    b.HasData(
-                        new
-                        {
-                            PromoUsageId = 1,
-                            PromoId = 1,
-                            RideId = 1,
-                            UsedAt = new DateTime(2025, 10, 28, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PromoUsageId = 2,
-                            PromoId = 2,
-                            RideId = 2,
-                            UsedAt = new DateTime(2025, 11, 2, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PromoUsageId = 3,
-                            PromoId = 3,
-                            RideId = 1,
-                            UsedAt = new DateTime(2025, 10, 29, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PromoUsageId = 4,
-                            PromoId = 1,
-                            RideId = 2,
-                            UsedAt = new DateTime(2025, 11, 3, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        },
-                        new
-                        {
-                            PromoUsageId = 5,
-                            PromoId = 4,
-                            RideId = 1,
-                            UsedAt = new DateTime(2025, 11, 7, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            UserId = 4
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Review", b =>
@@ -884,58 +437,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("RiderId");
 
                     b.ToTable("Reviews");
-
-                    b.HasData(
-                        new
-                        {
-                            ReviewId = 1,
-                            Comment = "Excellent service, very professional driver!",
-                            CreatedAt = new DateTime(2025, 10, 28, 1, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 1,
-                            Rating = 5.00m,
-                            RideId = 1,
-                            RiderId = 4
-                        },
-                        new
-                        {
-                            ReviewId = 2,
-                            Comment = "Good ride, clean car and friendly driver.",
-                            CreatedAt = new DateTime(2025, 11, 2, 2, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 2,
-                            Rating = 4.50m,
-                            RideId = 2,
-                            RiderId = 4
-                        },
-                        new
-                        {
-                            ReviewId = 3,
-                            Comment = "Punctual and safe driving.",
-                            CreatedAt = new DateTime(2025, 10, 29, 12, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 1,
-                            Rating = 4.00m,
-                            RideId = 1,
-                            RiderId = 4
-                        },
-                        new
-                        {
-                            ReviewId = 4,
-                            Comment = "Best taxi service in Sarajevo!",
-                            CreatedAt = new DateTime(2025, 11, 3, 6, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 2,
-                            Rating = 5.00m,
-                            RideId = 2,
-                            RiderId = 4
-                        },
-                        new
-                        {
-                            ReviewId = 5,
-                            Comment = "Very satisfied with the service.",
-                            CreatedAt = new DateTime(2025, 10, 30, 18, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 1,
-                            Rating = 4.75m,
-                            RideId = 1,
-                            RiderId = 4
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Ride", b =>
@@ -1000,79 +501,31 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("VehicleId");
 
                     b.ToTable("Rides");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            RideId = 1,
-                            CompletedAt = new DateTime(2025, 10, 28, 0, 32, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DistanceKm = 5.2m,
-                            DriverId = 1,
-                            DropoffLocationId = 3,
-                            DurationMin = 20,
-                            FareEstimate = 8.50m,
-                            FareFinal = 8.50m,
-                            PickupLocationId = 1,
-                            RequestedAt = new DateTime(2025, 10, 28, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RiderId = 4,
-                            StartedAt = new DateTime(2025, 10, 28, 0, 12, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Status = "completed",
-                            VehicleId = 1
-                        },
-                        new
-                        {
-                            RideId = 2,
-                            CompletedAt = new DateTime(2025, 11, 2, 0, 52, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DistanceKm = 12.5m,
-                            DriverId = 2,
-                            DropoffLocationId = 4,
-                            DurationMin = 35,
-                            FareEstimate = 15.00m,
-                            FareFinal = 12.00m,
-                            PickupLocationId = 2,
-                            RequestedAt = new DateTime(2025, 11, 2, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RiderId = 4,
-                            StartedAt = new DateTime(2025, 11, 2, 0, 17, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Status = "completed",
-                            VehicleId = 2
-                        },
-                        new
-                        {
-                            RideId = 3,
-                            DriverId = 3,
-                            DropoffLocationId = 5,
-                            FareEstimate = 6.00m,
-                            PickupLocationId = 4,
-                            RequestedAt = new DateTime(2025, 11, 7, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RiderId = 4,
-                            StartedAt = new DateTime(2025, 11, 7, 0, 10, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Status = "active",
-                            VehicleId = 3
-                        },
-                        new
-                        {
-                            RideId = 4,
-                            DriverId = 1,
-                            DropoffLocationId = 1,
-                            FareEstimate = 7.50m,
-                            PickupLocationId = 3,
-                            RequestedAt = new DateTime(2025, 11, 12, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RiderId = 4,
-                            Status = "accepted",
-                            VehicleId = 1
-                        },
-                        new
-                        {
-                            RideId = 5,
-                            DriverId = 2,
-                            DropoffLocationId = 2,
-                            FareEstimate = 18.00m,
-                            PickupLocationId = 5,
-                            RequestedAt = new DateTime(2025, 11, 17, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            RiderId = 4,
-                            Status = "requested",
-                            VehicleId = 2
-                        });
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.Role", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.User", b =>
@@ -1099,6 +552,9 @@ namespace TaxiMo.Services.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1106,15 +562,13 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -1133,83 +587,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = 1,
-                            CreatedAt = new DateTime(2024, 11, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DateOfBirth = new DateTime(1985, 5, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "admin@taximo.ba",
-                            FirstName = "Admin",
-                            LastName = "User",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38761123456",
-                            Role = "admin",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 26, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "admin"
-                        },
-                        new
-                        {
-                            UserId = 2,
-                            CreatedAt = new DateTime(2025, 1, 31, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DateOfBirth = new DateTime(1990, 8, 20, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "desktop@taximo.ba",
-                            FirstName = "Desktop",
-                            LastName = "Operator",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38761234567",
-                            Role = "desktop",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 25, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "desktop"
-                        },
-                        new
-                        {
-                            UserId = 3,
-                            CreatedAt = new DateTime(2025, 2, 20, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DateOfBirth = new DateTime(1992, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "mobile@taximo.ba",
-                            FirstName = "Mobile",
-                            LastName = "Operator",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38761345678",
-                            Role = "mobile",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 24, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "mobile"
-                        },
-                        new
-                        {
-                            UserId = 4,
-                            CreatedAt = new DateTime(2025, 5, 11, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DateOfBirth = new DateTime(1995, 11, 25, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "john.doe@example.com",
-                            FirstName = "John",
-                            LastName = "Doe",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38761456789",
-                            Role = "user",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "john.doe"
-                        },
-                        new
-                        {
-                            UserId = 5,
-                            CreatedAt = new DateTime(2025, 6, 30, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DateOfBirth = new DateTime(1988, 7, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "support@taximo.ba",
-                            FirstName = "Support",
-                            LastName = "Agent",
-                            PasswordHash = "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-                            Phone = "38761567890",
-                            Role = "support",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 23, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Username = "support"
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserAuthToken", b =>
@@ -1251,59 +628,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserAuthTokens");
-
-                    b.HasData(
-                        new
-                        {
-                            TokenId = 1,
-                            DeviceId = "desktop-app",
-                            ExpiresAt = new DateTime(2025, 12, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.100",
-                            RefreshTokenHash = "fake_refresh_token_hash_admin_001",
-                            TokenHash = "fake_token_hash_admin_001",
-                            UserId = 1
-                        },
-                        new
-                        {
-                            TokenId = 2,
-                            DeviceId = "desktop-app",
-                            ExpiresAt = new DateTime(2025, 12, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.101",
-                            RefreshTokenHash = "fake_refresh_token_hash_desktop_002",
-                            TokenHash = "fake_token_hash_desktop_002",
-                            UserId = 2
-                        },
-                        new
-                        {
-                            TokenId = 3,
-                            DeviceId = "mobile-app",
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.102",
-                            RefreshTokenHash = "fake_refresh_token_hash_mobile_003",
-                            TokenHash = "fake_token_hash_mobile_003",
-                            UserId = 3
-                        },
-                        new
-                        {
-                            TokenId = 4,
-                            DeviceId = "mobile-app",
-                            ExpiresAt = new DateTime(2025, 12, 4, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "10.0.0.50",
-                            RefreshTokenHash = "fake_refresh_token_hash_user_004",
-                            TokenHash = "fake_token_hash_user_004",
-                            UserId = 4
-                        },
-                        new
-                        {
-                            TokenId = 5,
-                            DeviceId = "desktop-app",
-                            ExpiresAt = new DateTime(2025, 12, 27, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            IpAddress = "192.168.1.103",
-                            RefreshTokenHash = "fake_refresh_token_hash_support_005",
-                            RevokedAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            TokenHash = "fake_token_hash_support_005",
-                            UserId = 5
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserNotification", b =>
@@ -1342,58 +666,32 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("RecipientUserId");
 
                     b.ToTable("UserNotifications");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            NotificationId = 1,
-                            Body = "Thank you for joining TaxiMo. Get 10% off your first ride with code WELCOME10",
-                            IsRead = true,
-                            RecipientUserId = 4,
-                            SentAt = new DateTime(2025, 5, 11, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Welcome to TaxiMo!",
-                            Type = "welcome"
-                        },
-                        new
-                        {
-                            NotificationId = 2,
-                            Body = "Your ride from Home to Work Office has been completed. Thank you for using TaxiMo!",
-                            IsRead = true,
-                            RecipientUserId = 4,
-                            SentAt = new DateTime(2025, 10, 28, 0, 32, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Ride Completed",
-                            Type = "ride_completed"
-                        },
-                        new
-                        {
-                            NotificationId = 3,
-                            Body = "Your payment of 8.50 BAM has been processed successfully.",
-                            IsRead = false,
-                            RecipientUserId = 4,
-                            SentAt = new DateTime(2025, 11, 2, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Payment Received",
-                            Type = "payment"
-                        },
-                        new
-                        {
-                            NotificationId = 4,
-                            Body = "Use code WEEKEND15 for 15% off your weekend rides!",
-                            IsRead = false,
-                            RecipientUserId = 4,
-                            SentAt = new DateTime(2025, 11, 17, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "New Promo Code Available",
-                            Type = "promotion"
-                        },
-                        new
-                        {
-                            NotificationId = 5,
-                            Body = "Your driver Ahmed Hasanovic is on the way to your pickup location.",
-                            IsRead = true,
-                            RecipientUserId = 4,
-                            SentAt = new DateTime(2025, 11, 7, 0, 10, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            Title = "Driver Assigned",
-                            Type = "ride_update"
-                        });
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserRole", b =>
+                {
+                    b.Property<int>("UserRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserRoleId"));
+
+                    b.Property<DateTime>("DateAssigned")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserRoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserRoles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>
@@ -1453,83 +751,6 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("DriverId");
 
                     b.ToTable("Vehicles");
-
-                    b.HasData(
-                        new
-                        {
-                            VehicleId = 1,
-                            Capacity = 4,
-                            Color = "White",
-                            CreatedAt = new DateTime(2024, 10, 23, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 1,
-                            Make = "Skoda",
-                            Model = "Octavia",
-                            PlateNumber = "A-123-BH",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 26, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            VehicleType = "Sedan",
-                            Year = 2020
-                        },
-                        new
-                        {
-                            VehicleId = 2,
-                            Capacity = 4,
-                            Color = "Black",
-                            CreatedAt = new DateTime(2024, 9, 3, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 2,
-                            Make = "Volkswagen",
-                            Model = "Golf",
-                            PlateNumber = "S-456-SA",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 25, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            VehicleType = "Hatchback",
-                            Year = 2019
-                        },
-                        new
-                        {
-                            VehicleId = 3,
-                            Capacity = 4,
-                            Color = "Silver",
-                            CreatedAt = new DateTime(2024, 12, 12, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 3,
-                            Make = "Mercedes-Benz",
-                            Model = "E-Class",
-                            PlateNumber = "T-789-TU",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 24, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            VehicleType = "Sedan",
-                            Year = 2021
-                        },
-                        new
-                        {
-                            VehicleId = 4,
-                            Capacity = 4,
-                            Color = "Blue",
-                            CreatedAt = new DateTime(2024, 7, 15, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 4,
-                            Make = "Toyota",
-                            Model = "Corolla",
-                            PlateNumber = "Z-321-ZE",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 17, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            VehicleType = "Sedan",
-                            Year = 2018
-                        },
-                        new
-                        {
-                            VehicleId = 5,
-                            Capacity = 4,
-                            Color = "Red",
-                            CreatedAt = new DateTime(2025, 3, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            DriverId = 5,
-                            Make = "Ford",
-                            Model = "Focus",
-                            PlateNumber = "B-654-BI",
-                            Status = "active",
-                            UpdatedAt = new DateTime(2025, 11, 22, 0, 7, 38, 228, DateTimeKind.Utc).AddTicks(7919),
-                            VehicleType = "Hatchback",
-                            Year = 2022
-                        });
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAuthToken", b =>
@@ -1563,6 +784,25 @@ namespace TaxiMo.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("RecipientDriver");
+                });
+
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverRole", b =>
+                {
+                    b.HasOne("TaxiMo.Services.Database.Entities.Driver", "Driver")
+                        .WithMany("DriverRoles")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaxiMo.Services.Database.Entities.Role", "Role")
+                        .WithMany("DriverRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Location", b =>
@@ -1712,6 +952,25 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("RecipientUser");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserRole", b =>
+                {
+                    b.HasOne("TaxiMo.Services.Database.Entities.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaxiMo.Services.Database.Entities.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>
                 {
                     b.HasOne("TaxiMo.Services.Database.Entities.Driver", "Driver")
@@ -1730,6 +989,8 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("DriverAvailabilities");
 
                     b.Navigation("DriverNotifications");
+
+                    b.Navigation("DriverRoles");
 
                     b.Navigation("Reviews");
 
@@ -1759,6 +1020,13 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.Role", b =>
+                {
+                    b.Navigation("DriverRoles");
+
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.User", b =>
                 {
                     b.Navigation("Locations");
@@ -1774,6 +1042,8 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("UserAuthTokens");
 
                     b.Navigation("UserNotifications");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>

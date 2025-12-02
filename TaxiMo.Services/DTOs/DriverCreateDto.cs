@@ -15,6 +15,11 @@ namespace TaxiMo.Services.DTOs
         [LettersOnly(ErrorMessage = "Last name must contain only letters.")]
         public string LastName { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Username is required.")]
+        [MaxLength(50, ErrorMessage = "Username cannot exceed 50 characters.")]
+        [LettersOnly(ErrorMessage = "Username must contain only letters.")]
+        public string Username { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Email is required.")]
         [MaxLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
         [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
@@ -43,6 +48,7 @@ namespace TaxiMo.Services.DTOs
         [Required(ErrorMessage = "Password confirmation is required.")]
         [PasswordMatch("Password", ErrorMessage = "Password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
+        
     }
 }
 

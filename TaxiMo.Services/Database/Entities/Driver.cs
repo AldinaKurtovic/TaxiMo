@@ -12,9 +12,6 @@ namespace TaxiMo.Services.Database.Entities
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(20)]
-        public string Role { get; set; } = "Driver";
-        [Required]
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;
 
@@ -34,9 +31,12 @@ namespace TaxiMo.Services.Database.Entities
         [MaxLength(255)]
         public string PasswordHash { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(50)]
+      
+        public string PasswordSalt { get; set; } = string.Empty;
+
         public string LicenseNumber { get; set; } = string.Empty;
+
+        public DateTime? LastLoginAt { get; set; }
 
         [Required]
         public DateTime LicenseExpiry { get; set; }
@@ -63,6 +63,7 @@ namespace TaxiMo.Services.Database.Entities
         public virtual ICollection<DriverAvailability> DriverAvailabilities { get; set; } = new List<DriverAvailability>();
         public virtual ICollection<DriverNotification> DriverNotifications { get; set; } = new List<DriverNotification>();
         public virtual ICollection<DriverAuthToken> DriverAuthTokens { get; set; } = new List<DriverAuthToken>();
+        public virtual ICollection<DriverRole> DriverRoles { get; set; } = new List<DriverRole>();
     }
 }
 

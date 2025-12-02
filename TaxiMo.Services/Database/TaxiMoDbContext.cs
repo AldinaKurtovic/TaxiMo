@@ -25,6 +25,9 @@ namespace TaxiMo.Services.Database
         public DbSet<DriverNotification> DriverNotifications { get; set; }
         public DbSet<UserAuthToken> UserAuthTokens { get; set; }
         public DbSet<DriverAuthToken> DriverAuthTokens { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<DriverRole> DriverRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -64,8 +67,31 @@ namespace TaxiMo.Services.Database
                 .HasForeignKey(r => r.RiderId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Seed data
-            modelBuilder.Seed();
+            // UserRole many-to-many relationship
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // DriverRole many-to-many relationship
+            modelBuilder.Entity<DriverRole>()
+                .HasOne(dr => dr.Driver)
+                .WithMany(d => d.DriverRoles)
+                .HasForeignKey(dr => dr.DriverId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DriverRole>()
+                .HasOne(dr => dr.Role)
+                .WithMany(r => r.DriverRoles)
+                .HasForeignKey(dr => dr.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
     }

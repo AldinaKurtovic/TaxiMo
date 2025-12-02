@@ -12,8 +12,8 @@ using TaxiMo.Services.Database;
 namespace TaxiMo.Services.Migrations
 {
     [DbContext(typeof(TaxiMoDbContext))]
-    [Migration("20251126234101_role")]
-    partial class role
+    [Migration("20251201231341_db")]
+    partial class db
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,6 +46,9 @@ namespace TaxiMo.Services.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -56,13 +59,16 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<string>("LicenseNumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
@@ -70,11 +76,6 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<decimal?>("RatingAvg")
                         .HasColumnType("decimal(3,2)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -206,6 +207,32 @@ namespace TaxiMo.Services.Migrations
                     b.HasIndex("RecipientDriverId");
 
                     b.ToTable("DriverNotifications");
+                });
+
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverRole", b =>
+                {
+                    b.Property<int>("DriverRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DriverRoleId"));
+
+                    b.Property<DateTime>("DateAssigned")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DriverRoleId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("DriverRoles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Location", b =>
@@ -479,6 +506,31 @@ namespace TaxiMo.Services.Migrations
                     b.ToTable("Rides");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.Role", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("Roles");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -503,6 +555,9 @@ namespace TaxiMo.Services.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -510,15 +565,13 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -618,6 +671,32 @@ namespace TaxiMo.Services.Migrations
                     b.ToTable("UserNotifications");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserRole", b =>
+                {
+                    b.Property<int>("UserRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserRoleId"));
+
+                    b.Property<DateTime>("DateAssigned")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserRoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserRoles");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>
                 {
                     b.Property<int>("VehicleId")
@@ -708,6 +787,25 @@ namespace TaxiMo.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("RecipientDriver");
+                });
+
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverRole", b =>
+                {
+                    b.HasOne("TaxiMo.Services.Database.Entities.Driver", "Driver")
+                        .WithMany("DriverRoles")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaxiMo.Services.Database.Entities.Role", "Role")
+                        .WithMany("DriverRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Location", b =>
@@ -857,6 +955,25 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("RecipientUser");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserRole", b =>
+                {
+                    b.HasOne("TaxiMo.Services.Database.Entities.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaxiMo.Services.Database.Entities.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>
                 {
                     b.HasOne("TaxiMo.Services.Database.Entities.Driver", "Driver")
@@ -875,6 +992,8 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("DriverAvailabilities");
 
                     b.Navigation("DriverNotifications");
+
+                    b.Navigation("DriverRoles");
 
                     b.Navigation("Reviews");
 
@@ -904,6 +1023,13 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("TaxiMo.Services.Database.Entities.Role", b =>
+                {
+                    b.Navigation("DriverRoles");
+
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.User", b =>
                 {
                     b.Navigation("Locations");
@@ -919,6 +1045,8 @@ namespace TaxiMo.Services.Migrations
                     b.Navigation("UserAuthTokens");
 
                     b.Navigation("UserNotifications");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>

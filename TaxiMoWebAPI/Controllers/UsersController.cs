@@ -1,17 +1,17 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
-using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
+using TaxiMo.Services.DTOs.Auth;
+using TaxiMo.Services.Helpers;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMoWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -25,232 +25,133 @@ namespace TaxiMoWebAPI.Controllers
             _logger = logger;
         }
 
-        private static string HashPassword(string password)
+        // LOGIN
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<ActionResult<UserResponse>> Login(UserLoginRequest request)
         {
-            using var sha256 = SHA256.Create();
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashedBytes);
+            try
+            {
+                var user = await _userService.AuthenticateAsync(request);
+                if (user == null)
+                    return Unauthorized(new { message = "Invalid username or password" });
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login");
+                return StatusCode(500, new { message = "An error occurred during login" });
+            }
         }
 
-        private static bool VerifyPassword(string password, string hash)
-        {
-            var hashOfInput = HashPassword(password);
-            return hashOfInput == hash;
-        }
-
-        // GET: api/users
+        // GET ALL USERS
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] string? search = null, [FromQuery] bool? isActive = null)
         {
-            try
-            {
-                var users = await _userService.GetAllAsync(search, isActive);
-                var userDtos = _mapper.Map<List<UserDto>>(users);
-                return Ok(userDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving users");
-                return StatusCode(500, new { message = "An error occurred while retrieving users" });
-            }
+            var users = await _userService.GetAllAsync(search, isActive);
+            return Ok(_mapper.Map<List<UserDto>>(users));
         }
 
-        // GET: api/users/{id}
+        // GET USER BY ID
         [HttpGet("{id}")]
         public async Task<ActionResult<UserDto>> GetUser(int id)
         {
-            try
-            {
-                var user = await _userService.GetByIdAsync(id);
+            var user = await _userService.GetByIdAsync(id);
+            if (user == null)
+                return NotFound(new { message = $"User with ID {id} not found" });
 
-                if (user == null)
-                {
-                    return NotFound(new { message = $"User with ID {id} not found" });
-                }
-
-                var userDto = _mapper.Map<UserDto>(user);
-                return Ok(userDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving user with ID {UserId}", id);
-                return StatusCode(500, new { message = "An error occurred while retrieving the user" });
-            }
+            return Ok(_mapper.Map<UserDto>(user));
         }
 
-        // POST: api/users
+        // CREATE USER
         [HttpPost]
-        public async Task<ActionResult<object>> CreateUser(UserCreateDto userCreateDto)
+        public async Task<ActionResult<object>> CreateUser(UserCreateDto dto)
         {
             try
             {
                 if (!ModelState.IsValid)
-                {
-                    var errors = ModelState
-                        .Where(x => x.Value?.Errors.Count > 0)
-                        .SelectMany(x => x.Value!.Errors.Select(e => new
-                        {
-                            Field = x.Key,
-                            Message = e.ErrorMessage
-                        }))
-                        .ToList();
-                    return BadRequest(new { message = "Validation failed.", errors });
-                }
+                    return BadRequest(ModelState);
 
-                // Check if email already exists
-                var existingUser = await _userService.GetByEmailAsync(userCreateDto.Email);
-                if (existingUser != null)
-                {
-                    return BadRequest(new { message = "A user with this email address already exists." });
-                }
-
-                var user = _mapper.Map<User>(userCreateDto);
-                user.PasswordHash = HashPassword(userCreateDto.Password);
-                
-                var createdUser = await _userService.CreateAsync(user);
-                var userDto = _mapper.Map<UserDto>(createdUser);
-
-                return CreatedAtAction(
-                    nameof(GetUser), 
-                    new { id = userDto.UserId }, 
-                    new { 
-                        message = $"User '{userDto.FirstName} {userDto.LastName}' has been successfully created.",
-                        data = userDto 
-                    });
+                // Use the DTO-based CreateAsync which handles password hashing and role assignment
+                var userResponse = await _userService.CreateAsync(dto);
+                return Ok(new { message = "User created.", data = userResponse });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating user");
-                return StatusCode(500, new { message = "An error occurred while creating the user" });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
 
-        // PUT: api/users/{id}
+        // UPDATE USER
         [HttpPut("{id}")]
-        public async Task<ActionResult<object>> UpdateUser(int id, UserUpdateDto userUpdateDto, [FromQuery] bool isSelfUpdate = false)
+        public async Task<ActionResult<object>> UpdateUser(int id, UserUpdateDto dto)
         {
             try
             {
-                if (id != userUpdateDto.UserId)
-                {
+                if (id != dto.UserId)
                     return BadRequest(new { message = "User ID mismatch." });
-                }
 
-                if (!ModelState.IsValid)
+                var existing = await _userService.GetByIdAsync(id);
+                if (existing == null)
+                    return NotFound(new { message = "User not found." });
+
+                // PASSWORD CHANGE
+                if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
                 {
-                    var errors = ModelState
-                        .Where(x => x.Value?.Errors.Count > 0)
-                        .SelectMany(x => x.Value!.Errors.Select(e => new
-                        {
-                            Field = x.Key,
-                            Message = e.ErrorMessage
-                        }))
-                        .ToList();
-                    return BadRequest(new { message = "Validation failed.", errors });
+                    PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
+                    existing.PasswordHash = hash;
+                    existing.PasswordSalt = salt;
                 }
 
-                try
-                {
-                    var existingUser = await _userService.GetByIdAsync(id);
-                    if (existingUser == null)
-                    {
-                        return NotFound(new { message = $"User with ID {id} not found." });
-                    }
+                // UPDATE OTHER FIELDS
+                _mapper.Map(dto, existing);
 
-                    // Handle password change
-                    if (userUpdateDto.ChangePassword && !string.IsNullOrWhiteSpace(userUpdateDto.NewPassword))
-                    {
-                        // If user is updating their own password, verify old password
-                        if (isSelfUpdate)
-                        {
-                            if (string.IsNullOrWhiteSpace(userUpdateDto.OldPassword))
-                            {
-                                return BadRequest(new { message = "Old password is required when changing your own password." });
-                            }
+                await _userService.UpdateAsync(existing);
 
-                            if (!VerifyPassword(userUpdateDto.OldPassword, existingUser.PasswordHash))
-                            {
-                                return BadRequest(new { message = "Old password is incorrect." });
-                            }
-                        }
-
-                        existingUser.PasswordHash = HashPassword(userUpdateDto.NewPassword);
-                    }
-
-                    // Update other properties only if provided (partial update support)
-                    if (!string.IsNullOrWhiteSpace(userUpdateDto.FirstName))
-                    {
-                        existingUser.FirstName = userUpdateDto.FirstName;
-                    }
-                    if (!string.IsNullOrWhiteSpace(userUpdateDto.LastName))
-                    {
-                        existingUser.LastName = userUpdateDto.LastName;
-                    }
-                    if (!string.IsNullOrWhiteSpace(userUpdateDto.Email))
-                    {
-                        // Check if email is already taken by another user
-                        var emailUser = await _userService.GetByEmailAsync(userUpdateDto.Email);
-                        if (emailUser != null && emailUser.UserId != id)
-                        {
-                            return BadRequest(new { message = "A user with this email address already exists." });
-                        }
-                        existingUser.Email = userUpdateDto.Email;
-                    }
-                    if (userUpdateDto.Phone != null)
-                    {
-                        existingUser.Phone = userUpdateDto.Phone;
-                    }
-                    if (userUpdateDto.DateOfBirth.HasValue)
-                    {
-                        existingUser.DateOfBirth = userUpdateDto.DateOfBirth;
-                    }
-                    if (!string.IsNullOrWhiteSpace(userUpdateDto.Status))
-                    {
-                        existingUser.Status = userUpdateDto.Status;
-                    }
-
-                    existingUser.UpdatedAt = DateTime.UtcNow;
-                    // Entity is already tracked, just save changes
-                    await _userService.UpdateAsync(existingUser);
-                    var userDto = _mapper.Map<UserDto>(existingUser);
-                    
-                    return Ok(new { 
-                        message = $"User '{userDto.FirstName} {userDto.LastName}' has been successfully updated.",
-                        data = userDto 
-                    });
-                }
-                catch (KeyNotFoundException)
-                {
-                    return NotFound(new { message = $"User with ID {id} not found." });
-                }
+                return Ok(new { message = "User updated.", data = _mapper.Map<UserDto>(existing) });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user with ID {UserId}", id);
+                _logger.LogError(ex, "Error updating user");
                 return StatusCode(500, new { message = "An error occurred while updating the user" });
             }
         }
 
-        // DELETE: api/users/{id}
+        // DELETE
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            var deleted = await _userService.DeleteAsync(id);
+            if (!deleted)
+                return NotFound(new { message = "User not found" });
+
+            return NoContent();
+        }
+
+        // FIX USERS WITHOUT ROLES
+        /// <summary>
+        /// Finds all users without any roles and assigns them the default "User" role.
+        /// This is a utility endpoint to fix existing data.
+        /// </summary>
+        [HttpPost("fix-users-without-roles")]
+        public async Task<ActionResult<object>> FixUsersWithoutRoles()
+        {
             try
             {
-                var deleted = await _userService.DeleteAsync(id);
-                if (!deleted)
-                {
-                    return NotFound(new { message = $"User with ID {id} not found" });
-                }
-
-                return NoContent();
+                var fixedCount = await _userService.FixUsersWithoutRolesAsync();
+                return Ok(new 
+                { 
+                    message = $"Successfully assigned default 'User' role to {fixedCount} user(s).",
+                    usersFixed = fixedCount
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user with ID {UserId}", id);
-                return StatusCode(500, new { message = "An error occurred while deleting the user" });
+                _logger.LogError(ex, "Error fixing users without roles");
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }
 }
-

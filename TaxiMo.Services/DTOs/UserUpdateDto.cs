@@ -5,45 +5,49 @@ namespace TaxiMo.Services.DTOs
 {
     public class UserUpdateDto
     {
-        [Required(ErrorMessage = "User ID is required.")]
+        [Required]
         public int UserId { get; set; }
 
-        [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters.")]
-        [LettersOnly(ErrorMessage = "First name must contain only letters.")]
+        [MaxLength(50)]
+        [LettersOnly]
         public string? FirstName { get; set; }
 
-        [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters.")]
-        [LettersOnly(ErrorMessage = "Last name must contain only letters.")]
+        [MaxLength(50)]
+        [LettersOnly]
         public string? LastName { get; set; }
 
-        [MaxLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
-        [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+        [MaxLength(255)]
+        [EmailAddress]
         public string? Email { get; set; }
 
-        [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters.")]
-        [PhoneNumber(ErrorMessage = "Phone number may contain digits only.")]
+        [MaxLength(50)]
+        [LettersOnly]
+        public string? Username { get; set; }
+
+        [MaxLength(20)]
+        [PhoneNumber]
         public string? Phone { get; set; }
 
-        [DateOfBirthNotInFuture(ErrorMessage = "Date of birth cannot be in the future.")]
+        [DateOfBirthNotInFuture]
         public DateTime? DateOfBirth { get; set; }
 
-        [MaxLength(50, ErrorMessage = "Status cannot exceed 50 characters.")]
+        [MaxLength(50)]
         public string? Status { get; set; }
 
-        // Optional password change fields
         public bool ChangePassword { get; set; }
 
-        [ConditionalRequired("ChangePassword", true, ErrorMessage = "New password is required when changing password.")]
-        [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
-        [MaxLength(100, ErrorMessage = "Password cannot exceed 100 characters.")]
+        [ConditionalRequired("ChangePassword", true)]
+        [MinLength(8)]
+        [MaxLength(100)]
         public string? NewPassword { get; set; }
 
-        [ConditionalRequired("NewPassword", ErrorMessage = "Password confirmation is required when providing a new password.")]
-        [PasswordMatch("NewPassword", ErrorMessage = "Password and confirmation password do not match.")]
+        [ConditionalRequired("NewPassword")]
+        [PasswordMatch("NewPassword")]
         public string? ConfirmNewPassword { get; set; }
 
-        // Old password - required only when user is changing their own password (handled in controller/service)
         public string? OldPassword { get; set; }
+
+        // ONE ROLE ONLY
+        public int? RoleId { get; set; }
     }
 }
-
