@@ -2,13 +2,8 @@ using TaxiMo.Services.Database.Entities;
 
 namespace TaxiMo.Services.Interfaces
 {
-    public interface ILocationService
+    public interface ILocationService : IBaseCRUDService<Location>
     {
-        Task<List<Location>> GetAllAsync();
-        Task<Location?> GetByIdAsync(int id);
-        Task<Location> CreateAsync(Location location);
-        Task<Location> UpdateAsync(Location location);
-        Task<bool> DeleteAsync(int id);
     }
 }
 

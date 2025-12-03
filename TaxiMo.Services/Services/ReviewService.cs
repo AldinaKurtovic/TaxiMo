@@ -1,23 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class ReviewService : IReviewService
+    public class ReviewService : BaseCRUDService<Review>, IReviewService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public ReviewService(TaxiMoDbContext context)
+        public ReviewService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<List<Review>> GetAllAsync(string? search = null, decimal? minRating = null)
         {
-            var query = _context.Reviews
+            var query = DbSet
                 .Include(r => r.Driver)
                 .Include(r => r.Rider)
                 .AsQueryable();
@@ -39,27 +35,18 @@ namespace TaxiMo.Services.Services
             return await query.ToListAsync();
         }
 
-        public async Task<Review?> GetByIdAsync(int id)
-        {
-            return await _context.Reviews.FindAsync(id);
-        }
-
-        public async Task<Review> CreateAsync(Review review)
+        public override async Task<Review> CreateAsync(Review review)
         {
             review.CreatedAt = DateTime.UtcNow;
-
-            _context.Reviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            return review;
+            return await base.CreateAsync(review);
         }
 
-        public async Task<Review> UpdateAsync(Review review)
+        public override async Task<Review> UpdateAsync(Review review)
         {
-            var existingReview = await _context.Reviews.FindAsync(review.ReviewId);
+            var existingReview = await GetByIdAsync(review.ReviewId);
             if (existingReview == null)
             {
-                throw new UserException($"Review with ID {review.ReviewId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"Review with ID {review.ReviewId} not found.");
             }
 
             // Update properties
@@ -69,23 +56,8 @@ namespace TaxiMo.Services.Services
             existingReview.Rating = review.Rating;
             existingReview.Comment = review.Comment;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingReview;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var review = await _context.Reviews.FindAsync(id);
-            if (review == null)
-            {
-                return false;
-            }
-
-            _context.Reviews.Remove(review);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

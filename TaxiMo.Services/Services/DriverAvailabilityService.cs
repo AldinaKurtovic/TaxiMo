@@ -1,46 +1,27 @@
-using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class DriverAvailabilityService : IDriverAvailabilityService
+    public class DriverAvailabilityService : BaseCRUDService<DriverAvailability>, IDriverAvailabilityService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public DriverAvailabilityService(TaxiMoDbContext context)
+        public DriverAvailabilityService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<List<DriverAvailability>> GetAllAsync()
-        {
-            return await _context.DriverAvailabilities.ToListAsync();
-        }
-
-        public async Task<DriverAvailability?> GetByIdAsync(int id)
-        {
-            return await _context.DriverAvailabilities.FindAsync(id);
-        }
-
-        public async Task<DriverAvailability> CreateAsync(DriverAvailability driverAvailability)
+        public override async Task<DriverAvailability> CreateAsync(DriverAvailability driverAvailability)
         {
             driverAvailability.UpdatedAt = DateTime.UtcNow;
-
-            _context.DriverAvailabilities.Add(driverAvailability);
-            await _context.SaveChangesAsync();
-
-            return driverAvailability;
+            return await base.CreateAsync(driverAvailability);
         }
 
-        public async Task<DriverAvailability> UpdateAsync(DriverAvailability driverAvailability)
+        public override async Task<DriverAvailability> UpdateAsync(DriverAvailability driverAvailability)
         {
-            var existingDriverAvailability = await _context.DriverAvailabilities.FindAsync(driverAvailability.AvailabilityId);
+            var existingDriverAvailability = await GetByIdAsync(driverAvailability.AvailabilityId);
             if (existingDriverAvailability == null)
             {
-                throw new UserException($"DriverAvailability with ID {driverAvailability.AvailabilityId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"DriverAvailability with ID {driverAvailability.AvailabilityId} not found.");
             }
 
             // Update properties
@@ -51,23 +32,8 @@ namespace TaxiMo.Services.Services
             existingDriverAvailability.LastLocationUpdate = driverAvailability.LastLocationUpdate;
             existingDriverAvailability.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingDriverAvailability;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var driverAvailability = await _context.DriverAvailabilities.FindAsync(id);
-            if (driverAvailability == null)
-            {
-                return false;
-            }
-
-            _context.DriverAvailabilities.Remove(driverAvailability);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

@@ -2,13 +2,9 @@ using TaxiMo.Services.Database.Entities;
 
 namespace TaxiMo.Services.Interfaces
 {
-    public interface IRideService
+    public interface IRideService : IBaseCRUDService<Ride>
     {
         Task<List<Ride>> GetAllAsync(string? search = null, string? status = null);
-        Task<Ride?> GetByIdAsync(int id);
-        Task<Ride> CreateAsync(Ride ride);
-        Task<Ride> UpdateAsync(Ride ride);
-        Task<bool> DeleteAsync(int id);
     }
 }
 

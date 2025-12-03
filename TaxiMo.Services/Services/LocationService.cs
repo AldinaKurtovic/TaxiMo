@@ -1,47 +1,28 @@
-using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class LocationService : ILocationService
+    public class LocationService : BaseCRUDService<Location>, ILocationService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public LocationService(TaxiMoDbContext context)
+        public LocationService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<List<Location>> GetAllAsync()
-        {
-            return await _context.Locations.ToListAsync();
-        }
-
-        public async Task<Location?> GetByIdAsync(int id)
-        {
-            return await _context.Locations.FindAsync(id);
-        }
-
-        public async Task<Location> CreateAsync(Location location)
+        public override async Task<Location> CreateAsync(Location location)
         {
             location.CreatedAt = DateTime.UtcNow;
             location.UpdatedAt = DateTime.UtcNow;
-
-            _context.Locations.Add(location);
-            await _context.SaveChangesAsync();
-
-            return location;
+            return await base.CreateAsync(location);
         }
 
-        public async Task<Location> UpdateAsync(Location location)
+        public override async Task<Location> UpdateAsync(Location location)
         {
-            var existingLocation = await _context.Locations.FindAsync(location.LocationId);
+            var existingLocation = await GetByIdAsync(location.LocationId);
             if (existingLocation == null)
             {
-                throw new UserException($"Location with ID {location.LocationId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"Location with ID {location.LocationId} not found.");
             }
 
             // Update properties
@@ -53,23 +34,8 @@ namespace TaxiMo.Services.Services
             existingLocation.Lng = location.Lng;
             existingLocation.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingLocation;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var location = await _context.Locations.FindAsync(id);
-            if (location == null)
-            {
-                return false;
-            }
-
-            _context.Locations.Remove(location);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

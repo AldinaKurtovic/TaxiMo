@@ -1,23 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class PromoCodeService : IPromoCodeService
+    public class PromoCodeService : BaseCRUDService<PromoCode>, IPromoCodeService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public PromoCodeService(TaxiMoDbContext context)
+        public PromoCodeService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<List<PromoCode>> GetAllAsync(string? search = null, bool? isActive = null)
         {
-            var query = _context.PromoCodes.AsQueryable();
+            var query = DbSet.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -43,27 +39,18 @@ namespace TaxiMo.Services.Services
             return await query.ToListAsync();
         }
 
-        public async Task<PromoCode?> GetByIdAsync(int id)
-        {
-            return await _context.PromoCodes.FindAsync(id);
-        }
-
-        public async Task<PromoCode> CreateAsync(PromoCode promoCode)
+        public override async Task<PromoCode> CreateAsync(PromoCode promoCode)
         {
             promoCode.CreatedAt = DateTime.UtcNow;
-
-            _context.PromoCodes.Add(promoCode);
-            await _context.SaveChangesAsync();
-
-            return promoCode;
+            return await base.CreateAsync(promoCode);
         }
 
-        public async Task<PromoCode> UpdateAsync(PromoCode promoCode)
+        public override async Task<PromoCode> UpdateAsync(PromoCode promoCode)
         {
-            var existingPromoCode = await _context.PromoCodes.FindAsync(promoCode.PromoId);
+            var existingPromoCode = await GetByIdAsync(promoCode.PromoId);
             if (existingPromoCode == null)
             {
-                throw new UserException($"PromoCode with ID {promoCode.PromoId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"PromoCode with ID {promoCode.PromoId} not found.");
             }
 
             // Update properties
@@ -76,23 +63,8 @@ namespace TaxiMo.Services.Services
             existingPromoCode.ValidUntil = promoCode.ValidUntil;
             existingPromoCode.Status = promoCode.Status;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingPromoCode;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var promoCode = await _context.PromoCodes.FindAsync(id);
-            if (promoCode == null)
-            {
-                return false;
-            }
-
-            _context.PromoCodes.Remove(promoCode);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

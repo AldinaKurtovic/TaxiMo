@@ -1,23 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class RideService : IRideService
+    public class RideService : BaseCRUDService<Ride>, IRideService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public RideService(TaxiMoDbContext context)
+        public RideService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<List<Ride>> GetAllAsync(string? search = null, string? status = null)
         {
-            var query = _context.Rides
+            var query = DbSet
                 .Include(r => r.Driver)
                 .Include(r => r.Rider)
                 .AsQueryable();
@@ -40,25 +36,12 @@ namespace TaxiMo.Services.Services
             return await query.ToListAsync();
         }
 
-        public async Task<Ride?> GetByIdAsync(int id)
+        public override async Task<Ride> UpdateAsync(Ride ride)
         {
-            return await _context.Rides.FindAsync(id);
-        }
-
-        public async Task<Ride> CreateAsync(Ride ride)
-        {
-            _context.Rides.Add(ride);
-            await _context.SaveChangesAsync();
-
-            return ride;
-        }
-
-        public async Task<Ride> UpdateAsync(Ride ride)
-        {
-            var existingRide = await _context.Rides.FindAsync(ride.RideId);
+            var existingRide = await GetByIdAsync(ride.RideId);
             if (existingRide == null)
             {
-                throw new UserException($"Ride with ID {ride.RideId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {ride.RideId} not found.");
             }
 
             // Update properties
@@ -76,23 +59,8 @@ namespace TaxiMo.Services.Services
             existingRide.DistanceKm = ride.DistanceKm;
             existingRide.DurationMin = ride.DurationMin;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingRide;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var ride = await _context.Rides.FindAsync(id);
-            if (ride == null)
-            {
-                return false;
-            }
-
-            _context.Rides.Remove(ride);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

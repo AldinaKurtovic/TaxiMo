@@ -1,44 +1,21 @@
-using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class DriverNotificationService : IDriverNotificationService
+    public class DriverNotificationService : BaseCRUDService<DriverNotification>, IDriverNotificationService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public DriverNotificationService(TaxiMoDbContext context)
+        public DriverNotificationService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<List<DriverNotification>> GetAllAsync()
+        public override async Task<DriverNotification> UpdateAsync(DriverNotification driverNotification)
         {
-            return await _context.DriverNotifications.ToListAsync();
-        }
-
-        public async Task<DriverNotification?> GetByIdAsync(int id)
-        {
-            return await _context.DriverNotifications.FindAsync(id);
-        }
-
-        public async Task<DriverNotification> CreateAsync(DriverNotification driverNotification)
-        {
-            _context.DriverNotifications.Add(driverNotification);
-            await _context.SaveChangesAsync();
-
-            return driverNotification;
-        }
-
-        public async Task<DriverNotification> UpdateAsync(DriverNotification driverNotification)
-        {
-            var existingDriverNotification = await _context.DriverNotifications.FindAsync(driverNotification.NotificationId);
+            var existingDriverNotification = await GetByIdAsync(driverNotification.NotificationId);
             if (existingDriverNotification == null)
             {
-                throw new UserException($"DriverNotification with ID {driverNotification.NotificationId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"DriverNotification with ID {driverNotification.NotificationId} not found.");
             }
 
             // Update properties
@@ -49,23 +26,8 @@ namespace TaxiMo.Services.Services
             existingDriverNotification.IsRead = driverNotification.IsRead;
             existingDriverNotification.SentAt = driverNotification.SentAt;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingDriverNotification;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var driverNotification = await _context.DriverNotifications.FindAsync(id);
-            if (driverNotification == null)
-            {
-                return false;
-            }
-
-            _context.DriverNotifications.Remove(driverNotification);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }

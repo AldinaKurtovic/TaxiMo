@@ -1,47 +1,28 @@
-using Microsoft.EntityFrameworkCore;
-using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
 
 namespace TaxiMo.Services.Services
 {
-    public class VehicleService : IVehicleService
+    public class VehicleService : BaseCRUDService<Vehicle>, IVehicleService
     {
-        private readonly TaxiMoDbContext _context;
-
-        public VehicleService(TaxiMoDbContext context)
+        public VehicleService(TaxiMoDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<List<Vehicle>> GetAllAsync()
-        {
-            return await _context.Vehicles.ToListAsync();
-        }
-
-        public async Task<Vehicle?> GetByIdAsync(int id)
-        {
-            return await _context.Vehicles.FindAsync(id);
-        }
-
-        public async Task<Vehicle> CreateAsync(Vehicle vehicle)
+        public override async Task<Vehicle> CreateAsync(Vehicle vehicle)
         {
             vehicle.CreatedAt = DateTime.UtcNow;
             vehicle.UpdatedAt = DateTime.UtcNow;
-
-            _context.Vehicles.Add(vehicle);
-            await _context.SaveChangesAsync();
-
-            return vehicle;
+            return await base.CreateAsync(vehicle);
         }
 
-        public async Task<Vehicle> UpdateAsync(Vehicle vehicle)
+        public override async Task<Vehicle> UpdateAsync(Vehicle vehicle)
         {
-            var existingVehicle = await _context.Vehicles.FindAsync(vehicle.VehicleId);
+            var existingVehicle = await GetByIdAsync(vehicle.VehicleId);
             if (existingVehicle == null)
             {
-                throw new UserException($"Vehicle with ID {vehicle.VehicleId} not found.");
+                throw new TaxiMo.Model.Exceptions.UserException($"Vehicle with ID {vehicle.VehicleId} not found.");
             }
 
             // Update properties
@@ -56,23 +37,8 @@ namespace TaxiMo.Services.Services
             existingVehicle.Status = vehicle.Status;
             existingVehicle.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-
+            await Context.SaveChangesAsync();
             return existingVehicle;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var vehicle = await _context.Vehicles.FindAsync(id);
-            if (vehicle == null)
-            {
-                return false;
-            }
-
-            _context.Vehicles.Remove(vehicle);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
     }
 }
