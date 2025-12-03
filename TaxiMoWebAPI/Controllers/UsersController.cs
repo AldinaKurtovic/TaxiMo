@@ -30,19 +30,11 @@ namespace TaxiMoWebAPI.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<UserResponse>> Login(UserLoginRequest request)
         {
-            try
-            {
-                var user = await _userService.AuthenticateAsync(request);
-                if (user == null)
-                    return Unauthorized(new { message = "Invalid username or password" });
+            var user = await _userService.AuthenticateAsync(request);
+            if (user == null)
+                return Unauthorized(new { message = "Invalid username or password" });
 
-                return Ok(user);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during login");
-                return StatusCode(500, new { message = "An error occurred during login" });
-            }
+            return Ok(user);
         }
 
         // GET ALL USERS
@@ -68,55 +60,39 @@ namespace TaxiMoWebAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<object>> CreateUser(UserCreateDto dto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-                // Use the DTO-based CreateAsync which handles password hashing and role assignment
-                var userResponse = await _userService.CreateAsync(dto);
-                return Ok(new { message = "User created.", data = userResponse });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating user");
-                return StatusCode(500, new { message = ex.Message });
-            }
+            // Use the DTO-based CreateAsync which handles password hashing and role assignment
+            var userResponse = await _userService.CreateAsync(dto);
+            return Ok(new { message = "User created.", data = userResponse });
         }
 
         // UPDATE USER
         [HttpPut("{id}")]
         public async Task<ActionResult<object>> UpdateUser(int id, UserUpdateDto dto)
         {
-            try
+            if (id != dto.UserId)
+                return BadRequest(new { message = "User ID mismatch." });
+
+            var existing = await _userService.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { message = "User not found." });
+
+            // PASSWORD CHANGE
+            if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
             {
-                if (id != dto.UserId)
-                    return BadRequest(new { message = "User ID mismatch." });
-
-                var existing = await _userService.GetByIdAsync(id);
-                if (existing == null)
-                    return NotFound(new { message = "User not found." });
-
-                // PASSWORD CHANGE
-                if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
-                {
-                    PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
-                    existing.PasswordHash = hash;
-                    existing.PasswordSalt = salt;
-                }
-
-                // UPDATE OTHER FIELDS
-                _mapper.Map(dto, existing);
-
-                await _userService.UpdateAsync(existing);
-
-                return Ok(new { message = "User updated.", data = _mapper.Map<UserDto>(existing) });
+                PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
+                existing.PasswordHash = hash;
+                existing.PasswordSalt = salt;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating user");
-                return StatusCode(500, new { message = "An error occurred while updating the user" });
-            }
+
+            // UPDATE OTHER FIELDS
+            _mapper.Map(dto, existing);
+
+            await _userService.UpdateAsync(existing);
+
+            return Ok(new { message = "User updated.", data = _mapper.Map<UserDto>(existing) });
         }
 
         // DELETE
@@ -138,20 +114,12 @@ namespace TaxiMoWebAPI.Controllers
         [HttpPost("fix-users-without-roles")]
         public async Task<ActionResult<object>> FixUsersWithoutRoles()
         {
-            try
-            {
-                var fixedCount = await _userService.FixUsersWithoutRolesAsync();
-                return Ok(new 
-                { 
-                    message = $"Successfully assigned default 'User' role to {fixedCount} user(s).",
-                    usersFixed = fixedCount
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fixing users without roles");
-                return StatusCode(500, new { message = ex.Message });
-            }
+            var fixedCount = await _userService.FixUsersWithoutRolesAsync();
+            return Ok(new 
+            { 
+                message = $"Successfully assigned default 'User' role to {fixedCount} user(s).",
+                usersFixed = fixedCount
+            });
         }
     }
 }

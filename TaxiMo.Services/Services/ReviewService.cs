@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -58,7 +59,7 @@ namespace TaxiMo.Services.Services
             var existingReview = await _context.Reviews.FindAsync(review.ReviewId);
             if (existingReview == null)
             {
-                throw new KeyNotFoundException($"Review with ID {review.ReviewId} not found.");
+                throw new UserException($"Review with ID {review.ReviewId} not found.");
             }
 
             // Update properties

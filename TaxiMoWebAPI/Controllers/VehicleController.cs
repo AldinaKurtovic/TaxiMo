@@ -14,134 +14,84 @@ namespace TaxiMoWebAPI.Controllers
     {
         private readonly IVehicleService _vehicleService;
         private readonly IMapper _mapper;
-        private readonly ILogger<VehicleController> _logger;
 
-        public VehicleController(IVehicleService vehicleService, IMapper mapper, ILogger<VehicleController> logger)
+        public VehicleController(IVehicleService vehicleService, IMapper mapper)
         {
             _vehicleService = vehicleService;
             _mapper = mapper;
-            _logger = logger;
         }
 
         // GET: api/Vehicle
         [HttpGet]
         public async Task<ActionResult<IEnumerable<VehicleDto>>> GetVehicles()
         {
-            try
-            {
-                var vehicles = await _vehicleService.GetAllAsync();
-                var vehicleDtos = _mapper.Map<List<VehicleDto>>(vehicles);
-                return Ok(vehicleDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving vehicles");
-                return StatusCode(500, new { message = "An error occurred while retrieving vehicles" });
-            }
+            var vehicles = await _vehicleService.GetAllAsync();
+            var vehicleDtos = _mapper.Map<List<VehicleDto>>(vehicles);
+            return Ok(vehicleDtos);
         }
 
         // GET: api/Vehicle/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<VehicleDto>> GetVehicle(int id)
         {
-            try
-            {
-                var vehicle = await _vehicleService.GetByIdAsync(id);
+            var vehicle = await _vehicleService.GetByIdAsync(id);
 
-                if (vehicle == null)
-                {
-                    return NotFound(new { message = $"Vehicle with ID {id} not found" });
-                }
-
-                var vehicleDto = _mapper.Map<VehicleDto>(vehicle);
-                return Ok(vehicleDto);
-            }
-            catch (Exception ex)
+            if (vehicle == null)
             {
-                _logger.LogError(ex, "Error retrieving vehicle with ID {VehicleId}", id);
-                return StatusCode(500, new { message = "An error occurred while retrieving the vehicle" });
+                return NotFound(new { message = $"Vehicle with ID {id} not found" });
             }
+
+            var vehicleDto = _mapper.Map<VehicleDto>(vehicle);
+            return Ok(vehicleDto);
         }
 
         // POST: api/Vehicle
         [HttpPost]
         public async Task<ActionResult<VehicleDto>> CreateVehicle(VehicleCreateDto vehicleCreateDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var vehicle = _mapper.Map<Vehicle>(vehicleCreateDto);
-                var createdVehicle = await _vehicleService.CreateAsync(vehicle);
-                var vehicleDto = _mapper.Map<VehicleDto>(createdVehicle);
-
-                return CreatedAtAction(nameof(GetVehicle), new { id = vehicleDto.VehicleId }, vehicleDto);
+                return BadRequest(ModelState);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating vehicle");
-                return StatusCode(500, new { message = "An error occurred while creating the vehicle" });
-            }
+
+            var vehicle = _mapper.Map<Vehicle>(vehicleCreateDto);
+            var createdVehicle = await _vehicleService.CreateAsync(vehicle);
+            var vehicleDto = _mapper.Map<VehicleDto>(createdVehicle);
+
+            return CreatedAtAction(nameof(GetVehicle), new { id = vehicleDto.VehicleId }, vehicleDto);
         }
 
         // PUT: api/Vehicle/{id}
         [HttpPut("{id}")]
         public async Task<ActionResult<VehicleDto>> UpdateVehicle(int id, VehicleUpdateDto vehicleUpdateDto)
         {
-            try
+            if (id != vehicleUpdateDto.VehicleId)
             {
-                if (id != vehicleUpdateDto.VehicleId)
-                {
-                    return BadRequest(new { message = "Vehicle ID mismatch" });
-                }
-
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                try
-                {
-                    var vehicle = _mapper.Map<Vehicle>(vehicleUpdateDto);
-                    var updatedVehicle = await _vehicleService.UpdateAsync(vehicle);
-                    var vehicleDto = _mapper.Map<VehicleDto>(updatedVehicle);
-                    return Ok(vehicleDto);
-                }
-                catch (KeyNotFoundException)
-                {
-                    return NotFound(new { message = $"Vehicle with ID {id} not found" });
-                }
+                return BadRequest(new { message = "Vehicle ID mismatch" });
             }
-            catch (Exception ex)
+
+            if (!ModelState.IsValid)
             {
-                _logger.LogError(ex, "Error updating vehicle with ID {VehicleId}", id);
-                return StatusCode(500, new { message = "An error occurred while updating the vehicle" });
+                return BadRequest(ModelState);
             }
+
+            var vehicle = _mapper.Map<Vehicle>(vehicleUpdateDto);
+            var updatedVehicle = await _vehicleService.UpdateAsync(vehicle);
+            var vehicleDto = _mapper.Map<VehicleDto>(updatedVehicle);
+            return Ok(vehicleDto);
         }
 
         // DELETE: api/Vehicle/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(int id)
         {
-            try
+            var deleted = await _vehicleService.DeleteAsync(id);
+            if (!deleted)
             {
-                var deleted = await _vehicleService.DeleteAsync(id);
-                if (!deleted)
-                {
-                    return NotFound(new { message = $"Vehicle with ID {id} not found" });
-                }
+                return NotFound(new { message = $"Vehicle with ID {id} not found" });
+            }
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting vehicle with ID {VehicleId}", id);
-                return StatusCode(500, new { message = "An error occurred while deleting the vehicle" });
-            }
+            return NoContent();
         }
     }
 }
-

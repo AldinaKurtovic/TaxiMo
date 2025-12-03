@@ -91,7 +91,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasKey("DriverId");
 
-                    b.ToTable("Drivers");
+                    b.ToTable("Drivers", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAuthToken", b =>
@@ -132,7 +132,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("DriverId");
 
-                    b.ToTable("DriverAuthTokens");
+                    b.ToTable("DriverAuthTokens", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAvailability", b =>
@@ -165,7 +165,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("DriverId");
 
-                    b.ToTable("DriverAvailabilities");
+                    b.ToTable("DriverAvailabilities", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverNotification", b =>
@@ -203,7 +203,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("RecipientDriverId");
 
-                    b.ToTable("DriverNotifications");
+                    b.ToTable("DriverNotifications", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverRole", b =>
@@ -229,7 +229,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("DriverRoles");
+                    b.ToTable("DriverRoles", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Location", b =>
@@ -272,7 +272,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Locations");
+                    b.ToTable("Locations", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Payment", b =>
@@ -320,7 +320,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.PromoCode", b =>
@@ -367,7 +367,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasKey("PromoId");
 
-                    b.ToTable("PromoCodes");
+                    b.ToTable("PromoCodes", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.PromoUsage", b =>
@@ -398,7 +398,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PromoUsages");
+                    b.ToTable("PromoUsages", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Review", b =>
@@ -436,7 +436,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("RiderId");
 
-                    b.ToTable("Reviews");
+                    b.ToTable("Reviews", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Ride", b =>
@@ -500,7 +500,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("Rides");
+                    b.ToTable("Rides", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Role", b =>
@@ -525,7 +525,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasKey("RoleId");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.User", b =>
@@ -586,7 +586,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserAuthToken", b =>
@@ -627,7 +627,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserAuthTokens");
+                    b.ToTable("UserAuthTokens", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserNotification", b =>
@@ -665,7 +665,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("RecipientUserId");
 
-                    b.ToTable("UserNotifications");
+                    b.ToTable("UserNotifications", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.UserRole", b =>
@@ -691,7 +691,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.Vehicle", b =>
@@ -750,7 +750,7 @@ namespace TaxiMo.Services.Migrations
 
                     b.HasIndex("DriverId");
 
-                    b.ToTable("Vehicles");
+                    b.ToTable("Vehicles", (string)null);
                 });
 
             modelBuilder.Entity("TaxiMo.Services.Database.Entities.DriverAuthToken", b =>

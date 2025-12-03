@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -44,7 +45,7 @@ namespace TaxiMo.Services.Services
             var existingRole = await _context.Roles.FindAsync(role.RoleId);
             if (existingRole == null)
             {
-                throw new KeyNotFoundException($"Role with ID {role.RoleId} not found.");
+                throw new UserException($"Role with ID {role.RoleId} not found.");
             }
 
             existingRole.Name = role.Name;

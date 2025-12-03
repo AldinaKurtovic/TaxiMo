@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -37,7 +38,7 @@ namespace TaxiMo.Services.Services
             var existingUserNotification = await _context.UserNotifications.FindAsync(userNotification.NotificationId);
             if (existingUserNotification == null)
             {
-                throw new KeyNotFoundException($"UserNotification with ID {userNotification.NotificationId} not found.");
+                throw new UserException($"UserNotification with ID {userNotification.NotificationId} not found.");
             }
 
             // Update properties

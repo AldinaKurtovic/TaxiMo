@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -62,7 +63,7 @@ namespace TaxiMo.Services.Services
             var existingPromoCode = await _context.PromoCodes.FindAsync(promoCode.PromoId);
             if (existingPromoCode == null)
             {
-                throw new KeyNotFoundException($"PromoCode with ID {promoCode.PromoId} not found.");
+                throw new UserException($"PromoCode with ID {promoCode.PromoId} not found.");
             }
 
             // Update properties

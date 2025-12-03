@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs.Auth;
@@ -62,7 +63,7 @@ namespace TaxiMo.Services.Services
             driver.CreatedAt = DateTime.UtcNow;
             driver.UpdatedAt = DateTime.UtcNow;
 
-            // 1. Kreiramo vozaèa
+            // 1. Kreiramo vozaï¿½a
             _context.Drivers.Add(driver);
             await _context.SaveChangesAsync();
 
@@ -77,7 +78,7 @@ namespace TaxiMo.Services.Services
             _context.DriverRoles.Add(driverRole);
             await _context.SaveChangesAsync();
 
-            // 3. Uèitaj role u objekt drivera prije vraæanja
+            // 3. Uï¿½itaj role u objekt drivera prije vraï¿½anja
             driver.DriverRoles = new List<DriverRole> { driverRole };
 
             return driver;
@@ -93,7 +94,7 @@ namespace TaxiMo.Services.Services
             var existingDriver = await _context.Drivers.FindAsync(driver.DriverId);
             if (existingDriver == null)
             {
-                throw new KeyNotFoundException($"Driver with ID {driver.DriverId} not found.");
+                throw new UserException($"Driver with ID {driver.DriverId} not found.");
             }
 
             // Update properties

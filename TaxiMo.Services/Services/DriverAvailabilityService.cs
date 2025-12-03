@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -39,7 +40,7 @@ namespace TaxiMo.Services.Services
             var existingDriverAvailability = await _context.DriverAvailabilities.FindAsync(driverAvailability.AvailabilityId);
             if (existingDriverAvailability == null)
             {
-                throw new KeyNotFoundException($"DriverAvailability with ID {driverAvailability.AvailabilityId} not found.");
+                throw new UserException($"DriverAvailability with ID {driverAvailability.AvailabilityId} not found.");
             }
 
             // Update properties

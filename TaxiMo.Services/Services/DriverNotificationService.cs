@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -37,7 +38,7 @@ namespace TaxiMo.Services.Services
             var existingDriverNotification = await _context.DriverNotifications.FindAsync(driverNotification.NotificationId);
             if (existingDriverNotification == null)
             {
-                throw new KeyNotFoundException($"DriverNotification with ID {driverNotification.NotificationId} not found.");
+                throw new UserException($"DriverNotification with ID {driverNotification.NotificationId} not found.");
             }
 
             // Update properties

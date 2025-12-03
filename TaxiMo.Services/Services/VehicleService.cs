@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -40,7 +41,7 @@ namespace TaxiMo.Services.Services
             var existingVehicle = await _context.Vehicles.FindAsync(vehicle.VehicleId);
             if (existingVehicle == null)
             {
-                throw new KeyNotFoundException($"Vehicle with ID {vehicle.VehicleId} not found.");
+                throw new UserException($"Vehicle with ID {vehicle.VehicleId} not found.");
             }
 
             // Update properties

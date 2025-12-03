@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
@@ -109,10 +110,10 @@ namespace TaxiMo.Services.Services
         public async Task<UserResponse> CreateAsync(UserCreateDto dto)
         {
             if (await _context.Users.AnyAsync(x => x.Email == dto.Email))
-                throw new Exception("Email already exists.");
+                throw new UserException("Email already exists.");
 
             if (await _context.Users.AnyAsync(x => x.Username == dto.Username))
-                throw new Exception("Username already exists.");
+                throw new UserException("Username already exists.");
 
             PasswordHelper.CreatePasswordHash(dto.Password, out string hash, out string salt);
 
@@ -138,7 +139,7 @@ namespace TaxiMo.Services.Services
                 .FirstOrDefaultAsync(r => r.RoleId == dto.RoleId && r.IsActive);
 
             if (role == null)
-                throw new Exception("Invalid RoleId.");
+                throw new UserException("Invalid RoleId.");
 
             _context.UserRoles.Add(new UserRole
             {
@@ -160,7 +161,7 @@ namespace TaxiMo.Services.Services
         {
             var db = await _context.Users.FindAsync(user.UserId);
             if (db == null)
-                throw new Exception("User not found.");
+                throw new UserException("User not found.");
 
             db.FirstName = user.FirstName;
             db.LastName = user.LastName;
@@ -184,7 +185,7 @@ namespace TaxiMo.Services.Services
                 .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
 
             if (user == null)
-                throw new Exception("User not found.");
+                throw new UserException("User not found.");
 
             // Update fields
             if (!string.IsNullOrWhiteSpace(dto.FirstName))
@@ -197,7 +198,7 @@ namespace TaxiMo.Services.Services
             {
                 if (user.Email != dto.Email &&
                     await _context.Users.AnyAsync(x => x.Email == dto.Email && x.UserId != dto.UserId))
-                    throw new Exception("Email already exists.");
+                    throw new UserException("Email already exists.");
 
                 user.Email = dto.Email;
             }
@@ -206,7 +207,7 @@ namespace TaxiMo.Services.Services
             {
                 if (user.Username != dto.Username &&
                     await _context.Users.AnyAsync(x => x.Username == dto.Username && x.UserId != dto.UserId))
-                    throw new Exception("Username already exists.");
+                    throw new UserException("Username already exists.");
 
                 user.Username = dto.Username;
             }
@@ -244,7 +245,7 @@ namespace TaxiMo.Services.Services
                     .FirstOrDefaultAsync(r => r.RoleId == dto.RoleId && r.IsActive);
 
                 if (newRole == null)
-                    throw new Exception("Invalid RoleId.");
+                    throw new UserException("Invalid RoleId.");
 
                 // Assign new role
                 _context.UserRoles.Add(new UserRole
@@ -318,7 +319,7 @@ namespace TaxiMo.Services.Services
                 .FirstOrDefaultAsync(u => u.UserId == userId);
 
             if (user == null)
-                throw new Exception("User not found.");
+                throw new UserException("User not found.");
 
             return new UserResponse
             {
@@ -352,14 +353,14 @@ namespace TaxiMo.Services.Services
             // Check if user exists
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
-                throw new Exception($"User with ID {userId} not found.");
+                throw new UserException($"User with ID {userId} not found.");
 
             // Get role by name (case-insensitive)
             var role = await _context.Roles
                 .FirstOrDefaultAsync(r => r.Name.ToLower() == roleName.ToLower() && r.IsActive);
 
             if (role == null)
-                throw new Exception($"Role '{roleName}' not found or is inactive.");
+                throw new UserException($"Role '{roleName}' not found or is inactive.");
 
             // Check if user already has this role
             var existingUserRole = await _context.UserRoles
@@ -391,7 +392,7 @@ namespace TaxiMo.Services.Services
                 .FirstOrDefaultAsync(r => r.Name.ToLower() == "user" && r.IsActive);
 
             if (userRole == null)
-                throw new Exception("Default 'User' role not found or is inactive.");
+                throw new UserException("Default 'User' role not found or is inactive.");
 
             // Find all users that don't have any roles
             var usersWithoutRoles = await _context.Users

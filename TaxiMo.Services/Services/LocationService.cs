@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -40,7 +41,7 @@ namespace TaxiMo.Services.Services
             var existingLocation = await _context.Locations.FindAsync(location.LocationId);
             if (existingLocation == null)
             {
-                throw new KeyNotFoundException($"Location with ID {location.LocationId} not found.");
+                throw new UserException($"Location with ID {location.LocationId} not found.");
             }
 
             // Update properties

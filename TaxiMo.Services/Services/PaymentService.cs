@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
@@ -37,7 +38,7 @@ namespace TaxiMo.Services.Services
             var existingPayment = await _context.Payments.FindAsync(payment.PaymentId);
             if (existingPayment == null)
             {
-                throw new KeyNotFoundException($"Payment with ID {payment.PaymentId} not found.");
+                throw new UserException($"Payment with ID {payment.PaymentId} not found.");
             }
 
             // Update properties
