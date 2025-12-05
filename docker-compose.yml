@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  taximo-sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=MyStrong!Passw0rd
+      - MSSQL_PID=Developer
+    ports:
+      - "1401:1433"
+    networks:
+      - taximo-2025
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_MQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_MQ_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - taximo-2025
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    user: "999:999"
+
+  taximo-api:
+    build:
+      context: .
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=taximo-sql,1433;Database=TaxiMoDB;User Id=sa;Password=MyStrong!Passw0rd;TrustServerCertificate=True
+      - RabbitMQ__ConnectionString=host=rabbitmq;username=${RABBIT_MQ_USER};password=${RABBIT_MQ_PASS}
+    ports:
+      - "5244:5244"
+    networks:
+      - taximo-2025
+    depends_on:
+      taximo-sql:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  taximo.subscriber:
+    build:
+      context: .
+      dockerfile: Subscriber/Dockerfile
+    environment:
+      - RABBITMQ_CONNECTIONSTRING=host=rabbitmq;username=${RABBIT_MQ_USER};password=${RABBIT_MQ_PASS}
+      - ConnectionStrings__DefaultConnection=Server=taximo-sql,1433;Database=TaxiMoDB;User Id=sa;Password=MyStrong!Passw0rd;TrustServerCertificate=True
+    networks:
+      - taximo-2025
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    command: sh -c "sleep 90 && dotnet Subscriber.dll"
+
+networks:
+  taximo-2025:
+    driver: bridge
