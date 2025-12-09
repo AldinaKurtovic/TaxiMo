@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/admin_auth_provider.dart';
 import '../layout/master_screen.dart';
-import '../screens/users/users_screen.dart';
+import '../screens/home/home_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -41,8 +41,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => const MasterScreen(
-              child: UsersScreen(),
-              currentRoute: '/users',
+              child: HomeScreen(),
+              currentRoute: '/home',
             ),
           ),
         );

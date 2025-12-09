@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/admin_auth_provider.dart';
+import '../screens/admin_login_screen.dart';
+import '../screens/home/home_screen.dart';
 import '../screens/users/users_screen.dart';
+import '../screens/drivers/drivers_screen.dart';
+import '../screens/promo_codes/promo_codes_screen.dart';
+import '../screens/reviews/reviews_screen.dart';
 
 class MasterScreen extends StatefulWidget {
   final Widget child;
@@ -16,15 +23,62 @@ class MasterScreen extends StatefulWidget {
 }
 
 class _MasterScreenState extends State<MasterScreen> {
+  void _navigateToRoute(String route) {
+    Widget? screen;
+    switch (route) {
+      case '/home':
+        screen = const HomeScreen();
+        break;
+      case '/users':
+        screen = const UsersScreen();
+        break;
+      case '/drivers':
+        screen = const DriversScreen();
+        break;
+      case '/promo-codes':
+        screen = const PromoCodesScreen();
+        break;
+      case '/reviews':
+        screen = const ReviewsScreen();
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$route - Coming soon')),
+        );
+        return;
+    }
+
+    if (screen != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MasterScreen(
+            child: screen!,
+            currentRoute: route,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleLogout() {
+    Provider.of<AdminAuthProvider>(context, listen: false).logout();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Row(
         children: [
-          // Left Sidebar
+          // Left Sidebar - Dark Theme
           Container(
             width: 250,
-            color: const Color(0xFF1E1E2E),
+            color: const Color(0xFF2D2D3F), // Dark gray background
             child: Column(
               children: [
                 // Logo/Title
@@ -58,7 +112,7 @@ class _MasterScreenState extends State<MasterScreen> {
                         isSelected: widget.currentRoute == '/users',
                       ),
                       _buildNavItem(
-                        icon: Icons.drive_eta_outlined,
+                        icon: Icons.people_outline,
                         title: 'DRIVERS',
                         route: '/drivers',
                         isSelected: widget.currentRoute == '/drivers',
@@ -93,11 +147,11 @@ class _MasterScreenState extends State<MasterScreen> {
               ],
             ),
           ),
-          // Main Content Area
+          // Main Content Area - White Background
           Expanded(
             child: Column(
               children: [
-                // Top Header
+                // Top Header Bar
                 Container(
                   height: 60,
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -107,16 +161,22 @@ class _MasterScreenState extends State<MasterScreen> {
                     children: [
                       PopupMenuButton<String>(
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'Admin',
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
                             ),
-                            Icon(Icons.arrow_drop_down),
+                            Icon(Icons.arrow_drop_down, size: 20),
                           ],
                         ),
                         onSelected: (value) {
-                          // Handle menu selection
+                          if (value == 'logout') {
+                            _handleLogout();
+                          }
                         },
                         itemBuilder: (context) => [
                           const PopupMenuItem(
@@ -138,7 +198,17 @@ class _MasterScreenState extends State<MasterScreen> {
                 ),
                 const Divider(height: 1),
                 // Page Content
-                Expanded(child: widget.child),
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1400),
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -154,41 +224,24 @@ class _MasterScreenState extends State<MasterScreen> {
     required bool isSelected,
   }) {
     return InkWell(
-      onTap: () {
-        if (route == '/users') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const MasterScreen(
-                child: UsersScreen(),
-                currentRoute: '/users',
-              ),
-            ),
-          );
-        } else {
-          // TODO: Navigate to other routes
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title - Coming soon')),
-          );
-        }
-      },
+      onTap: () => _navigateToRoute(route),
       child: Container(
         color: isSelected
-            ? Colors.deepPurple.withOpacity(0.2)
+            ? const Color(0xFF3D3D4F) // Slightly lighter dark gray when selected
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Row(
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.deepPurple : Colors.grey[400],
+              color: isSelected ? Colors.white : Colors.grey[400],
               size: 24,
             ),
             const SizedBox(width: 16),
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? Colors.deepPurple : Colors.grey[400],
+                color: isSelected ? Colors.white : Colors.grey[400],
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 14,
               ),

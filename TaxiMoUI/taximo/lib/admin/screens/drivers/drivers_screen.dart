@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/users_provider.dart';
-import '../../models/user_model.dart';
+import '../../providers/drivers_provider.dart';
+import '../../models/driver_model.dart';
 
-class UsersScreen extends StatefulWidget {
-  const UsersScreen({super.key});
+class DriversScreen extends StatefulWidget {
+  const DriversScreen({super.key});
 
   @override
-  State<UsersScreen> createState() => _UsersScreenState();
+  State<DriversScreen> createState() => _DriversScreenState();
 }
 
-class _UsersScreenState extends State<UsersScreen> {
+class _DriversScreenState extends State<DriversScreen> {
   final _searchController = TextEditingController();
-  bool? _statusFilter;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UsersProvider>(context, listen: false).loadUsers();
+      Provider.of<DriversProvider>(context, listen: false).loadDrivers();
     });
   }
 
@@ -28,20 +27,12 @@ class _UsersScreenState extends State<UsersScreen> {
     super.dispose();
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return '';
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$month/$day/$year';
-  }
-
-  void _showDeleteDialog(BuildContext context, UserModel user) {
+  void _showDeleteDialog(BuildContext context, DriverModel driver) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.fullName}?'),
+        title: const Text('Delete Driver'),
+        content: Text('Are you sure you want to delete ${driver.fullName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -49,8 +40,8 @@ class _UsersScreenState extends State<UsersScreen> {
           ),
           TextButton(
             onPressed: () {
-              Provider.of<UsersProvider>(context, listen: false)
-                  .deleteUser(user.userId);
+              Provider.of<DriversProvider>(context, listen: false)
+                  .deleteDriver(driver.driverId);
               Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -70,7 +61,7 @@ class _UsersScreenState extends State<UsersScreen> {
         children: [
           // Title
           const Text(
-            'Users',
+            'Drivers',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -83,16 +74,16 @@ class _UsersScreenState extends State<UsersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Add User Button
+              // Add Driver Button
               ElevatedButton.icon(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Add User - Coming soon')),
+                    const SnackBar(content: Text('Add Driver - Coming soon')),
                   );
                 },
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text(
-                  'ADD USER',
+                  'ADD DRIVERS',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -143,7 +134,7 @@ class _UsersScreenState extends State<UsersScreen> {
                     fillColor: Colors.white,
                   ),
                   onChanged: (value) {
-                    Provider.of<UsersProvider>(context, listen: false)
+                    Provider.of<DriversProvider>(context, listen: false)
                         .setSearchQuery(value.isEmpty ? null : value);
                   },
                 ),
@@ -153,7 +144,7 @@ class _UsersScreenState extends State<UsersScreen> {
           const SizedBox(height: 24),
           // Data Table
           Expanded(
-            child: Consumer<UsersProvider>(
+            child: Consumer<DriversProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -170,7 +161,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => provider.loadUsers(),
+                          onPressed: () => provider.loadDrivers(),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -178,9 +169,9 @@ class _UsersScreenState extends State<UsersScreen> {
                   );
                 }
 
-                if (provider.currentPageUsers.isEmpty) {
+                if (provider.currentPageDrivers.isEmpty) {
                   return const Center(
-                    child: Text('No users found'),
+                    child: Text('No drivers found'),
                   );
                 }
 
@@ -204,7 +195,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           label: Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: Text(
-                              'User ID',
+                              'Driver ID',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -218,7 +209,7 @@ class _UsersScreenState extends State<UsersScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'User Name',
+                                'Driver Name',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
@@ -240,31 +231,14 @@ class _UsersScreenState extends State<UsersScreen> {
                             ],
                           ),
                         ),
-                        DataColumn(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Status',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
-                                onPressed: () {
-                                  provider.sort('status');
-                                },
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 24,
-                                  minHeight: 24,
-                                ),
-                              ),
-                            ],
+                        const DataColumn(
+                          label: Text(
+                            'License Number',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Color(0xFF424242),
+                            ),
                           ),
                         ),
                         DataColumn(
@@ -296,7 +270,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         ),
                         const DataColumn(
                           label: Text(
-                            'Date of Birth',
+                            'Phone',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -311,14 +285,14 @@ class _UsersScreenState extends State<UsersScreen> {
                           ),
                         ),
                       ],
-                      rows: provider.currentPageUsers.map((user) {
+                      rows: provider.currentPageDrivers.map((driver) {
                         return DataRow(
                           cells: [
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.only(left: 8.0),
                                 child: Text(
-                                  user.userId.toString(),
+                                  driver.driverId.toString(),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -328,41 +302,7 @@ class _UsersScreenState extends State<UsersScreen> {
                             ),
                             DataCell(
                               Text(
-                                user.fullName,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF424242),
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: user.isActive
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    user.status,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF424242),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                user.email,
+                                driver.fullName,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF424242),
@@ -371,7 +311,25 @@ class _UsersScreenState extends State<UsersScreen> {
                             ),
                             DataCell(
                               Text(
-                                _formatDate(user.dateOfBirth),
+                                driver.licenseNumber,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                driver.email,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                driver.phone ?? '',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF424242),
@@ -397,7 +355,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                             .showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                                'Edit ${user.fullName} - Coming soon'),
+                                                'Edit ${driver.fullName} - Coming soon'),
                                           ),
                                         );
                                       },
@@ -412,7 +370,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                         minHeight: 40,
                                       ),
                                       onPressed: () {
-                                        _showDeleteDialog(context, user);
+                                        _showDeleteDialog(context, driver);
                                       },
                                     ),
                                   ],
@@ -432,7 +390,7 @@ class _UsersScreenState extends State<UsersScreen> {
           const SizedBox(height: 16),
           // Pagination
           Center(
-            child: Consumer<UsersProvider>(
+            child: Consumer<DriversProvider>(
               builder: (context, provider, _) {
                 if (provider.totalPages <= 1) {
                   return const SizedBox.shrink();
