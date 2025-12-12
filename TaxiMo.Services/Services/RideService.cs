@@ -18,6 +18,9 @@ namespace TaxiMo.Services.Services
             var query = DbSet
                 .Include(r => r.Driver)
                 .Include(r => r.Rider)
+                .Include(r => r.PickupLocation)
+                .Include(r => r.DropoffLocation)
+                .Include(r => r.Vehicle)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))

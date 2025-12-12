@@ -201,6 +201,28 @@ namespace TaxiMo.Services.Services
             return await _context.Drivers
                 .AnyAsync(d => d.Email.ToLower() == email.ToLower() && d.DriverId != excludeId);
         }
+
+        public async Task<List<Driver>> GetFreeDriversAsync()
+        {
+            // Get drivers with status "active" who don't have any active rides
+            var activeDrivers = await _context.Drivers
+                .Where(d => d.Status.ToLower() == "active")
+                .ToListAsync();
+
+            var activeRideDriverIds = await _context.Rides
+                .Where(r => r.Status.ToLower() == "active" || 
+                           r.Status.ToLower() == "requested" || 
+                           r.Status.ToLower() == "accepted")
+                .Select(r => r.DriverId)
+                .Distinct()
+                .ToListAsync();
+
+            var freeDrivers = activeDrivers
+                .Where(d => !activeRideDriverIds.Contains(d.DriverId))
+                .ToList();
+
+            return freeDrivers;
+        }
     }
 }
 

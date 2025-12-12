@@ -81,6 +81,7 @@ builder.Services.AddScoped<IDriverAvailabilityService, DriverAvailabilityService
 builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
 builder.Services.AddScoped<IPromoUsageService, PromoUsageService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 // Register ExceptionFilter for dependency injection
 builder.Services.AddTransient<ExceptionFilter>();

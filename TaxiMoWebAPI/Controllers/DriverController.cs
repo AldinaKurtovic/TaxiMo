@@ -49,6 +49,24 @@ namespace TaxiMoWebAPI.Controllers
             return Ok(_mapper.Map<DriverDto>(driver));
         }
 
+        // GET: api/driver/free
+        [HttpGet("free")]
+        public async Task<ActionResult<IEnumerable<DriverDto>>> GetFreeDrivers()
+        {
+            try
+            {
+                var allDrivers = await _driverService.GetAllAsync(null, true, null);
+                var freeDrivers = await _driverService.GetFreeDriversAsync();
+                var freeDriverDtos = _mapper.Map<List<DriverDto>>(freeDrivers);
+                return Ok(freeDriverDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving free drivers");
+                return StatusCode(500, new { message = "An error occurred while retrieving free drivers" });
+            }
+        }
+
         // POST: api/driver
         [HttpPost]
         public async Task<ActionResult<object>> CreateDriver(DriverCreateDto dto)

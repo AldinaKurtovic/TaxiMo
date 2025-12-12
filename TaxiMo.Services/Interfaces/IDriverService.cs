@@ -15,6 +15,7 @@ namespace TaxiMo.Services.Interfaces
         Task<DriverResponse?> AuthenticateAsync(DriverLoginRequest request);
         Task<bool> EmailExistsAsync(string email);
         Task<bool> EmailExistsAsync(string email, int excludeId);
+        Task<List<Driver>> GetFreeDriversAsync();
     }
 }
 

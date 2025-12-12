@@ -7,6 +7,8 @@ import '../screens/users/users_screen.dart';
 import '../screens/drivers/drivers_screen.dart';
 import '../screens/promo_codes/promo_codes_screen.dart';
 import '../screens/reviews/reviews_screen.dart';
+import '../screens/statistics/statistics_screen.dart';
+import '../screens/rides/rides_screen.dart';
 
 class MasterScreen extends StatefulWidget {
   final Widget child;
@@ -40,6 +42,12 @@ class _MasterScreenState extends State<MasterScreen> {
         break;
       case '/reviews':
         screen = const ReviewsScreen();
+        break;
+      case '/statistics':
+        screen = const StatisticsScreen();
+        break;
+      case '/rides':
+        screen = const RidesScreen();
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(

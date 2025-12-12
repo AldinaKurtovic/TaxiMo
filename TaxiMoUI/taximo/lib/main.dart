@@ -5,6 +5,8 @@ import 'admin/providers/users_provider.dart';
 import 'admin/providers/drivers_provider.dart';
 import 'admin/providers/promo_provider.dart';
 import 'admin/providers/reviews_provider.dart';
+import 'admin/providers/statistics_provider.dart';
+import 'admin/providers/rides_provider.dart';
 import 'admin/screens/admin_login_screen.dart';
 
 void main() {
@@ -23,6 +25,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DriversProvider()),
         ChangeNotifierProvider(create: (_) => PromoProvider()),
         ChangeNotifierProvider(create: (_) => ReviewsProvider()),
+        ChangeNotifierProvider(create: (_) => StatisticsProvider()),
+        ChangeNotifierProvider(create: (_) => RidesProvider()),
       ],
       child: MaterialApp(
         title: 'TaxiMo Admin',

@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.1.1
   http: ^1.6.0
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

@@ -29,7 +29,7 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/{controller}
         [HttpGet]
-        public virtual async Task<ActionResult<IEnumerable<TDto>>> GetAll()
+        public virtual async Task<ActionResult<IEnumerable<TDto>>> GetAll([FromQuery] string? search = null, [FromQuery] string? status = null)
         {
             try
             {
