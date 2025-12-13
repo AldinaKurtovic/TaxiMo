@@ -268,13 +268,86 @@ namespace TaxiMo.Services.Services
         // ============================
         public async Task<bool> DeleteAsync(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return false;
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserRoles)
+                    .Include(u => u.UserAuthTokens)
+                    .Include(u => u.UserNotifications)
+                    .FirstOrDefaultAsync(u => u.UserId == id);
+                
+                if (user == null)
+                    return false;
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
+                // Check for related entities that block deletion (DeleteBehavior.Restrict)
+                bool hasRides = await _context.Rides.AnyAsync(r => r.RiderId == id);
+                bool hasPayments = await _context.Payments.AnyAsync(p => p.UserId == id);
+                bool hasReviews = await _context.Reviews.AnyAsync(r => r.RiderId == id); // Review uses RiderId, not UserId
+                bool hasPromoUsages = await _context.PromoUsages.AnyAsync(pu => pu.UserId == id);
+                bool hasLocations = await _context.Locations.AnyAsync(l => l.UserId == id);
+
+                // OPTION A: Block deletion if user has rides (recommended)
+                if (hasRides)
+                {
+                    throw new InvalidOperationException("User cannot be deleted because rides exist. Please handle or delete rides first.");
+                }
+
+                if (hasPayments)
+                {
+                    throw new InvalidOperationException("User cannot be deleted because payments exist. Please handle or delete payments first.");
+                }
+
+                if (hasReviews)
+                {
+                    throw new InvalidOperationException("User cannot be deleted because reviews exist. Please handle or delete reviews first.");
+                }
+
+                if (hasPromoUsages)
+                {
+                    throw new InvalidOperationException("User cannot be deleted because promo code usages exist. Please handle or delete promo usages first.");
+                }
+
+                if (hasLocations)
+                {
+                    throw new InvalidOperationException("User cannot be deleted because locations exist. Please handle or delete locations first.");
+                }
+
+                // Delete related entities that can be deleted (UserRoles, UserAuthTokens, UserNotifications)
+                if (user.UserRoles.Any())
+                {
+                    _context.UserRoles.RemoveRange(user.UserRoles);
+                }
+
+                if (user.UserAuthTokens.Any())
+                {
+                    _context.UserAuthTokens.RemoveRange(user.UserAuthTokens);
+                }
+
+                if (user.UserNotifications.Any())
+                {
+                    _context.UserNotifications.RemoveRange(user.UserNotifications);
+                }
+                
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                // Re-throw business logic exceptions as-is
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Log the real exception for debugging
+                Console.WriteLine($"Error deleting user {id}: {ex}");
+                Console.WriteLine($"Exception type: {ex.GetType().FullName}");
+                Console.WriteLine($"Exception message: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                // Re-throw to preserve original exception
+                throw;
+            }
         }
 
         // ============================

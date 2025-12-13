@@ -25,9 +25,10 @@ namespace TaxiMo.Services.DTOs
         [LettersOnly]
         public string Username { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Phone is required.")]
         [MaxLength(20)]
         [PhoneNumber]
-        public string? Phone { get; set; }
+        public string Phone { get; set; } = string.Empty;
 
         [DateOfBirthNotInFuture]
         public DateTime? DateOfBirth { get; set; }

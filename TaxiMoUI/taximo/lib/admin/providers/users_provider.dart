@@ -43,17 +43,47 @@ class UsersProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Use backend filtering with search and status
       final usersList = await _usersService.getUsers(
-        search: search,
-        isActive: isActive,
+        search: search ?? _searchQuery,
+        isActive: isActive ?? _statusFilter,
       );
       _users = usersList
           .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
           .toList();
       
-      _searchQuery = search;
-      _statusFilter = isActive;
-      _applyFilters();
+      // Store current filter values
+      if (search != null) _searchQuery = search;
+      if (isActive != null) _statusFilter = isActive;
+      
+      // Apply only client-side sorting (backend handles search and status)
+      _filteredUsers = List<UserModel>.from(_users);
+      
+      if (_sortColumn != null) {
+        _filteredUsers.sort((a, b) {
+          int comparison = 0;
+          switch (_sortColumn) {
+            case 'name':
+              comparison = a.fullName.compareTo(b.fullName);
+              break;
+            case 'email':
+              comparison = a.email.compareTo(b.email);
+              break;
+            case 'dateOfBirth':
+              final aDate = a.dateOfBirth ?? DateTime(1900);
+              final bDate = b.dateOfBirth ?? DateTime(1900);
+              comparison = aDate.compareTo(bDate);
+              break;
+          }
+          return _sortAscending ? comparison : -comparison;
+        });
+      }
+
+      // Reset to first page if current page is out of bounds
+      if (_currentPage > totalPages && totalPages > 0) {
+        _currentPage = 1;
+      }
+      
       _currentPage = 1;
       _errorMessage = null;
     } catch (e) {
@@ -66,37 +96,36 @@ class UsersProvider extends ChangeNotifier {
     }
   }
 
-  void _applyFilters() {
-    _filteredUsers = List<UserModel>.from(_users);
+  void setSearchQuery(String? query) {
+    _searchQuery = query;
+    // Reload from backend with new search
+    loadUsers(search: query, isActive: _statusFilter);
+  }
 
-    // Apply search filter
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      final query = _searchQuery!.toLowerCase();
-      _filteredUsers = _filteredUsers.where((user) {
-        return user.firstName.toLowerCase().contains(query) ||
-            user.lastName.toLowerCase().contains(query) ||
-            user.email.toLowerCase().contains(query) ||
-            user.username.toLowerCase().contains(query);
-      }).toList();
+  void setStatusFilter(bool? isActive) {
+    _statusFilter = isActive;
+    // Reload from backend with new status filter
+    loadUsers(search: _searchQuery, isActive: isActive);
+  }
+
+  void sort(String column) {
+    // Don't allow sorting by status
+    if (column == 'status') return;
+    
+    if (_sortColumn == column) {
+      _sortAscending = !_sortAscending;
+    } else {
+      _sortColumn = column;
+      _sortAscending = true;
     }
-
-    // Apply status filter
-    if (_statusFilter != null) {
-      _filteredUsers = _filteredUsers.where((user) {
-        return _statusFilter! ? user.isActive : !user.isActive;
-      }).toList();
-    }
-
-    // Apply sorting
+    
+    // Apply client-side sorting only
     if (_sortColumn != null) {
       _filteredUsers.sort((a, b) {
         int comparison = 0;
         switch (_sortColumn) {
           case 'name':
             comparison = a.fullName.compareTo(b.fullName);
-            break;
-          case 'status':
-            comparison = a.status.compareTo(b.status);
             break;
           case 'email':
             comparison = a.email.compareTo(b.email);
@@ -110,35 +139,7 @@ class UsersProvider extends ChangeNotifier {
         return _sortAscending ? comparison : -comparison;
       });
     }
-
-    // Reset to first page if current page is out of bounds
-    if (_currentPage > totalPages && totalPages > 0) {
-      _currentPage = 1;
-    }
-  }
-
-  void setSearchQuery(String? query) {
-    _searchQuery = query;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void setStatusFilter(bool? isActive) {
-    _statusFilter = isActive;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void sort(String column) {
-    if (_sortColumn == column) {
-      _sortAscending = !_sortAscending;
-    } else {
-      _sortColumn = column;
-      _sortAscending = true;
-    }
-    _applyFilters();
+    
     notifyListeners();
   }
 

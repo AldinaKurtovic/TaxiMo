@@ -60,50 +60,85 @@ namespace TaxiMoWebAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<object>> CreateUser(UserCreateDto dto)
         {
+            _logger.LogInformation("CreateUser request received. Email: {Email}, Username: {Username}", dto.Email, dto.Username);
+            
             if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("ModelState is invalid: {ModelState}", ModelState);
                 return BadRequest(ModelState);
+            }
 
-            // Use the DTO-based CreateAsync which handles password hashing and role assignment
-            var userResponse = await _userService.CreateAsync(dto);
-            return Ok(new { message = "User created.", data = userResponse });
+            try
+            {
+                // Use the DTO-based CreateAsync which handles password hashing and role assignment
+                var userResponse = await _userService.CreateAsync(dto);
+                _logger.LogInformation("User created successfully. UserId: {UserId}", userResponse.UserId);
+                return Ok(new { message = "User created.", data = userResponse });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user. Email: {Email}, Username: {Username}", dto.Email, dto.Username);
+                throw; // Re-throw to let ExceptionFilter handle it
+            }
         }
 
         // UPDATE USER
         [HttpPut("{id}")]
         public async Task<ActionResult<object>> UpdateUser(int id, UserUpdateDto dto)
         {
+            _logger.LogInformation("UpdateUser request received. Id: {Id}, Dto.UserId: {UserId}", id, dto.UserId);
+            
             if (id != dto.UserId)
-                return BadRequest(new { message = "User ID mismatch." });
-
-            var existing = await _userService.GetByIdAsync(id);
-            if (existing == null)
-                return NotFound(new { message = "User not found." });
-
-            // PASSWORD CHANGE
-            if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
             {
-                PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
-                existing.PasswordHash = hash;
-                existing.PasswordSalt = salt;
+                _logger.LogWarning("User ID mismatch. Route id: {RouteId}, DTO id: {DtoId}", id, dto.UserId);
+                return BadRequest(new { message = "User ID mismatch." });
             }
 
-            // UPDATE OTHER FIELDS
-            _mapper.Map(dto, existing);
-
-            await _userService.UpdateAsync(existing);
-
-            return Ok(new { message = "User updated.", data = _mapper.Map<UserDto>(existing) });
+            try
+            {
+                // Use the DTO-based UpdateAsync which handles all the logic properly
+                var userResponse = await _userService.UpdateAsync(dto);
+                _logger.LogInformation("User updated successfully. UserId: {UserId}", userResponse.UserId);
+                return Ok(new { message = "User updated.", data = userResponse });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user. UserId: {UserId}", dto.UserId);
+                throw; // Re-throw to let ExceptionFilter handle it
+            }
         }
 
         // DELETE
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var deleted = await _userService.DeleteAsync(id);
-            if (!deleted)
-                return NotFound(new { message = "User not found" });
+            _logger.LogInformation("DeleteUser request received. Id: {Id}", id);
+            
+            try
+            {
+                var deleted = await _userService.DeleteAsync(id);
+                if (!deleted)
+                {
+                    _logger.LogWarning("User not found for deletion. UserId: {UserId}", id);
+                    return NotFound(new { message = "User not found" });
+                }
 
-            return NoContent();
+                _logger.LogInformation("User deleted successfully. UserId: {UserId}", id);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Business logic error - user cannot be deleted due to related records
+                _logger.LogWarning("User deletion blocked: {Message}. UserId: {UserId}", ex.Message, id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log the full exception details
+                _logger.LogError(ex, "Error deleting user. UserId: {UserId}. Exception: {ExceptionType} - {Message}. StackTrace: {StackTrace}", 
+                    id, ex.GetType().FullName, ex.Message, ex.StackTrace);
+                throw; // Re-throw to let ExceptionFilter handle it
+            }
         }
 
         // FIX USERS WITHOUT ROLES
