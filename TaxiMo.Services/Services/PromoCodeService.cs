@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
@@ -11,7 +12,7 @@ namespace TaxiMo.Services.Services
         {
         }
 
-        public async Task<List<PromoCode>> GetAllAsync(string? search = null, bool? isActive = null)
+        public async Task<List<PromoCode>> GetAllAsync(string? search = null, bool? isActive = null, string? sortBy = null, string? sortOrder = null)
         {
             var query = DbSet.AsQueryable();
 
@@ -34,6 +35,36 @@ namespace TaxiMo.Services.Services
                 {
                     query = query.Where(p => p.Status.ToLower() != "active");
                 }
+            }
+
+            // Apply sorting
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                var ascending = string.IsNullOrWhiteSpace(sortOrder) || sortOrder.ToLower() == "asc";
+                
+                switch (sortBy.ToLower())
+                {
+                    case "code":
+                        query = ascending 
+                            ? query.OrderBy(p => p.Code)
+                            : query.OrderByDescending(p => p.Code);
+                        break;
+                    case "discount":
+                    case "discountvalue":
+                        query = ascending
+                            ? query.OrderBy(p => p.DiscountValue)
+                            : query.OrderByDescending(p => p.DiscountValue);
+                        break;
+                    default:
+                        // Default sort by PromoId if invalid sortBy
+                        query = query.OrderBy(p => p.PromoId);
+                        break;
+                }
+            }
+            else
+            {
+                // Default sort by PromoId
+                query = query.OrderBy(p => p.PromoId);
             }
 
             return await query.ToListAsync();

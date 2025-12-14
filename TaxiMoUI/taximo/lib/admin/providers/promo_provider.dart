@@ -25,6 +25,10 @@ class PromoProvider extends ChangeNotifier {
     );
   }
 
+  // Sorting
+  String? _sortColumn;
+  bool _sortAscending = true;
+
   // Filtering
   String? _searchQuery;
   bool? _statusFilter;
@@ -34,23 +38,32 @@ class PromoProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchAll({String? search, bool? isActive}) async {
+  Future<void> fetchAll({String? search, bool? isActive, String? sortBy, String? sortOrder}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      // Use backend filtering and sorting
       final promoCodesList = await _promoService.getAll(
-        search: search,
-        isActive: isActive,
+        search: search ?? _searchQuery,
+        isActive: isActive ?? _statusFilter,
+        sortBy: sortBy ?? _sortColumn,
+        sortOrder: sortOrder ?? (_sortAscending ? 'asc' : 'desc'),
       );
       _promoCodes = promoCodesList
           .map((json) => PromoModel.fromJson(json as Map<String, dynamic>))
           .toList();
       
-      _searchQuery = search;
-      _statusFilter = isActive;
-      _applyFilters();
+      // Store current filter and sort values
+      if (search != null) _searchQuery = search;
+      if (isActive != null) _statusFilter = isActive;
+      if (sortBy != null) _sortColumn = sortBy;
+      if (sortOrder != null) _sortAscending = sortOrder.toLowerCase() == 'asc';
+      
+      // Backend handles all filtering and sorting, so just use the results directly
+      _filteredPromoCodes = List<PromoModel>.from(_promoCodes);
+      
       _currentPage = 1;
       _errorMessage = null;
     } catch (e) {
@@ -64,44 +77,36 @@ class PromoProvider extends ChangeNotifier {
     }
   }
 
-  void _applyFilters() {
-    _filteredPromoCodes = List<PromoModel>.from(_promoCodes);
-
-    // Apply search filter
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      final query = _searchQuery!.toLowerCase();
-      _filteredPromoCodes = _filteredPromoCodes.where((promo) {
-        return promo.code.toLowerCase().contains(query) ||
-            (promo.description != null && promo.description!.toLowerCase().contains(query)) ||
-            promo.status.toLowerCase().contains(query);
-      }).toList();
-    }
-
-    // Apply status filter
-    if (_statusFilter != null) {
-      _filteredPromoCodes = _filteredPromoCodes.where((promo) {
-        return _statusFilter! ? promo.isActive : !promo.isActive;
-      }).toList();
-    }
-
-    // Reset to first page if current page is out of bounds
-    if (_currentPage > totalPages && totalPages > 0) {
-      _currentPage = 1;
-    }
-  }
-
   void search(String? query) {
     _searchQuery = query;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
+    // Reload from backend with new search
+    fetchAll(search: query, isActive: _statusFilter, sortBy: _sortColumn, sortOrder: _sortAscending ? 'asc' : 'desc');
   }
 
   void setStatusFilter(bool? isActive) {
     _statusFilter = isActive;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
+    // Reload from backend with new status filter
+    fetchAll(search: _searchQuery, isActive: isActive, sortBy: _sortColumn, sortOrder: _sortAscending ? 'asc' : 'desc');
+  }
+
+  void sort(String column) {
+    // Only allow sorting by code and discount
+    if (column != 'code' && column != 'discount') return;
+    
+    if (_sortColumn == column) {
+      _sortAscending = !_sortAscending;
+    } else {
+      _sortColumn = column;
+      _sortAscending = true;
+    }
+    
+    // Reload from backend with new sort
+    fetchAll(
+      search: _searchQuery,
+      isActive: _statusFilter,
+      sortBy: _sortColumn,
+      sortOrder: _sortAscending ? 'asc' : 'desc',
+    );
   }
 
   void goToPage(int page) {
@@ -132,7 +137,12 @@ class PromoProvider extends ChangeNotifier {
 
     try {
       await _promoService.create(promoData);
-      await fetchAll(search: _searchQuery, isActive: _statusFilter);
+      await fetchAll(
+        search: _searchQuery,
+        isActive: _statusFilter,
+        sortBy: _sortColumn,
+        sortOrder: _sortAscending ? 'asc' : 'desc',
+      );
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('Error adding promo code: $e');
@@ -149,7 +159,12 @@ class PromoProvider extends ChangeNotifier {
 
     try {
       await _promoService.update(id, promoData);
-      await fetchAll(search: _searchQuery, isActive: _statusFilter);
+      await fetchAll(
+        search: _searchQuery,
+        isActive: _statusFilter,
+        sortBy: _sortColumn,
+        sortOrder: _sortAscending ? 'asc' : 'desc',
+      );
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('Error updating promo code: $e');
@@ -166,7 +181,12 @@ class PromoProvider extends ChangeNotifier {
 
     try {
       await _promoService.delete(id);
-      await fetchAll(search: _searchQuery, isActive: _statusFilter);
+      await fetchAll(
+        search: _searchQuery,
+        isActive: _statusFilter,
+        sortBy: _sortColumn,
+        sortOrder: _sortAscending ? 'asc' : 'desc',
+      );
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('Error deleting promo code: $e');

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/promo_provider.dart';
 import '../../models/promo_model.dart';
+import 'widgets/add_promo_modal.dart';
+import 'widgets/edit_promo_modal.dart';
 
 class PromoCodesScreen extends StatefulWidget {
   const PromoCodesScreen({super.key});
@@ -12,6 +14,7 @@ class PromoCodesScreen extends StatefulWidget {
 
 class _PromoCodesScreenState extends State<PromoCodesScreen> {
   final _searchController = TextEditingController();
+  String? _selectedStatusFilter; // null = All, true = Active, false = Inactive
 
   @override
   void initState() {
@@ -53,9 +56,16 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   }
 
   void _showEditDialog(BuildContext context, PromoModel promo) {
-    // TODO: Implement edit dialog with form fields
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit "${promo.code}" - Coming soon')),
+    showDialog(
+      context: context,
+      builder: (context) => EditPromoModal(promo: promo),
+    );
+  }
+
+  void _showAddDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AddPromoModal(),
     );
   }
 
@@ -75,7 +85,8 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -89,43 +100,90 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 32),
-          // Header with add button and search
+          const SizedBox(height: 24),
+          // Header with Add Promo Code button, Status filter, and Search
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Add Promo Code Button
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Add Promo Code - Coming soon')),
-                  );
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text(
-                  'ADD PROMO CODE',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+              // Left side: Add Promo Code Button and Status Filter
+              Row(
+                children: [
+                  // Add Promo Code Button
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _showAddDialog(context);
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'ADD PROMO CODE',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple[50],
+                      foregroundColor: Colors.purple[700],
+                      side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple[50],
-                  foregroundColor: Colors.purple[700],
-                  side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
+                  const SizedBox(width: 12),
+                  // Status Filter
+                  Container(
+                    height: 44, // Match button height
+                    width: 130, // Fixed width for compact appearance
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedStatusFilter == null 
+                            ? 'All' 
+                            : _selectedStatusFilter,
+                        isExpanded: true,
+                        items: ['All', 'Active', 'Inactive'].map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(
+                              status,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          bool? isActive;
+                          if (value == 'All') {
+                            _selectedStatusFilter = null;
+                            isActive = null;
+                          } else if (value == 'Active') {
+                            _selectedStatusFilter = 'Active';
+                            isActive = true;
+                          } else {
+                            _selectedStatusFilter = 'Inactive';
+                            isActive = false;
+                          }
+                          setState(() {});
+                          Provider.of<PromoProvider>(context, listen: false)
+                              .setStatusFilter(isActive);
+                        },
+                      ),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
-                ),
+                ],
               ),
-              const SizedBox(width: 16),
-              // Search Bar
+              // Search Bar (right side)
               SizedBox(
                 width: 320,
                 child: TextField(
@@ -238,22 +296,29 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                   );
                 }
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        headingRowHeight: 56,
-                        dataRowHeight: 64,
-                        headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                        columnSpacing: 40,
-                        horizontalMargin: 24,
-                        columns: [
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Container(
+                      width: constraints.maxWidth,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
+                            ),
+                            child: DataTable(
+                              headingRowHeight: 56,
+                              dataRowHeight: 64,
+                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                              columnSpacing: 50,
+                              horizontalMargin: 24,
+                              columns: [
                           DataColumn(
                             label: Padding(
                               padding: const EdgeInsets.only(left: 8.0),
@@ -267,14 +332,31 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ),
                             ),
                           ),
-                          const DataColumn(
-                            label: Text(
-                              'Code',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Color(0xFF424242),
-                              ),
+                          DataColumn(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Code',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                  onPressed: () {
+                                    Provider.of<PromoProvider>(context, listen: false).sort('code');
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const DataColumn(
@@ -287,14 +369,31 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ),
                             ),
                           ),
-                          const DataColumn(
-                            label: Text(
-                              'Discount',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Color(0xFF424242),
-                              ),
+                          DataColumn(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Discount',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                  onPressed: () {
+                                    Provider.of<PromoProvider>(context, listen: false).sort('discount');
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const DataColumn(
@@ -437,9 +536,12 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                             ],
                           );
                         }).toList(),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

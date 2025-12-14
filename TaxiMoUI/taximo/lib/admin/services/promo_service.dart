@@ -15,13 +15,24 @@ class PromoService {
     };
   }
 
-  Future<List<dynamic>> getAll({String? search, bool? isActive}) async {
+  Future<List<dynamic>> getAll({
+    String? search,
+    bool? isActive,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
     final queryParams = <String, String>{};
     if (search != null && search.isNotEmpty) {
       queryParams['search'] = search;
     }
     if (isActive != null) {
       queryParams['isActive'] = isActive.toString();
+    }
+    if (sortBy != null && sortBy.isNotEmpty) {
+      queryParams['sortBy'] = sortBy;
+    }
+    if (sortOrder != null && sortOrder.isNotEmpty) {
+      queryParams['sortOrder'] = sortOrder;
     }
 
     final uri = Uri.parse('$baseUrl/api/PromoCode').replace(queryParameters: queryParams);
