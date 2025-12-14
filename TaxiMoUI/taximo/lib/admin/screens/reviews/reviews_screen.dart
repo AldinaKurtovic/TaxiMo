@@ -27,38 +27,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     super.dispose();
   }
 
-  void _showDeleteDialog(BuildContext context, ReviewModel review) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Review'),
-        content: Text('Are you sure you want to delete this review from ${review.riderName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Provider.of<ReviewsProvider>(context, listen: false)
-                  .delete(review.reviewId);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context, ReviewModel review) {
-    // TODO: Implement edit dialog with form fields
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit review from ${review.riderName} - Coming soon')),
-    );
-  }
-
   Widget _buildStarRating(double rating) {
     final ratingInt = rating.round().clamp(0, 5);
     return Row(
@@ -76,7 +44,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -100,7 +69,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Q Search...',
+                    hintText: 'Search...',
                     hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                     prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[600]),
                     border: OutlineInputBorder(
@@ -207,21 +176,28 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   );
                 }
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        headingRowHeight: 56,
-                        dataRowHeight: 64,
-                        headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                        columnSpacing: 40,
-                        horizontalMargin: 24,
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Container(
+                      width: constraints.maxWidth,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
+                            ),
+                            child: DataTable(
+                              headingRowHeight: 56,
+                              dataRowHeight: 64,
+                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                              columnSpacing: 50,
+                              horizontalMargin: 24,
                         columns: [
                           DataColumn(
                             label: Padding(
@@ -252,7 +228,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 IconButton(
                                   icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
                                   onPressed: () {
-                                    // Sort by user name
+                                    provider.sort('userName');
                                   },
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -279,7 +255,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 IconButton(
                                   icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
                                   onPressed: () {
-                                    // Sort by driver name
+                                    provider.sort('driverName');
                                   },
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -306,7 +282,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 IconButton(
                                   icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
                                   onPressed: () {
-                                    // Sort by description
+                                    provider.sort('description');
                                   },
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -318,19 +294,16 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             ),
                           ),
                           const DataColumn(
-                            label: Text(
-                              'Rating',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Color(0xFF424242),
-                              ),
-                            ),
-                          ),
-                          const DataColumn(
                             label: Padding(
                               padding: EdgeInsets.only(right: 8.0),
-                              child: Text(''),
+                              child: Text(
+                                'Rating',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -341,7 +314,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(left: 8.0),
                                   child: Text(
-                                    review.riderId.toString(),
+                                    review.userId.toString(),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF424242),
@@ -351,7 +324,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  review.riderName,
+                                  review.userName,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -369,7 +342,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  review.description,
+                                  review.description ?? 'No description',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -377,49 +350,20 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 ),
                               ),
                               DataCell(
-                                _buildStarRating(review.rating),
-                              ),
-                              DataCell(
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8.0),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        color: Colors.blue[700],
-                                        padding: const EdgeInsets.all(8),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                          minHeight: 40,
-                                        ),
-                                        onPressed: () {
-                                          _showEditDialog(context, review);
-                                        },
-                                      ),
-                                      const SizedBox(width: 4),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 20),
-                                        color: Colors.red[700],
-                                        padding: const EdgeInsets.all(8),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                          minHeight: 40,
-                                        ),
-                                        onPressed: () {
-                                          _showDeleteDialog(context, review);
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                                  child: _buildStarRating(review.rating),
                                 ),
                               ),
                             ],
                           );
                         }).toList(),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

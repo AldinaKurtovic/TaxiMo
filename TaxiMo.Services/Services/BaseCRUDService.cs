@@ -14,14 +14,48 @@ namespace TaxiMo.Services.Services
 
         protected DbSet<TEntity> DbSet => Context.Set<TEntity>();
 
+        protected virtual IQueryable<TEntity> AddInclude(IQueryable<TEntity> query)
+        {
+            return query;
+        }
+
         public virtual async Task<List<TEntity>> GetAllAsync()
         {
-            return await DbSet.ToListAsync();
+            var query = AddInclude(DbSet);
+            return await query.ToListAsync();
         }
 
         public virtual async Task<TEntity?> GetByIdAsync(int id)
         {
-            return await DbSet.FindAsync(id);
+            var query = AddInclude(DbSet);
+            // Use reflection to find the primary key property
+            var entityType = Context.Model.FindEntityType(typeof(TEntity));
+            if (entityType == null)
+            {
+                throw new InvalidOperationException($"Entity type {typeof(TEntity).Name} not found in model");
+            }
+
+            var primaryKey = entityType.FindPrimaryKey();
+            if (primaryKey == null || primaryKey.Properties.Count != 1)
+            {
+                throw new InvalidOperationException($"Entity type {typeof(TEntity).Name} must have a single primary key property");
+            }
+
+            var keyProperty = primaryKey.Properties[0];
+            var keyPropertyInfo = typeof(TEntity).GetProperty(keyProperty.Name);
+            if (keyPropertyInfo == null)
+            {
+                throw new InvalidOperationException($"Primary key property {keyProperty.Name} not found on {typeof(TEntity).Name}");
+            }
+
+            // Build expression: entity => entity.KeyProperty == id
+            var parameter = System.Linq.Expressions.Expression.Parameter(typeof(TEntity), "e");
+            var property = System.Linq.Expressions.Expression.Property(parameter, keyPropertyInfo);
+            var constant = System.Linq.Expressions.Expression.Constant(id);
+            var equality = System.Linq.Expressions.Expression.Equal(property, constant);
+            var lambda = System.Linq.Expressions.Expression.Lambda<Func<TEntity, bool>>(equality, parameter);
+
+            return await query.FirstOrDefaultAsync(lambda);
         }
 
         public virtual async Task<TEntity> CreateAsync(TEntity entity)

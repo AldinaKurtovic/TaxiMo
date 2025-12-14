@@ -1,4 +1,5 @@
 using AutoMapper;
+using TaxiMo.Model.Responses;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
 
@@ -60,6 +61,17 @@ namespace TaxiMo.Services.Mappings
 
             // Review mappings
             CreateMap<Review, ReviewDto>();
+            CreateMap<Review, ReviewResponse>()
+                .ForMember(dest => dest.UserId,
+                    opt => opt.MapFrom(src => src.RiderId))
+                .ForMember(dest => dest.UserName,
+                    opt => opt.MapFrom(src =>
+                        src.Rider.FirstName + " " + src.Rider.LastName))
+                .ForMember(dest => dest.DriverName,
+                    opt => opt.MapFrom(src =>
+                        src.Driver.FirstName + " " + src.Driver.LastName))
+                .ForMember(dest => dest.Description,
+                    opt => opt.MapFrom(src => src.Comment));
             CreateMap<ReviewCreateDto, Review>()
                 .ForMember(dest => dest.ReviewId, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());

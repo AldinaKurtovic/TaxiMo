@@ -22,7 +22,7 @@ namespace TaxiMo.Services.Database
             // Users - UPSERT by Username
             await UpsertUsersAsync(context, baseDate);
 
-            // Drivers - UPSERT by Username
+            // Drivers - UPSERT by LicenseNumber
             await UpsertDriversAsync(context, baseDate);
 
             // UserRoles - UPSERT by UserId + RoleId
@@ -40,7 +40,7 @@ namespace TaxiMo.Services.Database
             // PromoCodes - UPSERT by Code
             await UpsertPromoCodesAsync(context, baseDate);
 
-            // Rides - UPSERT by RiderId + DriverId + RequestedAt (combination to identify unique rides)
+            // Rides - UPSERT by RiderId + DriverId + PickupLocationId + DropoffLocationId
             await UpsertRidesAsync(context, baseDate);
 
             // Payments - UPSERT by RideId + TransactionRef (or RideId + Amount + Method if TransactionRef is null)
@@ -55,10 +55,10 @@ namespace TaxiMo.Services.Database
             // DriverAvailabilities - UPSERT by DriverId (one per driver)
             await UpsertDriverAvailabilitiesAsync(context, baseDate);
 
-            // UserNotifications - UPSERT by RecipientUserId + Title + SentAt
+            // UserNotifications - UPSERT by RecipientUserId + Title
             await UpsertUserNotificationsAsync(context, baseDate);
 
-            // DriverNotifications - UPSERT by RecipientDriverId + Title + SentAt
+            // DriverNotifications - UPSERT by RecipientDriverId + Title
             await UpsertDriverNotificationsAsync(context, baseDate);
 
             // UserAuthTokens - UPSERT by UserId + DeviceId
@@ -162,7 +162,7 @@ namespace TaxiMo.Services.Database
 
             foreach (var driverData in driversToSeed)
             {
-                var existing = await context.Drivers.FirstOrDefaultAsync(d => d.Username == driverData.Username);
+                var existing = await context.Drivers.FirstOrDefaultAsync(d => d.LicenseNumber == driverData.LicenseNumber);
                 if (existing != null)
                 {
                     existing.FirstName = driverData.FirstName;
@@ -464,7 +464,8 @@ namespace TaxiMo.Services.Database
                 var existing = await context.Rides.FirstOrDefaultAsync(r =>
                     r.RiderId == rideData.RiderId &&
                     r.DriverId == rideData.DriverId &&
-                    r.RequestedAt == rideData.RequestedAt);
+                    r.PickupLocationId == rideData.PickupLocationId &&
+                    r.DropoffLocationId == rideData.DropoffLocationId);
                 if (existing != null)
                 {
                     existing.VehicleId = rideData.VehicleId;
@@ -573,51 +574,40 @@ namespace TaxiMo.Services.Database
             var johnDoeUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "john.doe");
             if (johnDoeUser == null) return;
 
-            var rides = await context.Rides
-                .Where(r => r.RiderId == johnDoeUser.UserId)
+            var completedRides = await context.Rides
+                .Where(r =>
+                    r.RiderId == johnDoeUser.UserId &&
+                    r.Status == "completed")
                 .OrderBy(r => r.RequestedAt)
                 .ToListAsync();
 
-            if (rides.Count < 2) return;
+            if (completedRides.Count == 0) return;
 
-            var driverAhmed = await context.Drivers.FirstOrDefaultAsync(d => d.Username == "driver.ahmed");
-            var driverAmina = await context.Drivers.FirstOrDefaultAsync(d => d.Username == "driver.amina");
-            if (driverAhmed == null || driverAmina == null) return;
-
-            var reviewsToSeed = new[]
+            foreach (var ride in completedRides)
             {
-                new { RideId = rides[0].RideId, RiderId = johnDoeUser.UserId, DriverId = driverAhmed.DriverId, Rating = 5.00m, Comment = "Excellent service, very professional driver!", CreatedAt = baseDate.AddDays(-30).AddHours(1) },
-                new { RideId = rides[1].RideId, RiderId = johnDoeUser.UserId, DriverId = driverAmina.DriverId, Rating = 4.50m, Comment = "Good ride, clean car and friendly driver.", CreatedAt = baseDate.AddDays(-25).AddHours(2) },
-                new { RideId = rides[0].RideId, RiderId = johnDoeUser.UserId, DriverId = driverAhmed.DriverId, Rating = 4.00m, Comment = "Punctual and safe driving.", CreatedAt = baseDate.AddDays(-29).AddHours(12) },
-                new { RideId = rides[1].RideId, RiderId = johnDoeUser.UserId, DriverId = driverAmina.DriverId, Rating = 5.00m, Comment = "Best taxi service in Sarajevo!", CreatedAt = baseDate.AddDays(-24).AddHours(6) },
-                new { RideId = rides[0].RideId, RiderId = johnDoeUser.UserId, DriverId = driverAhmed.DriverId, Rating = 4.75m, Comment = "Very satisfied with the service.", CreatedAt = baseDate.AddDays(-28).AddHours(18) }
-            };
+                var existingReview = await context.Reviews.FirstOrDefaultAsync(r =>
+                    r.RideId == ride.RideId &&
+                    r.RiderId == ride.RiderId &&
+                    r.DriverId == ride.DriverId);
 
-            foreach (var reviewData in reviewsToSeed)
-            {
-                var existing = await context.Reviews.FirstOrDefaultAsync(r =>
-                    r.RideId == reviewData.RideId &&
-                    r.RiderId == reviewData.RiderId &&
-                    r.DriverId == reviewData.DriverId &&
-                    r.CreatedAt == reviewData.CreatedAt);
-                if (existing != null)
+                if (existingReview != null)
                 {
-                    existing.Rating = reviewData.Rating;
-                    existing.Comment = reviewData.Comment;
+                    // update only
+                    existingReview.Rating = existingReview.Rating; // leave as is
+                    continue;
                 }
-                else
+
+                context.Reviews.Add(new Review
                 {
-                    context.Reviews.Add(new Review
-                    {
-                        RideId = reviewData.RideId,
-                        RiderId = reviewData.RiderId,
-                        DriverId = reviewData.DriverId,
-                        Rating = reviewData.Rating,
-                        Comment = reviewData.Comment,
-                        CreatedAt = reviewData.CreatedAt
-                    });
-                }
+                    RideId = ride.RideId,
+                    RiderId = ride.RiderId,
+                    DriverId = ride.DriverId,
+                    Rating = 5.0m,
+                    Comment = "Great ride, professional driver.",
+                    CreatedAt = baseDate.AddHours(1)
+                });
             }
+
             await context.SaveChangesAsync();
         }
 
@@ -655,9 +645,12 @@ namespace TaxiMo.Services.Database
                 var existing = await context.PromoUsages.FirstOrDefaultAsync(pu =>
                     pu.PromoId == promoUsageData.PromoId &&
                     pu.UserId == promoUsageData.UserId &&
-                    pu.RideId == promoUsageData.RideId &&
-                    pu.UsedAt == promoUsageData.UsedAt);
-                if (existing == null)
+                    pu.RideId == promoUsageData.RideId);
+                if (existing != null)
+                {
+                    existing.UsedAt = promoUsageData.UsedAt;
+                }
+                else
                 {
                     context.PromoUsages.Add(new PromoUsage
                     {
@@ -730,8 +723,7 @@ namespace TaxiMo.Services.Database
             {
                 var existing = await context.UserNotifications.FirstOrDefaultAsync(un =>
                     un.RecipientUserId == notificationData.RecipientUserId &&
-                    un.Title == notificationData.Title &&
-                    un.SentAt == notificationData.SentAt);
+                    un.Title == notificationData.Title);
                 if (existing != null)
                 {
                     existing.Body = notificationData.Body;
@@ -772,8 +764,7 @@ namespace TaxiMo.Services.Database
             {
                 var existing = await context.DriverNotifications.FirstOrDefaultAsync(dn =>
                     dn.RecipientDriverId == notificationData.RecipientDriverId &&
-                    dn.Title == notificationData.Title &&
-                    dn.SentAt == notificationData.SentAt);
+                    dn.Title == notificationData.Title);
                 if (existing != null)
                 {
                     existing.Body = notificationData.Body;

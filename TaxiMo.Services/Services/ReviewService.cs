@@ -11,12 +11,28 @@ namespace TaxiMo.Services.Services
         {
         }
 
+        protected override IQueryable<Review> AddInclude(IQueryable<Review> query)
+        {
+            return query
+                .Include(r => r.Rider)
+                .Include(r => r.Driver);
+        }
+
+        public override async Task<List<Review>> GetAllAsync()
+        {
+            var query = AddInclude(DbSet);
+            return await query.ToListAsync();
+        }
+
+        public override async Task<Review?> GetByIdAsync(int id)
+        {
+            var query = AddInclude(DbSet);
+            return await query.FirstOrDefaultAsync(r => r.ReviewId == id);
+        }
+
         public async Task<List<Review>> GetAllAsync(string? search = null, decimal? minRating = null)
         {
-            var query = DbSet
-                .Include(r => r.Driver)
-                .Include(r => r.Rider)
-                .AsQueryable();
+            var query = AddInclude(DbSet).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {

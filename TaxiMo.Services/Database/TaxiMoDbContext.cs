@@ -92,6 +92,16 @@ namespace TaxiMo.Services.Database
                 .WithMany(r => r.DriverRoles)
                 .HasForeignKey(dr => dr.RoleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Review unique constraint: one review per ride per rider per driver
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => new { r.RideId, r.RiderId, r.DriverId })
+                .IsUnique();
+
+            // PromoUsage unique constraint: one usage per promo per user per ride
+            modelBuilder.Entity<PromoUsage>()
+                .HasIndex(p => new { p.PromoId, p.UserId, p.RideId })
+                .IsUnique();
         }
 
     }

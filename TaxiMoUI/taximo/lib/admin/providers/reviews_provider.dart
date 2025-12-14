@@ -25,6 +25,10 @@ class ReviewsProvider extends ChangeNotifier {
     );
   }
 
+  // Sorting
+  String? _sortColumn;
+  bool _sortAscending = true;
+
   // Filtering
   String? _searchQuery;
   double? _minRatingFilter;
@@ -44,6 +48,10 @@ class ReviewsProvider extends ChangeNotifier {
         search: search,
         minRating: minRating,
       );
+      
+      // Debug: Log the response
+      print('Reviews response: $reviewsList');
+      
       _reviews = reviewsList
           .map((json) => ReviewModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -51,6 +59,28 @@ class ReviewsProvider extends ChangeNotifier {
       _searchQuery = search;
       _minRatingFilter = minRating;
       _applyFilters();
+      
+      // Apply sorting after filtering
+      if (_sortColumn != null) {
+        _filteredReviews.sort((a, b) {
+          int comparison = 0;
+          switch (_sortColumn) {
+            case 'userName':
+              comparison = a.userName.compareTo(b.userName);
+              break;
+            case 'driverName':
+              comparison = a.driverName.compareTo(b.driverName);
+              break;
+            case 'description':
+              final aDesc = a.description ?? '';
+              final bDesc = b.description ?? '';
+              comparison = aDesc.compareTo(bDesc);
+              break;
+          }
+          return _sortAscending ? comparison : -comparison;
+        });
+      }
+      
       _currentPage = 1;
       _errorMessage = null;
     } catch (e) {
@@ -71,8 +101,8 @@ class ReviewsProvider extends ChangeNotifier {
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
       final query = _searchQuery!.toLowerCase();
       _filteredReviews = _filteredReviews.where((review) {
-        return review.comment?.toLowerCase().contains(query) == true ||
-            review.riderName.toLowerCase().contains(query) ||
+        return review.description?.toLowerCase().contains(query) == true ||
+            review.userName.toLowerCase().contains(query) ||
             review.driverName.toLowerCase().contains(query);
       }).toList();
     }
@@ -100,6 +130,38 @@ class ReviewsProvider extends ChangeNotifier {
     _minRatingFilter = minRating;
     // Re-fetch from API with rating filter
     fetchAll(search: _searchQuery, minRating: minRating);
+  }
+
+  void sort(String column) {
+    if (_sortColumn == column) {
+      _sortAscending = !_sortAscending;
+    } else {
+      _sortColumn = column;
+      _sortAscending = true;
+    }
+    
+    // Apply client-side sorting
+    if (_sortColumn != null) {
+      _filteredReviews.sort((a, b) {
+        int comparison = 0;
+        switch (_sortColumn) {
+          case 'userName':
+            comparison = a.userName.compareTo(b.userName);
+            break;
+          case 'driverName':
+            comparison = a.driverName.compareTo(b.driverName);
+            break;
+          case 'description':
+            final aDesc = a.description ?? '';
+            final bDesc = b.description ?? '';
+            comparison = aDesc.compareTo(bDesc);
+            break;
+        }
+        return _sortAscending ? comparison : -comparison;
+      });
+    }
+    
+    notifyListeners();
   }
 
   void goToPage(int page) {
