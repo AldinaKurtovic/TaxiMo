@@ -23,15 +23,16 @@ namespace TaxiMoWebAPI.Controllers
         }
 
         // GET: api/Ride?search=xxx&status=xxx
-        // Override to use IRideService.GetAllAsync with search and status parameters
+        // Override base GetAll to use IRideService.GetAllAsync with search and status parameters
         [HttpGet]
         public override async Task<ActionResult<IEnumerable<RideDto>>> GetAll([FromQuery] string? search = null, [FromQuery] string? status = null)
         {
             try
             {
                 var rides = await _rideService.GetAllAsync(search, status);
-                var dtos = Mapper.Map<List<RideDto>>(rides);
-                return Ok(dtos);
+                var responses = Mapper.Map<List<RideResponse>>(rides);
+                // Return RideResponse list (will be serialized correctly by ASP.NET Core)
+                return new OkObjectResult(responses);
             }
             catch (Exception ex)
             {

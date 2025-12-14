@@ -22,32 +22,8 @@ class RidesProvider with ChangeNotifier {
   RideFilter get currentFilter => _currentFilter;
   String? get searchQuery => _searchQuery;
 
-  List<RideModel> get filteredRides {
-    if (_currentFilter == RideFilter.freeDrivers) {
-      return [];
-    }
-
-    var filtered = List<RideModel>.from(_rides);
-
-    // Apply status filter
-    if (_currentFilter == RideFilter.completed) {
-      filtered = filtered.where((r) => r.status.toLowerCase() == 'completed').toList();
-    } else if (_currentFilter == RideFilter.cancelled) {
-      filtered = filtered.where((r) => r.status.toLowerCase() == 'cancelled').toList();
-    }
-
-    // Apply search filter
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      final query = _searchQuery!.toLowerCase();
-      filtered = filtered.where((ride) {
-        return ride.driverName.toLowerCase().contains(query) ||
-            ride.riderName.toLowerCase().contains(query) ||
-            ride.vehicleCode.toLowerCase().contains(query);
-      }).toList();
-    }
-
-    return filtered;
-  }
+  // All filtering is done on backend, so rides getter returns the filtered list
+  List<RideModel> get filteredRides => _rides;
 
   Future<void> fetchRides({String? search, String? status}) async {
     if (_currentFilter == RideFilter.freeDrivers) {
@@ -59,7 +35,9 @@ class RidesProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final ridesList = await _ridesService.getAll(search: search, status: status);
+      // Use current search query if search parameter is not provided
+      final searchQuery = search ?? _searchQuery;
+      final ridesList = await _ridesService.getAll(search: searchQuery, status: status);
       _rides = ridesList
           .map((json) => RideModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -106,7 +84,8 @@ class RidesProvider with ChangeNotifier {
       } else if (filter == RideFilter.cancelled) {
         status = 'cancelled';
       }
-      fetchRides(status: status);
+      // Fetch with current search query and status filter
+      fetchRides(search: _searchQuery, status: status);
     }
     notifyListeners();
   }
@@ -114,7 +93,15 @@ class RidesProvider with ChangeNotifier {
   void search(String? query) {
     _searchQuery = query;
     if (_currentFilter != RideFilter.freeDrivers) {
-      fetchRides(search: query);
+      // Determine status based on current filter
+      String? status;
+      if (_currentFilter == RideFilter.completed) {
+        status = 'completed';
+      } else if (_currentFilter == RideFilter.cancelled) {
+        status = 'cancelled';
+      }
+      // Fetch from backend with search and status
+      fetchRides(search: query, status: status);
     }
     notifyListeners();
   }
@@ -131,6 +118,11 @@ class RidesProvider with ChangeNotifier {
       }
       fetchRides(search: _searchQuery, status: status);
     }
+  }
+
+  // Initial load method
+  Future<void> loadRides() async {
+    await fetchRides();
   }
 }
 

@@ -312,7 +312,9 @@ namespace TaxiMo.Services.Services
         public async Task<List<Driver>> GetFreeDriversAsync()
         {
             // Get drivers with status "active" who don't have any active rides
+            // Include DriverAvailabilities to get coordinates
             var activeDrivers = await _context.Drivers
+                .Include(d => d.DriverAvailabilities)
                 .Where(d => d.Status.ToLower() == "active")
                 .ToListAsync();
 

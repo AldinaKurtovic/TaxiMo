@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/rides_provider.dart';
 import '../../models/ride_model.dart';
 import '../../models/driver_model.dart';
+import 'widgets/rides_map_widget.dart';
 
 class RidesScreen extends StatefulWidget {
   const RidesScreen({super.key});
@@ -13,12 +14,14 @@ class RidesScreen extends StatefulWidget {
 
 class _RidesScreenState extends State<RidesScreen> {
   final _searchController = TextEditingController();
+  RideModel? _selectedRide;
+  DriverModel? _selectedDriver;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<RidesProvider>(context, listen: false).fetchRides();
+      Provider.of<RidesProvider>(context, listen: false).loadRides();
     });
   }
 
@@ -61,21 +64,35 @@ class _RidesScreenState extends State<RidesScreen> {
   }
 
   Widget _buildRideCard(RideModel ride) {
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    final isSelected = _selectedRide?.rideId == ride.rideId;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedRide = ride;
+          _selectedDriver = null;
+        });
+      },
+      child: Container(
+        width: 320,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.purple : Colors.grey[200]!,
+            width: isSelected ? 2 : 1,
           ),
-        ],
-      ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                  ? Colors.purple.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.1),
+              spreadRadius: isSelected ? 2 : 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -88,7 +105,7 @@ class _RidesScreenState extends State<RidesScreen> {
                     radius: 20,
                     backgroundColor: Colors.grey[300],
                     child: Text(
-                      ride.driverName[0].toUpperCase(),
+                      ride.driverName.isNotEmpty ? ride.driverName[0].toUpperCase() : 'D',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -121,47 +138,107 @@ class _RidesScreenState extends State<RidesScreen> {
               _buildStatusBadge(ride.status),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            ride.pickupLocation,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF2D2D3F),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            ride.dropoffLocation,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
-            ),
+          const SizedBox(height: 12),
+          // User name
+          Row(
+            children: [
+              Icon(Icons.person, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  ride.riderName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(
-            ride.timeRange,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+          // Pickup location
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 14, color: Colors.green[600]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  ride.pickupLocation,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF2D2D3F),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Dropoff location
+          Row(
+            children: [
+              Icon(Icons.place, size: 14, color: Colors.red[600]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  ride.dropoffLocation,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Time range
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                ride.timeRange,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ),
         ],
+      ),
       ),
     );
   }
 
   Widget _buildFreeDriverCard(DriverModel driver) {
-    return Container(
-      width: 280,
+    final isSelected = _selectedDriver?.driverId == driver.driverId;
+    // Generate vehicle code from driver ID (format: TX-XXX)
+    final vehicleCode = 'TX-${driver.driverId.toString().padLeft(3, '0')}';
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedDriver = driver;
+          _selectedRide = null;
+        });
+      },
+      child: Container(
+      width: 320,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSelected ? Colors.purple : Colors.grey[200]!,
+          width: isSelected ? 2 : 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
+            color: isSelected 
+                ? Colors.purple.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.1),
+            spreadRadius: isSelected ? 2 : 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -176,7 +253,7 @@ class _RidesScreenState extends State<RidesScreen> {
                 radius: 20,
                 backgroundColor: Colors.grey[300],
                 child: Text(
-                  driver.firstName[0].toUpperCase(),
+                  driver.firstName.isNotEmpty ? driver.firstName[0].toUpperCase() : 'D',
                   style: const TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.bold,
@@ -196,7 +273,7 @@ class _RidesScreenState extends State<RidesScreen> {
                     ),
                   ),
                   Text(
-                    driver.licenseNumber,
+                    vehicleCode,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
@@ -207,12 +284,21 @@ class _RidesScreenState extends State<RidesScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            'Available for assignment',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+          // Current location (placeholder - would need backend support for actual location)
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Available for assignment',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -243,56 +329,37 @@ class _RidesScreenState extends State<RidesScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _buildMapPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.map, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Map View',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Google Maps integration\ncoming soon',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildMapWidget(RidesProvider provider) {
+    return RidesMapWidget(
+      rides: provider.filteredRides,
+      freeDrivers: provider.freeDrivers,
+      currentFilter: provider.currentFilter,
+      selectedRide: _selectedRide,
+      selectedDriver: _selectedDriver,
+      onRideSelected: (ride) {
+        setState(() {
+          _selectedRide = ride;
+          _selectedDriver = null;
+        });
+      },
+      onDriverSelected: (driver) {
+        setState(() {
+          _selectedDriver = driver;
+          _selectedRide = null;
+        });
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -306,17 +373,20 @@ class _RidesScreenState extends State<RidesScreen> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 32),
-          // Search Bar
+          const SizedBox(height: 24),
+          // Header with Search
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Left side: Empty space (no button needed for rides)
+              const SizedBox.shrink(),
+              // Search Bar (right side)
               SizedBox(
                 width: 320,
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Q Search...',
+                    hintText: 'Search...',
                     hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                     prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[600]),
                     border: OutlineInputBorder(
@@ -432,24 +502,54 @@ class _RidesScreenState extends State<RidesScreen> {
                       flex: 2,
                       child: provider.currentFilter == RideFilter.freeDrivers
                           ? provider.freeDrivers.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No free drivers available',
-                                    style: TextStyle(color: Colors.grey),
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.drive_eta_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No free drivers available',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 )
-                              : Wrap(
-                                  spacing: 16,
-                                  runSpacing: 16,
-                                  children: provider.freeDrivers
-                                      .map((driver) => _buildFreeDriverCard(driver))
-                                      .toList(),
+                              : SingleChildScrollView(
+                                  child: Wrap(
+                                    spacing: 16,
+                                    runSpacing: 16,
+                                    children: provider.freeDrivers
+                                        .map((driver) => _buildFreeDriverCard(driver))
+                                        .toList(),
+                                  ),
                                 )
                           : provider.filteredRides.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No rides found',
-                                    style: TextStyle(color: Colors.grey),
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.directions_car_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No rides found',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 )
                               : SingleChildScrollView(
@@ -466,7 +566,7 @@ class _RidesScreenState extends State<RidesScreen> {
                     // Right side: Map
                     Expanded(
                       flex: 1,
-                      child: _buildMapPlaceholder(),
+                      child: _buildMapWidget(provider),
                     ),
                   ],
                 );

@@ -28,6 +28,8 @@ class RideModel {
   final double? pickupLocationLng;
   final double? dropoffLocationLat;
   final double? dropoffLocationLng;
+  final double? driverLatitude;
+  final double? driverLongitude;
 
   RideModel({
     required this.rideId,
@@ -57,6 +59,8 @@ class RideModel {
     this.pickupLocationLng,
     this.dropoffLocationLat,
     this.dropoffLocationLng,
+    this.driverLatitude,
+    this.driverLongitude,
   });
 
   String get driverName {
@@ -78,11 +82,23 @@ class RideModel {
   }
 
   String get pickupLocation {
-    return pickupLocationName ?? 'Unknown';
+    if (pickupLocationName != null && pickupLocationName!.isNotEmpty) {
+      return pickupLocationName!;
+    }
+    if (pickupLocationAddress != null && pickupLocationAddress!.isNotEmpty) {
+      return pickupLocationAddress!;
+    }
+    return 'Location $pickupLocationId';
   }
 
   String get dropoffLocation {
-    return dropoffLocationName ?? 'Unknown';
+    if (dropoffLocationName != null && dropoffLocationName!.isNotEmpty) {
+      return dropoffLocationName!;
+    }
+    if (dropoffLocationAddress != null && dropoffLocationAddress!.isNotEmpty) {
+      return dropoffLocationAddress!;
+    }
+    return 'Location $dropoffLocationId';
   }
 
   String get timeRange {
@@ -98,6 +114,12 @@ class RideModel {
   }
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
+    final driver = json['driver'] as Map<String, dynamic>?;
+    final rider = json['rider'] as Map<String, dynamic>?;
+    final vehicle = json['vehicle'] as Map<String, dynamic>?;
+    final pickupLocation = json['pickupLocation'] as Map<String, dynamic>?;
+    final dropoffLocation = json['dropoffLocation'] as Map<String, dynamic>?;
+
     return RideModel(
       rideId: json['rideId'] as int,
       riderId: json['riderId'] as int,
@@ -123,52 +145,32 @@ class RideModel {
           ? (json['distanceKm'] as num).toDouble()
           : null,
       durationMin: json['durationMin'] as int?,
-      driverFirstName: json['driver'] != null
-          ? (json['driver'] as Map<String, dynamic>)['firstName'] as String?
+      driverFirstName: driver?['firstName'] as String?,
+      driverLastName: driver?['lastName'] as String?,
+      riderFirstName: rider?['firstName'] as String?,
+      riderLastName: rider?['lastName'] as String?,
+      vehiclePlateNumber: vehicle?['plateNumber'] as String?,
+      pickupLocationName: pickupLocation?['name'] as String?,
+      pickupLocationAddress: pickupLocation?['addressLine'] as String?,
+      dropoffLocationName: dropoffLocation?['name'] as String?,
+      dropoffLocationAddress: dropoffLocation?['addressLine'] as String?,
+      pickupLocationLat: pickupLocation?['lat'] != null
+          ? (pickupLocation!['lat'] as num).toDouble()
           : null,
-      driverLastName: json['driver'] != null
-          ? (json['driver'] as Map<String, dynamic>)['lastName'] as String?
+      pickupLocationLng: pickupLocation?['lng'] != null
+          ? (pickupLocation!['lng'] as num).toDouble()
           : null,
-      riderFirstName: json['rider'] != null
-          ? (json['rider'] as Map<String, dynamic>)['firstName'] as String?
+      dropoffLocationLat: dropoffLocation?['lat'] != null
+          ? (dropoffLocation!['lat'] as num).toDouble()
           : null,
-      riderLastName: json['rider'] != null
-          ? (json['rider'] as Map<String, dynamic>)['lastName'] as String?
+      dropoffLocationLng: dropoffLocation?['lng'] != null
+          ? (dropoffLocation!['lng'] as num).toDouble()
           : null,
-      vehiclePlateNumber: json['vehicle'] != null
-          ? (json['vehicle'] as Map<String, dynamic>)['plateNumber'] as String?
+      driverLatitude: json['driverLatitude'] != null
+          ? (json['driverLatitude'] as num).toDouble()
           : null,
-      pickupLocationName: json['pickupLocation'] != null
-          ? (json['pickupLocation'] as Map<String, dynamic>)['name'] as String?
-          : null,
-      pickupLocationAddress: json['pickupLocation'] != null
-          ? (json['pickupLocation'] as Map<String, dynamic>)['addressLine'] as String?
-          : null,
-      dropoffLocationName: json['dropoffLocation'] != null
-          ? (json['dropoffLocation'] as Map<String, dynamic>)['name'] as String?
-          : null,
-      dropoffLocationAddress: json['dropoffLocation'] != null
-          ? (json['dropoffLocation'] as Map<String, dynamic>)['addressLine'] as String?
-          : null,
-      pickupLocationLat: json['pickupLocation'] != null
-          ? (json['pickupLocation'] as Map<String, dynamic>)['lat'] != null
-              ? (json['pickupLocation'] as Map<String, dynamic>)['lat'] as double
-              : null
-          : null,
-      pickupLocationLng: json['pickupLocation'] != null
-          ? (json['pickupLocation'] as Map<String, dynamic>)['lng'] != null
-              ? (json['pickupLocation'] as Map<String, dynamic>)['lng'] as double
-              : null
-          : null,
-      dropoffLocationLat: json['dropoffLocation'] != null
-          ? (json['dropoffLocation'] as Map<String, dynamic>)['lat'] != null
-              ? (json['dropoffLocation'] as Map<String, dynamic>)['lat'] as double
-              : null
-          : null,
-      dropoffLocationLng: json['dropoffLocation'] != null
-          ? (json['dropoffLocation'] as Map<String, dynamic>)['lng'] != null
-              ? (json['dropoffLocation'] as Map<String, dynamic>)['lng'] as double
-              : null
+      driverLongitude: json['driverLongitude'] != null
+          ? (json['driverLongitude'] as num).toDouble()
           : null,
     );
   }

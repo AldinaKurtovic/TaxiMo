@@ -37,6 +37,8 @@ dependencies:
   provider: ^6.1.1
   http: ^1.6.0
   fl_chart: ^0.69.0
+  google_maps_flutter_web: ^0.5.4
+  google_maps_flutter: ^2.5.0
 
 dev_dependencies:
   flutter_test:

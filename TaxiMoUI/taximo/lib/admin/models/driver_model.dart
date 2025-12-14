@@ -9,6 +9,8 @@ class DriverModel {
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final double? currentLatitude;
+  final double? currentLongitude;
 
   DriverModel({
     required this.driverId,
@@ -21,6 +23,8 @@ class DriverModel {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.currentLatitude,
+    this.currentLongitude,
   });
 
   String get fullName => '$firstName $lastName';
@@ -45,6 +49,12 @@ class DriverModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : DateTime.now(),
+      currentLatitude: json['currentLatitude'] != null
+          ? (json['currentLatitude'] as num).toDouble()
+          : null,
+      currentLongitude: json['currentLongitude'] != null
+          ? (json['currentLongitude'] as num).toDouble()
+          : null,
     );
   }
 

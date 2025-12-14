@@ -22,7 +22,26 @@ namespace TaxiMo.Services.Mappings
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
             // Driver mappings
-            CreateMap<Driver, DriverDto>();
+            CreateMap<Driver, DriverDto>()
+                .AfterMap((src, dest) =>
+                {
+                    if (src.DriverAvailabilities != null && src.DriverAvailabilities.Any())
+                    {
+                        var latestAvailability = src.DriverAvailabilities
+                            .OrderByDescending(da => da.LastLocationUpdate ?? da.UpdatedAt)
+                            .FirstOrDefault();
+                        
+                        if (latestAvailability != null)
+                        {
+                            dest.CurrentLatitude = latestAvailability.CurrentLat.HasValue 
+                                ? (double?)latestAvailability.CurrentLat.Value 
+                                : null;
+                            dest.CurrentLongitude = latestAvailability.CurrentLng.HasValue 
+                                ? (double?)latestAvailability.CurrentLng.Value 
+                                : null;
+                        }
+                    }
+                });
             CreateMap<DriverCreateDto, Driver>()
                 .ForMember(dest => dest.DriverId, opt => opt.Ignore())
                 .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
@@ -49,6 +68,26 @@ namespace TaxiMo.Services.Mappings
 
             // Ride mappings
             CreateMap<Ride, RideDto>();
+            CreateMap<Ride, RideResponse>()
+                .AfterMap((src, dest) =>
+                {
+                    if (src.Driver != null && src.Driver.DriverAvailabilities != null && src.Driver.DriverAvailabilities.Any())
+                    {
+                        var latestAvailability = src.Driver.DriverAvailabilities
+                            .OrderByDescending(da => da.LastLocationUpdate ?? da.UpdatedAt)
+                            .FirstOrDefault();
+                        
+                        if (latestAvailability != null)
+                        {
+                            dest.DriverLatitude = latestAvailability.CurrentLat.HasValue 
+                                ? (double?)latestAvailability.CurrentLat.Value 
+                                : null;
+                            dest.DriverLongitude = latestAvailability.CurrentLng.HasValue 
+                                ? (double?)latestAvailability.CurrentLng.Value 
+                                : null;
+                        }
+                    }
+                });
             CreateMap<RideCreateDto, Ride>()
                 .ForMember(dest => dest.RideId, opt => opt.Ignore())
                 .ForMember(dest => dest.StartedAt, opt => opt.Ignore())

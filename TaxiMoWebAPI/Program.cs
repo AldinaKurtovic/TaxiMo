@@ -22,6 +22,29 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TaxiMo API", Version = "v1" });
 
+    // Resolve conflicting actions (prefer derived class methods over base class)
+    c.ResolveConflictingActions(apiDescriptions =>
+    {
+        // Prefer the action from the derived class over the base class
+        var descriptions = apiDescriptions.ToList();
+        
+        // Find action from derived class (not BaseCRUDController)
+        var derivedClassAction = descriptions.FirstOrDefault(d =>
+        {
+            var actionDescriptor = d.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor;
+            if (actionDescriptor != null)
+            {
+                var declaringType = actionDescriptor.MethodInfo.DeclaringType;
+                return declaringType != null && 
+                       !declaringType.Name.Contains("BaseCRUDController") &&
+                       !declaringType.Name.Contains("BaseController");
+            }
+            return false;
+        });
+        
+        return derivedClassAction ?? descriptions.First();
+    });
+
     // Add Basic Authentication to Swagger
     c.AddSecurityDefinition("BasicAuthentication", new OpenApiSecurityScheme
     {

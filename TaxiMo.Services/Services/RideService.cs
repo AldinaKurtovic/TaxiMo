@@ -17,6 +17,7 @@ namespace TaxiMo.Services.Services
         {
             var query = DbSet
                 .Include(r => r.Driver)
+                    .ThenInclude(d => d.DriverAvailabilities)
                 .Include(r => r.Rider)
                 .Include(r => r.PickupLocation)
                 .Include(r => r.DropoffLocation)
