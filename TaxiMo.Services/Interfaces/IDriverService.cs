@@ -1,4 +1,5 @@
 using TaxiMo.Services.Database.Entities;
+using TaxiMo.Services.DTOs;
 using TaxiMo.Services.DTOs.Auth;
 
 namespace TaxiMo.Services.Interfaces
@@ -10,6 +11,7 @@ namespace TaxiMo.Services.Interfaces
         Task<Driver> CreateAsync(Driver driver);
         Task<Driver> CreateAsync(Driver driver,int roleId);
         Task<Driver> UpdateAsync(Driver driver);
+        Task<Driver> UpdateAsync(DriverUpdateDto dto);
         Task<bool> DeleteAsync(int id);
         Task<Driver?> GetByUsernameAsync(string username);
         Task<DriverResponse?> AuthenticateAsync(DriverLoginRequest request);

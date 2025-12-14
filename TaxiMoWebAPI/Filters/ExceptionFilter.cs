@@ -16,7 +16,13 @@ namespace TaxiMoWebAPI.Filters
 
         public override void OnException(ExceptionContext context)
         {
-            _logger.LogError(context.Exception, context.Exception.Message);
+            // Log full exception details including inner exception and stack trace
+            _logger.LogError(context.Exception, 
+                "Exception: {ExceptionType}\nMessage: {Message}\nStackTrace: {StackTrace}\nInnerException: {InnerException}",
+                context.Exception.GetType().FullName,
+                context.Exception.Message,
+                context.Exception.StackTrace,
+                context.Exception.InnerException?.ToString() ?? "None");
 
             if (context.Exception is UserException)
             {
@@ -25,8 +31,23 @@ namespace TaxiMoWebAPI.Filters
             }
             else
             {
-                context.ModelState.AddModelError("ERROR", "Server side error, please check logs");
+                // TEMPORARY: Return actual exception details for debugging
+                var exceptionDetails = new
+                {
+                    error = context.Exception.Message,
+                    exceptionType = context.Exception.GetType().FullName,
+                    stackTrace = context.Exception.StackTrace,
+                    innerException = context.Exception.InnerException != null ? new
+                    {
+                        message = context.Exception.InnerException.Message,
+                        type = context.Exception.InnerException.GetType().FullName,
+                        stackTrace = context.Exception.InnerException.StackTrace
+                    } : null
+                };
+
                 context.HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                context.Result = new JsonResult(exceptionDetails);
+                return;
             }
 
             var errors = context.ModelState

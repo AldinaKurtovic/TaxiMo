@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaxiMo.Model.Exceptions;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
+using TaxiMo.Services.DTOs;
 using TaxiMo.Services.DTOs.Auth;
 using TaxiMo.Services.Helpers;
 using TaxiMo.Services.Interfaces;
@@ -115,18 +116,124 @@ namespace TaxiMo.Services.Services
             return existingDriver;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        /// <summary>
+        /// Updates a driver with optional role reassignment and password change
+        /// Updates only scalar fields - does NOT update navigation properties
+        /// </summary>
+        public async Task<Driver> UpdateAsync(DriverUpdateDto dto)
         {
-            var driver = await _context.Drivers.FindAsync(id);
+            // Load driver WITHOUT navigation properties to avoid loading unnecessary data
+            // We only update scalar fields, so we don't need navigation properties
+            var driver = await _context.Drivers.FindAsync(dto.DriverId);
+
             if (driver == null)
+                throw new UserException($"Driver with ID {dto.DriverId} not found.");
+
+            // Update fields only if provided
+            if (!string.IsNullOrWhiteSpace(dto.FirstName))
+                driver.FirstName = dto.FirstName;
+
+            if (!string.IsNullOrWhiteSpace(dto.LastName))
+                driver.LastName = dto.LastName;
+
+            if (!string.IsNullOrWhiteSpace(dto.Email))
             {
-                return false;
+                if (driver.Email != dto.Email &&
+                    await _context.Drivers.AnyAsync(x => x.Email == dto.Email && x.DriverId != dto.DriverId))
+                    throw new UserException("Email already exists.");
+
+                driver.Email = dto.Email;
             }
 
-            _context.Drivers.Remove(driver);
+            if (!string.IsNullOrWhiteSpace(dto.Username))
+            {
+                if (driver.Username != dto.Username &&
+                    await _context.Drivers.AnyAsync(x => x.Username == dto.Username && x.DriverId != dto.DriverId))
+                    throw new UserException("Username already exists.");
+
+                driver.Username = dto.Username;
+            }
+
+            if (dto.Phone != null)
+                driver.Phone = dto.Phone;
+
+            if (!string.IsNullOrWhiteSpace(dto.LicenseNumber))
+                driver.LicenseNumber = dto.LicenseNumber;
+
+            // LicenseExpiry is required in Driver entity, only update if provided
+            if (dto.LicenseExpiry.HasValue)
+                driver.LicenseExpiry = dto.LicenseExpiry.Value;
+            // If not provided, keep existing value (required field must not be null)
+
+            if (!string.IsNullOrWhiteSpace(dto.Status))
+                driver.Status = dto.Status;
+
+            // Password update
+            if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
+            {
+                PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
+                driver.PasswordHash = hash;
+                driver.PasswordSalt = salt;
+            }
+
+            // ROLE UPDATE (similar to User)
+            // Note: RoleId is required in DriverUpdateDto, but we only update if provided
+            // For drivers, typically they only have one role (Driver = 3)
+            // If RoleId needs to be changed, we would handle it here similar to User
+            
+            driver.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return true;
+            return driver;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            try
+            {
+                var driver = await _context.Drivers
+                    .Include(d => d.DriverRoles)
+                    .FirstOrDefaultAsync(d => d.DriverId == id);
+                
+                if (driver == null)
+                    return false;
+
+                // Check for related entities that block deletion (DeleteBehavior.Restrict)
+                bool hasRides = await _context.Rides.AnyAsync(r => r.DriverId == id);
+
+                // Block deletion if driver has rides (recommended approach)
+                if (hasRides)
+                {
+                    throw new InvalidOperationException("Driver cannot be deleted because rides exist. Please handle or delete rides first.");
+                }
+
+                // Delete DriverRoles manually (Restrict relationship)
+                // Note: The following will cascade delete automatically:
+                // - Vehicles (Cascade)
+                // - Reviews (Cascade)
+                // - DriverAuthTokens (Cascade)
+                // - DriverNotifications (Cascade)
+                // - DriverAvailabilities (Cascade)
+                if (driver.DriverRoles.Any())
+                {
+                    _context.DriverRoles.RemoveRange(driver.DriverRoles);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Now delete the driver
+                _context.Drivers.Remove(driver);
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                throw; // Re-throw business logic exceptions
+            }
+            catch (Exception ex)
+            {
+                throw new UserException($"Error deleting driver: {ex.Message}");
+            }
         }
 
         public async Task<Driver?> GetByUsernameAsync(string username)

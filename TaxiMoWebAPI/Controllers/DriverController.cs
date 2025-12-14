@@ -104,59 +104,87 @@ namespace TaxiMoWebAPI.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<object>> UpdateDriver(int id, DriverUpdateDto dto, [FromQuery] bool isSelfUpdate = false)
         {
+            _logger.LogInformation("UpdateDriver request received. Id: {Id}, Dto.DriverId: {DriverId}", id, dto.DriverId);
+            
             if (id != dto.DriverId)
-                return BadRequest(new { message = "Driver ID mismatch." });
-
-            var existing = await _driverService.GetByIdAsync(id);
-            if (existing == null)
-                return NotFound(new { message = $"Driver with ID {id} not found." });
-
-            // Email update check
-            if (!string.IsNullOrWhiteSpace(dto.Email) &&
-                await _driverService.EmailExistsAsync(dto.Email, id))
             {
-                return BadRequest(new { message = "A driver with this email already exists." });
+                _logger.LogWarning("Driver ID mismatch. Route id: {RouteId}, DTO id: {DtoId}", id, dto.DriverId);
+                return BadRequest(new { message = "Driver ID mismatch." });
             }
 
-            // Password change (uses PasswordHelper like UsersController)
-            if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
+            if (!ModelState.IsValid)
             {
-                if (isSelfUpdate)
+                _logger.LogWarning("ModelState is invalid: {ModelState}", ModelState);
+                return BadRequest(new { message = "Validation failed.", errors = ModelState });
+            }
+
+            try
+            {
+                // Password change verification (if self-update)
+                if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword) && isSelfUpdate)
                 {
-                    // Verify old password using helper (assumes PasswordHelper has VerifyPassword method)
+                    var existing = await _driverService.GetByIdAsync(id);
+                    if (existing == null)
+                        return NotFound(new { message = $"Driver with ID {id} not found." });
+
+                    // Verify old password
                     var ok = PasswordHelper.VerifyPassword(dto.OldPassword, existing.PasswordHash, existing.PasswordSalt);
                     if (!ok)
+                    {
+                        _logger.LogWarning("Old password verification failed for driver. DriverId: {DriverId}", id);
                         return BadRequest(new { message = "Old password is incorrect." });
+                    }
                 }
 
-                // Create new hash+salt and store
-                PasswordHelper.CreatePasswordHash(dto.NewPassword, out string newHash, out string newSalt);
-                existing.PasswordHash = newHash;
-                existing.PasswordSalt = newSalt;
+                // Use the DTO-based UpdateAsync which handles all the logic properly
+                var updatedDriver = await _driverService.UpdateAsync(dto);
+                _logger.LogInformation("Driver updated successfully. DriverId: {DriverId}", updatedDriver.DriverId);
+                
+                return Ok(new
+                {
+                    message = $"Driver '{updatedDriver.FirstName} {updatedDriver.LastName}' successfully updated.",
+                    data = _mapper.Map<DriverDto>(updatedDriver)
+                });
             }
-
-            // Map other fields (AutoMapper ignores nulls)
-            _mapper.Map(dto, existing);
-
-            existing.UpdatedAt = DateTime.UtcNow;
-            await _driverService.UpdateAsync(existing);
-
-            return Ok(new
+            catch (Exception ex)
             {
-                message = $"Driver '{existing.FirstName} {existing.LastName}' successfully updated.",
-                data = _mapper.Map<DriverDto>(existing)
-            });
+                _logger.LogError(ex, "Error updating driver. DriverId: {DriverId}. Exception: {ExceptionType} - {Message}. StackTrace: {StackTrace}", 
+                    dto.DriverId, ex.GetType().FullName, ex.Message, ex.StackTrace);
+                throw; // Re-throw to let ExceptionFilter handle it
+            }
         }
 
         // DELETE: api/driver/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDriver(int id)
         {
-            var deleted = await _driverService.DeleteAsync(id);
-            if (!deleted)
-                return NotFound(new { message = $"Driver with ID {id} not found" });
+            _logger.LogInformation("DeleteDriver request received. Id: {Id}", id);
+            
+            try
+            {
+                var deleted = await _driverService.DeleteAsync(id);
+                if (!deleted)
+                {
+                    _logger.LogWarning("Driver not found for deletion. DriverId: {DriverId}", id);
+                    return NotFound(new { message = $"Driver with ID {id} not found" });
+                }
 
-            return NoContent();
+                _logger.LogInformation("Driver deleted successfully. DriverId: {DriverId}", id);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Business logic error - driver cannot be deleted due to related records
+                _logger.LogWarning("Driver deletion blocked: {Message}. DriverId: {DriverId}", ex.Message, id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log the full exception details
+                _logger.LogError(ex, "Error deleting driver. DriverId: {DriverId}. Exception: {ExceptionType} - {Message}. StackTrace: {StackTrace}", 
+                    id, ex.GetType().FullName, ex.Message, ex.StackTrace);
+                throw; // Re-throw to let ExceptionFilter handle it with full details
+            }
         }
     }
 }

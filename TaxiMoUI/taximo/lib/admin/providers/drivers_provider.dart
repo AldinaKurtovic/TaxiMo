@@ -43,17 +43,42 @@ class DriversProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Use backend filtering with search and status
       final driversList = await _driversService.getDrivers(
-        search: search,
-        isActive: isActive,
+        search: search ?? _searchQuery,
+        isActive: isActive ?? _statusFilter,
       );
       _drivers = driversList
           .map((json) => DriverModel.fromJson(json as Map<String, dynamic>))
           .toList();
       
-      _searchQuery = search;
-      _statusFilter = isActive;
-      _applyFilters();
+      // Store current filter values
+      if (search != null) _searchQuery = search;
+      if (isActive != null) _statusFilter = isActive;
+      
+      // Apply only client-side sorting (backend handles search and status)
+      _filteredDrivers = List<DriverModel>.from(_drivers);
+      
+      if (_sortColumn != null) {
+        _filteredDrivers.sort((a, b) {
+          int comparison = 0;
+          switch (_sortColumn) {
+            case 'name':
+              comparison = a.fullName.compareTo(b.fullName);
+              break;
+            case 'email':
+              comparison = a.email.compareTo(b.email);
+              break;
+          }
+          return _sortAscending ? comparison : -comparison;
+        });
+      }
+
+      // Reset to first page if current page is out of bounds
+      if (_currentPage > totalPages && totalPages > 0) {
+        _currentPage = 1;
+      }
+      
       _currentPage = 1;
       _errorMessage = null;
     } catch (e) {
@@ -66,28 +91,30 @@ class DriversProvider extends ChangeNotifier {
     }
   }
 
-  void _applyFilters() {
-    _filteredDrivers = List<DriverModel>.from(_drivers);
+  void setSearchQuery(String? query) {
+    _searchQuery = query;
+    // Reload from backend with new search
+    loadDrivers(search: query, isActive: _statusFilter);
+  }
 
-    // Apply search filter
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      final query = _searchQuery!.toLowerCase();
-      _filteredDrivers = _filteredDrivers.where((driver) {
-        return driver.firstName.toLowerCase().contains(query) ||
-            driver.lastName.toLowerCase().contains(query) ||
-            driver.email.toLowerCase().contains(query) ||
-            driver.licenseNumber.toLowerCase().contains(query);
-      }).toList();
+  void setStatusFilter(bool? isActive) {
+    _statusFilter = isActive;
+    // Reload from backend with new status filter
+    loadDrivers(search: _searchQuery, isActive: isActive);
+  }
+
+  void sort(String column) {
+    // Don't allow sorting by status
+    if (column == 'status') return;
+    
+    if (_sortColumn == column) {
+      _sortAscending = !_sortAscending;
+    } else {
+      _sortColumn = column;
+      _sortAscending = true;
     }
-
-    // Apply status filter
-    if (_statusFilter != null) {
-      _filteredDrivers = _filteredDrivers.where((driver) {
-        return _statusFilter! ? driver.isActive : !driver.isActive;
-      }).toList();
-    }
-
-    // Apply sorting
+    
+    // Apply client-side sorting only
     if (_sortColumn != null) {
       _filteredDrivers.sort((a, b) {
         int comparison = 0;
@@ -102,35 +129,7 @@ class DriversProvider extends ChangeNotifier {
         return _sortAscending ? comparison : -comparison;
       });
     }
-
-    // Reset to first page if current page is out of bounds
-    if (_currentPage > totalPages && totalPages > 0) {
-      _currentPage = 1;
-    }
-  }
-
-  void setSearchQuery(String? query) {
-    _searchQuery = query;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void setStatusFilter(bool? isActive) {
-    _statusFilter = isActive;
-    _applyFilters();
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void sort(String column) {
-    if (_sortColumn == column) {
-      _sortAscending = !_sortAscending;
-    } else {
-      _sortColumn = column;
-      _sortAscending = true;
-    }
-    _applyFilters();
+    
     notifyListeners();
   }
 

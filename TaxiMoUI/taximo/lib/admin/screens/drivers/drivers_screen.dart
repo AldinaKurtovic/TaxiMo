@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/drivers_provider.dart';
 import '../../models/driver_model.dart';
+import 'widgets/add_driver_modal.dart';
+import 'widgets/edit_driver_modal.dart';
 
 class DriversScreen extends StatefulWidget {
   const DriversScreen({super.key});
@@ -39,10 +41,30 @@ class _DriversScreenState extends State<DriversScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Provider.of<DriversProvider>(context, listen: false)
-                  .deleteDriver(driver.driverId);
-              Navigator.pop(context);
+            onPressed: () async {
+              print('Delete button clicked for driver ID: ${driver.driverId}'); // Debug log
+              try {
+                if (driver.driverId <= 0) {
+                  throw Exception('Invalid driver ID: ${driver.driverId}');
+                }
+                
+                await Provider.of<DriversProvider>(context, listen: false)
+                    .deleteDriver(driver.driverId);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Driver deleted successfully')),
+                  );
+                }
+              } catch (e) {
+                print('Delete driver error: $e'); // Debug log
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -52,10 +74,25 @@ class _DriversScreenState extends State<DriversScreen> {
     );
   }
 
+  void _showAddDriverModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AddDriverModal(),
+    );
+  }
+
+  void _showEditDriverModal(BuildContext context, DriverModel driver) {
+    showDialog(
+      context: context,
+      builder: (context) => EditDriverModal(driver: driver),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -69,18 +106,14 @@ class _DriversScreenState extends State<DriversScreen> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 32),
-          // Header with add button and search
+          const SizedBox(height: 24),
+          // Header with Add Driver button and Search
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Add Driver Button
+              // Left side: Add Driver Button
               ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Add Driver - Coming soon')),
-                  );
-                },
+                onPressed: () => _showAddDriverModal(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text(
                   'ADD DRIVERS',
@@ -104,8 +137,7 @@ class _DriversScreenState extends State<DriversScreen> {
                   elevation: 0,
                 ),
               ),
-              const SizedBox(width: 16),
-              // Search Bar
+              // Search Bar (right side)
               SizedBox(
                 width: 320,
                 child: TextField(
@@ -155,14 +187,40 @@ class _DriversScreenState extends State<DriversScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Error: ${provider.errorMessage}',
-                          style: const TextStyle(color: Colors.red),
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red[300],
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton(
+                        const Text(
+                          'Error loading drivers',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF424242),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 48.0),
+                          child: Text(
+                            provider.errorMessage!,
+                            style: TextStyle(color: Colors.red[700], fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
                           onPressed: () => provider.loadDrivers(),
-                          child: const Text('Retry'),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -170,26 +228,50 @@ class _DriversScreenState extends State<DriversScreen> {
                 }
 
                 if (provider.currentPageDrivers.isEmpty) {
-                  return const Center(
-                    child: Text('No drivers found'),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.drive_eta_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No drivers found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        headingRowHeight: 56,
-                        dataRowHeight: 64,
-                        headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                        columnSpacing: 40,
-                        horizontalMargin: 24,
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Container(
+                      width: constraints.maxWidth,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
+                            ),
+                            child: DataTable(
+                              headingRowHeight: 56,
+                              dataRowHeight: 64,
+                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                              columnSpacing: 50,
+                              horizontalMargin: 24,
                         columns: [
                         DataColumn(
                           label: Padding(
@@ -281,7 +363,14 @@ class _DriversScreenState extends State<DriversScreen> {
                         const DataColumn(
                           label: Padding(
                             padding: EdgeInsets.only(right: 8.0),
-                            child: Text(''),
+                            child: Text(
+                              'Actions',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Color(0xFF424242),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -351,13 +440,7 @@ class _DriversScreenState extends State<DriversScreen> {
                                         minHeight: 40,
                                       ),
                                       onPressed: () {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Edit ${driver.fullName} - Coming soon'),
-                                          ),
-                                        );
+                                        _showEditDriverModal(context, driver);
                                       },
                                     ),
                                     const SizedBox(width: 4),
@@ -380,10 +463,13 @@ class _DriversScreenState extends State<DriversScreen> {
                           ],
                         );
                       }).toList(),
-                    ),
-                  ),
-                ),
-                );
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                    },
+                  );
               },
             ),
           ),

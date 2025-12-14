@@ -5,6 +5,7 @@ class DriverModel {
   final String email;
   final String? phone;
   final String licenseNumber;
+  final DateTime licenseExpiry;
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -16,6 +17,7 @@ class DriverModel {
     required this.email,
     this.phone,
     required this.licenseNumber,
+    required this.licenseExpiry,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -33,6 +35,9 @@ class DriverModel {
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
       licenseNumber: json['licenseNumber'] as String? ?? '',
+      licenseExpiry: json['licenseExpiry'] != null
+          ? DateTime.parse(json['licenseExpiry'] as String)
+          : DateTime.now().add(const Duration(days: 365)),
       status: json['status'] as String? ?? 'Inactive',
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -51,6 +56,7 @@ class DriverModel {
       'email': email,
       'phone': phone,
       'licenseNumber': licenseNumber,
+      'licenseExpiry': licenseExpiry.toIso8601String(),
       'status': status,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
