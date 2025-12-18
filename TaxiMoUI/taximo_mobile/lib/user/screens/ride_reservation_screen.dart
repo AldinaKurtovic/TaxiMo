@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/ride_route_dto.dart';
 
 enum LocationSelection { pickup, destination }
 
@@ -35,6 +37,22 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
     if (p == null) return placeholder;
     return '${p.latitude.toStringAsFixed(5)}, ${p.longitude.toStringAsFixed(5)}';
   }
+
+  // Calculate distance in kilometers using Haversine formula
+  double _calculateDistanceKm(LatLng point1, LatLng point2) {
+    const double earthRadiusKm = 6371.0;
+    final double dLat = _toRadians(point2.latitude - point1.latitude);
+    final double dLon = _toRadians(point2.longitude - point1.longitude);
+    
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(point1.latitude)) * math.cos(_toRadians(point2.latitude)) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    
+    return earthRadiusKm * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (math.pi / 180.0);
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +168,32 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                       child: FilledButton(
                         onPressed: canProceed
                             ? () {
-                                // UI-only for now
+                                // Calculate distance and duration from coordinates
+                                final distanceKm = _calculateDistanceKm(_pickup!, _destination!);
+                                final distanceMeters = (distanceKm * 1000).round();
+                                
+                                // Calculate duration based on distance (average city speed: 30 km/h)
+                                // Formula: durationSeconds = round((distanceKm / 30) * 3600)
+                                final durationSeconds = ((distanceKm / 30) * 3600).round();
+                                final durationMin = (durationSeconds / 60).round();
+                                
+                                // Backend will recalculate fare, this is just for UI
+                                final fareEstimate = (distanceKm * 1.0);
+                                
+                                Navigator.pushNamed(
+                                  context,
+                                  '/choose-ride',
+                                  arguments: RideRouteDto(
+                                    pickup: _pickup!,
+                                    destination: _destination!,
+                                    distanceMeters: distanceMeters,
+                                    durationSeconds: durationSeconds,
+                                    polylinePoints: [],
+                                    fareEstimate: fareEstimate,
+                                    distanceKm: distanceKm,
+                                    durationMin: durationMin,
+                                  ),
+                                );
                               }
                             : null,
                         child: const Text('Next'),

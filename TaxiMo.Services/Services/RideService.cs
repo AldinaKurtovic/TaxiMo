@@ -9,8 +9,11 @@ namespace TaxiMo.Services.Services
 {
     public class RideService : BaseCRUDService<Ride>, IRideService
     {
-        public RideService(TaxiMoDbContext context) : base(context)
+        private readonly IRidePriceCalculator _priceCalculator;
+
+        public RideService(TaxiMoDbContext context, IRidePriceCalculator priceCalculator) : base(context)
         {
+            _priceCalculator = priceCalculator;
         }
 
         public async Task<List<Ride>> GetAllAsync(string? search = null, string? status = null)
@@ -44,6 +47,13 @@ namespace TaxiMo.Services.Services
 
         public override async Task<Ride> CreateAsync(Ride ride)
         {
+            // Calculate fare estimate if distance is provided
+            if (ride.DistanceKm.HasValue && ride.DistanceKm.Value > 0)
+            {
+                var distanceKm = (double)ride.DistanceKm.Value;
+                ride.FareEstimate = _priceCalculator.CalculateFareEstimate(distanceKm, _priceCalculator.PricePerKm);
+            }
+
             DbSet.Add(ride);
             await Context.SaveChangesAsync();
 

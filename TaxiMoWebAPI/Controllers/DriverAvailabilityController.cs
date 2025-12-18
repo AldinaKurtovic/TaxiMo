@@ -6,7 +6,7 @@ using TaxiMo.Services.Interfaces;
 
 namespace TaxiMoWebAPI.Controllers
 {
-    [Authorize(Roles = "Admin,Driver")]
+    [Authorize(Roles = "Admin,Driver,User")]
     public class DriverAvailabilityController : BaseCRUDController<DriverAvailability, DriverAvailabilityDto, DriverAvailabilityCreateDto, DriverAvailabilityUpdateDto>
     {
         protected override string EntityName => "DriverAvailability";

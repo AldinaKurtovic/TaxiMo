@@ -50,6 +50,7 @@ namespace TaxiMoWebAPI.Controllers
         }
 
         // GET: api/driver/free
+
         [HttpGet("free")]
         public async Task<ActionResult<IEnumerable<DriverDto>>> GetFreeDrivers()
         {

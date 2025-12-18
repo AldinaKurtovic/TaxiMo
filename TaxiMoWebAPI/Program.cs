@@ -93,6 +93,7 @@ builder.Services.AddAuthorization();
 // Register Services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDriverService, DriverService>();
+builder.Services.AddScoped<IRidePriceCalculator, RidePriceCalculator>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();

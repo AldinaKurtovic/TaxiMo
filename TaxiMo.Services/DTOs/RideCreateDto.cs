@@ -24,6 +24,10 @@ namespace TaxiMo.Services.DTOs
 
         [MaxLength(50)]
         public string Status { get; set; } = string.Empty;
+
+        public double? DistanceKm { get; set; }
+
+        public int? DurationMin { get; set; }
     }
 }
 

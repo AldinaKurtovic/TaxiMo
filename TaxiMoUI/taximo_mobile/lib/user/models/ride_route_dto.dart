@@ -6,6 +6,9 @@ class RideRouteDto {
   final int distanceMeters;
   final int durationSeconds;
   final List<LatLng> polylinePoints;
+  final double fareEstimate;
+  final double distanceKm;
+  final int durationMin;
 
   const RideRouteDto({
     required this.pickup,
@@ -13,6 +16,9 @@ class RideRouteDto {
     required this.distanceMeters,
     required this.durationSeconds,
     required this.polylinePoints,
+    required this.fareEstimate,
+    required this.distanceKm,
+    required this.durationMin,
   });
 }
 

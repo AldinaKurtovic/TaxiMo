@@ -5,6 +5,7 @@ import 'auth/screens/login_screen.dart';
 import 'user/screens/user_home_screen.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
+import 'user/screens/voucher_screen.dart';
 import 'driver/screens/driver_home_screen.dart';
 
 void main() {
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
           '/driver-home': (context) => const DriverHomeScreen(),
           '/ride-reservation': (context) => const RideReservationScreen(),
           '/choose-ride': (context) => const ChooseRideScreen(),
+          '/voucher': (context) => const VoucherScreen(),
         },
       ),
     );

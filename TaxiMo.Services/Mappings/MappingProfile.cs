@@ -94,8 +94,8 @@ namespace TaxiMo.Services.Mappings
                 .ForMember(dest => dest.CompletedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.FareEstimate, opt => opt.Ignore())
                 .ForMember(dest => dest.FareFinal, opt => opt.Ignore())
-                .ForMember(dest => dest.DistanceKm, opt => opt.Ignore())
-                .ForMember(dest => dest.DurationMin, opt => opt.Ignore());
+                .ForMember(dest => dest.DistanceKm, opt => opt.MapFrom(src => src.DistanceKm.HasValue ? (decimal?)src.DistanceKm.Value : null))
+                .ForMember(dest => dest.DurationMin, opt => opt.MapFrom(src => src.DurationMin));
             CreateMap<RideUpdateDto, Ride>();
 
             // Review mappings
