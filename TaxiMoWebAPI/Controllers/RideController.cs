@@ -1,6 +1,10 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Security.Claims;
+using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
 using TaxiMo.Services.Interfaces;
@@ -12,14 +16,20 @@ namespace TaxiMoWebAPI.Controllers
     {
         protected override string EntityName => "Ride";
         private readonly IRideService _rideService;
+        private readonly IDriverService _driverService;
+        private readonly TaxiMoDbContext _context;
 
         public RideController(
             IRideService rideService,
+            IDriverService driverService,
+            TaxiMoDbContext context,
             AutoMapper.IMapper mapper,
             ILogger<RideController> logger) 
             : base(rideService, mapper, logger)
         {
             _rideService = rideService;
+            _driverService = driverService;
+            _context = context;
         }
 
         // GET: api/Ride?search=xxx&status=xxx
@@ -38,6 +48,84 @@ namespace TaxiMoWebAPI.Controllers
             {
                 Logger.LogError(ex, "Error retrieving rides");
                 return StatusCode(500, new { message = "An error occurred while retrieving rides" });
+            }
+        }
+
+        // POST: api/Ride
+        // Override base Create to add logging and better error handling
+        [HttpPost]
+        public override async Task<ActionResult<RideDto>> Create(RideCreateDto createDto)
+        {
+            try
+            {
+                // Log authenticated user information
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var username = User.FindFirst(ClaimTypes.Name)?.Value;
+                var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                
+                Logger.LogInformation(
+                    "Ride creation request - UserId: {UserId}, Username: {Username}, Roles: {Roles}",
+                    userId, username, string.Join(", ", roles));
+
+                Logger.LogInformation(
+                    "Ride creation request - RiderId: {RiderId}, DriverId: {DriverId}, PickupLocationId: {PickupLocationId}, DropoffLocationId: {DropoffLocationId}",
+                    createDto.RiderId, createDto.DriverId, createDto.PickupLocationId, createDto.DropoffLocationId);
+
+                if (!ModelState.IsValid)
+                {
+                    Logger.LogWarning("Ride creation failed - ModelState invalid: {ModelState}", 
+                        string.Join(", ", ModelState.SelectMany(x => x.Value?.Errors.Select(e => e.ErrorMessage) ?? Enumerable.Empty<string>())));
+                    return BadRequest(ModelState);
+                }
+
+                // Load driver WITH vehicles to select the first active vehicle
+                var driver = await _context.Drivers
+                    .Include(d => d.Vehicles)
+                    .FirstOrDefaultAsync(d => d.DriverId == createDto.DriverId);
+
+                if (driver == null)
+                {
+                    Logger.LogWarning("Ride creation failed - Driver not found: {DriverId}", createDto.DriverId);
+                    return BadRequest(new { message = $"Driver with ID {createDto.DriverId} not found" });
+                }
+
+                // Select the first active vehicle for the driver
+                var vehicle = driver.Vehicles?.FirstOrDefault(v => v.Status.ToLower() == "active");
+                if (vehicle == null)
+                {
+                    Logger.LogWarning("Ride creation failed - Driver does not have an active vehicle: {DriverId}", createDto.DriverId);
+                    return BadRequest(new { message = "Selected driver does not have an active vehicle assigned" });
+                }
+
+                // MAP FIRST - Create entity from DTO
+                var ride = Mapper.Map<Ride>(createDto);
+
+                // ASSIGN VEHICLE AFTER MAPPING - This ensures AutoMapper doesn't overwrite it
+                ride.VehicleId = vehicle.VehicleId;
+                Logger.LogInformation("Selected vehicle for driver {DriverId}: VehicleId {VehicleId}", createDto.DriverId, vehicle.VehicleId);
+
+                // Use service to create ride (handles fare calculation, payment creation, etc.)
+                var createdEntity = await _rideService.CreateAsync(ride);
+                var dto = Mapper.Map<RideDto>(createdEntity);
+
+                Logger.LogInformation("Ride created successfully - RideId: {RideId}", createdEntity.RideId);
+
+                // Get the ID property from the DTO using reflection
+                var idProperty = typeof(RideDto).GetProperty($"{typeof(Ride).Name}Id");
+                if (idProperty == null)
+                {
+                    // Try alternative naming patterns
+                    idProperty = typeof(RideDto).GetProperty("Id") ?? 
+                                typeof(RideDto).GetProperties().FirstOrDefault(p => p.Name.EndsWith("Id"));
+                }
+
+                var id = idProperty?.GetValue(dto);
+                return CreatedAtAction(nameof(GetById), new { id }, dto);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error creating ride - Request: {@Request}", createDto);
+                return StatusCode(500, new { message = $"An error occurred while creating the {EntityName}" });
             }
         }
     }

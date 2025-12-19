@@ -41,6 +41,16 @@ namespace TaxiMo.Services.Mappings
                                 : null;
                         }
                     }
+                    
+                    // Set VehicleId from first vehicle
+                    if (src.Vehicles != null && src.Vehicles.Any())
+                    {
+                        var firstVehicle = src.Vehicles.FirstOrDefault();
+                        if (firstVehicle != null)
+                        {
+                            dest.VehicleId = firstVehicle.VehicleId;
+                        }
+                    }
                 });
             CreateMap<DriverCreateDto, Driver>()
                 .ForMember(dest => dest.DriverId, opt => opt.Ignore())

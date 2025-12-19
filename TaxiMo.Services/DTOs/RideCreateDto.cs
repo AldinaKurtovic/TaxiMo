@@ -10,8 +10,8 @@ namespace TaxiMo.Services.DTOs
         [Required]
         public int DriverId { get; set; }
 
-        [Required]
-        public int VehicleId { get; set; }
+        // VehicleId is optional - backend will select the first active vehicle for the driver
+        public int? VehicleId { get; set; }
 
         [Required]
         public int PickupLocationId { get; set; }

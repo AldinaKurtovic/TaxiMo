@@ -70,15 +70,11 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     });
 
     try {
-      // Get vehicleId - using placeholder for now
-      // TODO: Implement proper vehicle lookup
-      final vehicleId = await _rideService.getVehicleIdForDriver(_selectedDriverId!);
       final finalPrice = _calculateFinalPrice(route.fareEstimate, _selectedPromoCode);
 
       final bookingRequest = RideRequestDto(
         riderId: currentUser.userId,
         driverId: _selectedDriverId!,
-        vehicleId: vehicleId,
         pickupLocation: LocationRequest(
           name: 'Pickup Location',
           addressLine: 'Pickup Address',
@@ -321,8 +317,17 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                                     size: 48, color: colorScheme.onSurfaceVariant),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No drivers available',
+                                  'No available drivers with vehicles nearby',
+                                  textAlign: TextAlign.center,
                                   style: theme.textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Please try again later',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ],
                             ),
@@ -443,8 +448,9 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                       Builder(
                         builder: (context) {
                           final finalPrice = _calculateFinalPrice(route.fareEstimate, _selectedPromoCode);
+                          final hasDrivers = _drivers != null && _drivers!.isNotEmpty;
                           return FilledButton(
-                            onPressed: (_selectedDriverId != null && !_isBooking)
+                            onPressed: (_selectedDriverId != null && !_isBooking && hasDrivers)
                                 ? () => _bookRide(route)
                                 : null,
                             style: FilledButton.styleFrom(

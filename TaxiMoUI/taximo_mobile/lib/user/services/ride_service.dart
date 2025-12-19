@@ -78,12 +78,11 @@ class RideService {
       // Step 2: Create dropoff location
       final dropoffLocation = await createLocation(request.dropoffLocation, request.riderId);
 
-      // Step 3: Create ride
-      final rideUri = Uri.parse('${ApiConfig.baseUrl}/api/Rides');
+      // Step 3: Create ride (backend will automatically select the active vehicle for the driver)
+      final rideUri = Uri.parse('${ApiConfig.baseUrl}/api/Ride');
       final rideBody = jsonEncode({
         'riderId': request.riderId,
         'driverId': request.driverId,
-        'vehicleId': request.vehicleId,
         'pickupLocationId': pickupLocation.locationId,
         'dropoffLocationId': dropoffLocation.locationId,
         'requestedAt': DateTime.now().toIso8601String(),
@@ -92,7 +91,14 @@ class RideService {
         'durationMin': request.durationMin,
       });
 
+      print('Booking ride - URL: $rideUri');
+      print('Booking ride - Request body: $rideBody');
+      print('Booking ride - Headers: ${_headers()}');
+
       final rideResponse = await http.post(rideUri, headers: _headers(), body: rideBody);
+
+      print('Booking ride - Response status: ${rideResponse.statusCode}');
+      print('Booking ride - Response body: ${rideResponse.body}');
 
       if (rideResponse.statusCode == 201 || rideResponse.statusCode == 200) {
         final jsonData = jsonDecode(rideResponse.body) as Map<String, dynamic>;
@@ -102,6 +108,8 @@ class RideService {
         if (jsonData.containsKey('data')) {
           final data = jsonData['data'] as Map<String, dynamic>;
           rideId = data['rideId'] as int? ?? 0;
+        } else if (jsonData.containsKey('rideId')) {
+          rideId = jsonData['rideId'] as int;
         } else if (jsonData.containsKey('rideId')) {
           rideId = jsonData['rideId'] as int;
         }
@@ -122,10 +130,13 @@ class RideService {
         );
       } else {
         final errorBody = rideResponse.body;
+        print('ERROR - Failed to create ride: ${rideResponse.statusCode}');
+        print('ERROR - Response body: $errorBody');
         throw Exception('Failed to create ride: ${rideResponse.statusCode} - $errorBody');
       }
     } catch (e) {
-      throw Exception('Booking failed: $e');
+      print('ERROR - Booking failed: $e');
+      rethrow;
     }
   }
 
@@ -145,14 +156,5 @@ class RideService {
     }
   }
 
-  // Helper method to get vehicleId for a driver
-  // Note: This is a placeholder - you may need to implement a proper endpoint
-  // For now, we'll use a default value or fetch from driver data
-  Future<int> getVehicleIdForDriver(int driverId) async {
-    // TODO: Implement proper vehicle lookup
-    // For now, return a default value (this should be replaced with actual API call)
-    // You might need to create an endpoint like GET /api/Drivers/{id}/vehicle
-    return 1; // Placeholder - replace with actual implementation
-  }
 }
 

@@ -57,6 +57,21 @@ namespace TaxiMo.Services.Services
             DbSet.Add(ride);
             await Context.SaveChangesAsync();
 
+            // Create payment record automatically for cash payment
+            var payment = new Payment
+            {
+                RideId = ride.RideId,
+                UserId = ride.RiderId,
+                Amount = ride.FareEstimate ?? 0,
+                Currency = "KM",
+                Method = "cash",
+                Status = "pending",
+                PaidAt = null
+            };
+
+            Context.Payments.Add(payment);
+            await Context.SaveChangesAsync();
+
             // Publish RabbitMQ message after successful save
             await PublishRideCreatedMessageAsync(ride);
 

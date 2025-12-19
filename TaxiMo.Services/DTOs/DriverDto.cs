@@ -20,6 +20,9 @@ namespace TaxiMo.Services.DTOs
         // Driver coordinates from DriverAvailability (for map display)
         public double? CurrentLatitude { get; set; }
         public double? CurrentLongitude { get; set; }
+        
+        // VehicleId from first vehicle (for ride booking)
+        public int? VehicleId { get; set; }
     }
 }
 

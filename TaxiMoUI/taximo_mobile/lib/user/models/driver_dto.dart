@@ -5,6 +5,7 @@ class DriverDto {
   final double ratingAvg;
   final double? currentLatitude;
   final double? currentLongitude;
+  final int? vehicleId;
 
   const DriverDto({
     required this.driverId,
@@ -13,6 +14,7 @@ class DriverDto {
     required this.ratingAvg,
     this.currentLatitude,
     this.currentLongitude,
+    this.vehicleId,
   });
 
   factory DriverDto.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class DriverDto {
       ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0.0,
       currentLatitude: (json['currentLatitude'] as num?)?.toDouble(),
       currentLongitude: (json['currentLongitude'] as num?)?.toDouble(),
+      vehicleId: (json['vehicleId'] as int?),
     );
   }
 

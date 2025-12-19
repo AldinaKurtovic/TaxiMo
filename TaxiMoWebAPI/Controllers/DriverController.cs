@@ -14,15 +14,18 @@ namespace TaxiMoWebAPI.Controllers
     public class DriverController : ControllerBase
     {
         private readonly IDriverService _driverService;
+        private readonly IVehicleService _vehicleService;
         private readonly IMapper _mapper;
         private readonly ILogger<DriverController> _logger;
 
         public DriverController(
             IDriverService driverService,
+            IVehicleService vehicleService,
             IMapper mapper,
             ILogger<DriverController> logger)
         {
             _driverService = driverService;
+            _vehicleService = vehicleService;
             _mapper = mapper;
             _logger = logger;
         }
@@ -185,6 +188,57 @@ namespace TaxiMoWebAPI.Controllers
                 _logger.LogError(ex, "Error deleting driver. DriverId: {DriverId}. Exception: {ExceptionType} - {Message}. StackTrace: {StackTrace}", 
                     id, ex.GetType().FullName, ex.Message, ex.StackTrace);
                 throw; // Re-throw to let ExceptionFilter handle it with full details
+            }
+        }
+
+        // POST: api/driver/{id}/assign-vehicle
+        // Helper endpoint to assign a vehicle to a driver
+        [HttpPost("{id}/assign-vehicle")]
+        public async Task<ActionResult<object>> AssignVehicleToDriver(int id, VehicleCreateDto vehicleDto)
+        {
+            _logger.LogInformation("AssignVehicleToDriver request received. DriverId: {DriverId}", id);
+
+            if (id != vehicleDto.DriverId)
+            {
+                _logger.LogWarning("Driver ID mismatch. Route id: {RouteId}, DTO DriverId: {DtoDriverId}", id, vehicleDto.DriverId);
+                return BadRequest(new { message = "Driver ID mismatch." });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("ModelState is invalid: {ModelState}", ModelState);
+                return BadRequest(new { message = "Validation failed.", errors = ModelState });
+            }
+
+            try
+            {
+                // Verify driver exists
+                var driver = await _driverService.GetByIdAsync(id);
+                if (driver == null)
+                {
+                    _logger.LogWarning("Driver not found. DriverId: {DriverId}", id);
+                    return NotFound(new { message = $"Driver with ID {id} not found" });
+                }
+
+                // Create vehicle
+                var vehicle = _mapper.Map<Vehicle>(vehicleDto);
+                var createdVehicle = await _vehicleService.CreateAsync(vehicle);
+
+                _logger.LogInformation("Vehicle assigned successfully. DriverId: {DriverId}, VehicleId: {VehicleId}", id, createdVehicle.VehicleId);
+
+                return CreatedAtAction(
+                    nameof(GetDriver),
+                    new { id },
+                    new
+                    {
+                        message = $"Vehicle '{createdVehicle.Make} {createdVehicle.Model}' successfully assigned to driver '{driver.FirstName} {driver.LastName}'.",
+                        data = _mapper.Map<VehicleDto>(createdVehicle)
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning vehicle to driver. DriverId: {DriverId}", id);
+                return StatusCode(500, new { message = "An error occurred while assigning vehicle to driver" });
             }
         }
     }

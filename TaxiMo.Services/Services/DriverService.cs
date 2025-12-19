@@ -56,7 +56,9 @@ namespace TaxiMo.Services.Services
 
         public async Task<Driver?> GetByIdAsync(int id)
         {
-            return await _context.Drivers.FindAsync(id);
+            return await _context.Drivers
+                .Include(d => d.Vehicles)
+                .FirstOrDefaultAsync(d => d.DriverId == id);
         }
 
         public async Task<Driver> CreateAsync(Driver driver, int roleId = 3)
@@ -312,10 +314,15 @@ namespace TaxiMo.Services.Services
         public async Task<List<Driver>> GetFreeDriversAsync()
         {
             // Get drivers with status "active" who don't have any active rides
-            // Include DriverAvailabilities to get coordinates
+            // AND who have at least one active vehicle
+            // Include DriverAvailabilities to get coordinates and Vehicles to get vehicleId
             var activeDrivers = await _context.Drivers
                 .Include(d => d.DriverAvailabilities)
-                .Where(d => d.Status.ToLower() == "active")
+                .Include(d => d.Vehicles)
+                .Where(d => 
+                    d.Status.ToLower() == "active" &&
+                    d.Vehicles.Any(v => v.Status.ToLower() == "active")
+                )
                 .ToListAsync();
 
             var activeRideDriverIds = await _context.Rides

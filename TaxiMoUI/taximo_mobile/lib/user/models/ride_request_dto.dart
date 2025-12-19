@@ -29,7 +29,6 @@ class LocationRequest {
 class RideRequestDto {
   final int riderId;
   final int driverId;
-  final int vehicleId;
   final LocationRequest pickupLocation;
   final LocationRequest dropoffLocation;
   final double distanceKm;
@@ -42,7 +41,6 @@ class RideRequestDto {
   const RideRequestDto({
     required this.riderId,
     required this.driverId,
-    required this.vehicleId,
     required this.pickupLocation,
     required this.dropoffLocation,
     required this.distanceKm,
