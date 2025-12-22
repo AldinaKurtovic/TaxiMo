@@ -23,7 +23,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
   final RideService _rideService = RideService();
   late final Future<List<DriverDto>> _driversFuture;
   PromoCodeDto? _selectedPromoCode;
-  bool _isBooking = false;
+  bool _isNavigating = false;
 
   String _formatDistance(int meters) => '${(meters / 1000).toStringAsFixed(1)} km';
   String _formatDuration(int seconds) => '${(seconds / 60).round()} min';
@@ -47,7 +47,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     return finalPrice < 0 ? 0 : finalPrice;
   }
 
-  Future<void> _bookRide(RideRouteDto route) async {
+  Future<void> _navigateToPayment(RideRouteDto route) async {
     if (_selectedDriverId == null) {
       return;
     }
@@ -66,59 +66,47 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     }
 
     setState(() {
-      _isBooking = true;
+      _isNavigating = true;
     });
 
     try {
       final finalPrice = _calculateFinalPrice(route.fareEstimate, _selectedPromoCode);
 
-      final bookingRequest = RideRequestDto(
-        riderId: currentUser.userId,
-        driverId: _selectedDriverId!,
-        pickupLocation: LocationRequest(
-          name: 'Pickup Location',
-          addressLine: 'Pickup Address',
-          city: 'Mostar',
-          lat: route.pickup.latitude,
-          lng: route.pickup.longitude,
-        ),
-        dropoffLocation: LocationRequest(
-          name: 'Destination',
-          addressLine: 'Destination Address',
-          city: 'Mostar',
-          lat: route.destination.latitude,
-          lng: route.destination.longitude,
-        ),
-        distanceKm: route.distanceKm,
-        durationMin: route.durationMin,
-        fareEstimate: route.fareEstimate,
-        fareFinal: finalPrice,
-        promoCodeId: _selectedPromoCode?.promoId,
-        paymentMethod: 'cash',
+      // Navigate to PaymentScreen with ride booking data
+      // Ride will be created when user selects payment method
+      Navigator.pushNamed(
+        context,
+        '/payment',
+        arguments: {
+          'riderId': currentUser.userId,
+          'driverId': _selectedDriverId!,
+          'pickupLocation': {
+            'name': 'Pickup Location',
+            'addressLine': 'Pickup Address',
+            'city': 'Mostar',
+            'lat': route.pickup.latitude,
+            'lng': route.pickup.longitude,
+          },
+          'dropoffLocation': {
+            'name': 'Destination',
+            'addressLine': 'Destination Address',
+            'city': 'Mostar',
+            'lat': route.destination.latitude,
+            'lng': route.destination.longitude,
+          },
+          'distanceKm': route.distanceKm,
+          'durationMin': route.durationMin,
+          'fareEstimate': route.fareEstimate,
+          'fareFinal': finalPrice,
+          'promoCodeId': _selectedPromoCode?.promoId,
+        },
       );
-
-      final response = await _rideService.bookRide(bookingRequest);
-
-      if (!mounted) return;
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Your ride has been successfully booked. Please wait for driver confirmation.'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-
-      // Navigate back to home screen
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      Navigator.pushReplacementNamed(context, '/user-home');
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to book ride: ${e.toString()}'),
+          content: Text('Failed to proceed: ${e.toString()}'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
         ),
@@ -126,7 +114,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isBooking = false;
+          _isNavigating = false;
         });
       }
     }
@@ -432,17 +420,6 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      // Payment method dropdown (placeholder)
-                      DropdownButton<String>(
-                        value: 'Cash',
-                        underline: const SizedBox(),
-                        dropdownColor: Colors.grey[900],
-                        style: const TextStyle(color: Colors.white),
-                        items: const [
-                          DropdownMenuItem(value: 'Cash', child: Text('Cash')),
-                        ],
-                        onChanged: (_) {},
-                      ),
                       const Spacer(),
                       // Book button
                       Builder(
@@ -450,8 +427,8 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                           final finalPrice = _calculateFinalPrice(route.fareEstimate, _selectedPromoCode);
                           final hasDrivers = _drivers != null && _drivers!.isNotEmpty;
                           return FilledButton(
-                            onPressed: (_selectedDriverId != null && !_isBooking && hasDrivers)
-                                ? () => _bookRide(route)
+                            onPressed: (_selectedDriverId != null && !_isNavigating && hasDrivers)
+                                ? () => _navigateToPayment(route)
                                 : null,
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -461,7 +438,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                                 borderRadius: BorderRadius.circular(24),
                               ),
                             ),
-                            child: _isBooking
+                            child: _isNavigating
                                 ? SizedBox(
                                     width: 20,
                                     height: 20,

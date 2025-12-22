@@ -104,23 +104,25 @@ namespace TaxiMoWebAPI.Controllers
                 ride.VehicleId = vehicle.VehicleId;
                 Logger.LogInformation("Selected vehicle for driver {DriverId}: VehicleId {VehicleId}", createDto.DriverId, vehicle.VehicleId);
 
-                // Use service to create ride (handles fare calculation, payment creation, etc.)
-                var createdEntity = await _rideService.CreateAsync(ride);
-                var dto = Mapper.Map<RideDto>(createdEntity);
+                // Get payment method from DTO (default to "cash" if not provided)
+                var paymentMethod = createDto.PaymentMethod ?? "cash";
 
-                Logger.LogInformation("Ride created successfully - RideId: {RideId}", createdEntity.RideId);
+                // Use service to create ride with payment (handles fare calculation, payment creation, etc.)
+                var (createdRide, createdPayment) = await _rideService.CreateRideWithPaymentAsync(ride, paymentMethod);
 
-                // Get the ID property from the DTO using reflection
-                var idProperty = typeof(RideDto).GetProperty($"{typeof(Ride).Name}Id");
-                if (idProperty == null)
+                Logger.LogInformation("Ride created successfully - RideId: {RideId}, PaymentId: {PaymentId}", createdRide.RideId, createdPayment.PaymentId);
+
+                // Return custom booking response with ride and payment information
+                var bookingResponse = new
                 {
-                    // Try alternative naming patterns
-                    idProperty = typeof(RideDto).GetProperty("Id") ?? 
-                                typeof(RideDto).GetProperties().FirstOrDefault(p => p.Name.EndsWith("Id"));
-                }
+                    rideId = createdRide.RideId,
+                    paymentId = createdPayment.PaymentId,
+                    totalAmount = createdPayment.Amount,
+                    currency = createdPayment.Currency,
+                    message = "Ride booked successfully"
+                };
 
-                var id = idProperty?.GetValue(dto);
-                return CreatedAtAction(nameof(GetById), new { id }, dto);
+                return CreatedAtAction(nameof(GetById), new { id = createdRide.RideId }, bookingResponse);
             }
             catch (Exception ex)
             {

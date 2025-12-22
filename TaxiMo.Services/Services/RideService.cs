@@ -47,6 +47,12 @@ namespace TaxiMo.Services.Services
 
         public override async Task<Ride> CreateAsync(Ride ride)
         {
+            var (createdRide, _) = await CreateRideWithPaymentAsync(ride, "cash");
+            return createdRide;
+        }
+
+        public async Task<(Ride Ride, Payment Payment)> CreateRideWithPaymentAsync(Ride ride, string paymentMethod)
+        {
             // Calculate fare estimate if distance is provided
             if (ride.DistanceKm.HasValue && ride.DistanceKm.Value > 0)
             {
@@ -57,15 +63,16 @@ namespace TaxiMo.Services.Services
             DbSet.Add(ride);
             await Context.SaveChangesAsync();
 
-            // Create payment record automatically for cash payment
+            // Create payment record with provided payment method
             var payment = new Payment
             {
                 RideId = ride.RideId,
                 UserId = ride.RiderId,
                 Amount = ride.FareEstimate ?? 0,
                 Currency = "KM",
-                Method = "cash",
+                Method = paymentMethod ?? "cash",
                 Status = "pending",
+                TransactionRef = null,
                 PaidAt = null
             };
 
@@ -75,7 +82,7 @@ namespace TaxiMo.Services.Services
             // Publish RabbitMQ message after successful save
             await PublishRideCreatedMessageAsync(ride);
 
-            return ride;
+            return (ride, payment);
         }
 
         private async Task PublishRideCreatedMessageAsync(Ride ride)

@@ -42,3 +42,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Material Components for flutter_stripe compatibility
+    implementation("com.google.android.material:material:1.11.0")
+}

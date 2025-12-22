@@ -54,16 +54,25 @@ class RideRequestDto {
 
 class RideBookingResponse {
   final int rideId;
+  final int paymentId;
+  final double totalAmount;
+  final String currency;
   final String message;
 
   const RideBookingResponse({
     required this.rideId,
+    required this.paymentId,
+    required this.totalAmount,
+    required this.currency,
     required this.message,
   });
 
   factory RideBookingResponse.fromJson(Map<String, dynamic> json) {
     return RideBookingResponse(
       rideId: json['rideId'] as int? ?? 0,
+      paymentId: json['paymentId'] as int? ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] as String? ?? 'KM',
       message: json['message'] as String? ?? 'Ride booked successfully',
     );
   }

@@ -89,6 +89,7 @@ class RideService {
         'status': 'requested',
         'distanceKm': request.distanceKm,
         'durationMin': request.durationMin,
+        'paymentMethod': request.paymentMethod,
       });
 
       print('Booking ride - URL: $rideUri');
@@ -103,31 +104,20 @@ class RideService {
       if (rideResponse.statusCode == 201 || rideResponse.statusCode == 200) {
         final jsonData = jsonDecode(rideResponse.body) as Map<String, dynamic>;
         
-        // Extract rideId from response
-        int rideId = 0;
-        if (jsonData.containsKey('data')) {
-          final data = jsonData['data'] as Map<String, dynamic>;
-          rideId = data['rideId'] as int? ?? 0;
-        } else if (jsonData.containsKey('rideId')) {
-          rideId = jsonData['rideId'] as int;
-        } else if (jsonData.containsKey('rideId')) {
-          rideId = jsonData['rideId'] as int;
-        }
+        // Parse booking response with payment information
+        final bookingResponse = RideBookingResponse.fromJson(jsonData);
 
         // Step 4: Create PromoUsage if promo code was used
-        if (request.promoCodeId != null && rideId > 0) {
+        if (request.promoCodeId != null && bookingResponse.rideId > 0) {
           try {
-            await createPromoUsage(rideId, request.riderId, request.promoCodeId!);
+            await createPromoUsage(bookingResponse.rideId, request.riderId, request.promoCodeId!);
           } catch (e) {
             // Log error but don't fail the booking if promo usage creation fails
             print('Failed to create promo usage: $e');
           }
         }
 
-        return RideBookingResponse(
-          rideId: rideId,
-          message: jsonData['message'] as String? ?? 'Ride booked successfully',
-        );
+        return bookingResponse;
       } else {
         final errorBody = rideResponse.body;
         print('ERROR - Failed to create ride: ${rideResponse.statusCode}');

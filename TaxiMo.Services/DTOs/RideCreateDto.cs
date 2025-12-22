@@ -28,6 +28,9 @@ namespace TaxiMo.Services.DTOs
         public double? DistanceKm { get; set; }
 
         public int? DurationMin { get; set; }
+
+        [MaxLength(50)]
+        public string? PaymentMethod { get; set; }
     }
 }
 

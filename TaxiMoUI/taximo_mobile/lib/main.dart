@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'auth/providers/mobile_auth_provider.dart';
 import 'auth/screens/login_screen.dart';
@@ -6,9 +7,40 @@ import 'user/screens/user_home_screen.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
 import 'user/screens/voucher_screen.dart';
+import 'user/screens/payment_screen.dart';
 import 'driver/screens/driver_home_screen.dart';
+import 'services/stripe_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load .env file
+  debugPrint('[main] Loading .env file...');
+  await dotenv.load(fileName: ".env");
+  debugPrint('[main] .env file loaded. Keys available: ${dotenv.env.keys.length}');
+  
+  // Validate STRIPE_PUBLISHABLE_KEY exists
+  if (dotenv.env['STRIPE_PUBLISHABLE_KEY'] == null || 
+      dotenv.env['STRIPE_PUBLISHABLE_KEY']!.isEmpty) {
+    debugPrint('[main] WARNING: STRIPE_PUBLISHABLE_KEY is not set in .env file');
+  } else {
+    final maskedKey = dotenv.env['STRIPE_PUBLISHABLE_KEY']!.length > 6
+        ? '${dotenv.env['STRIPE_PUBLISHABLE_KEY']!.substring(0, 6)}...'
+        : '***';
+    debugPrint('[main] STRIPE_PUBLISHABLE_KEY found: $maskedKey');
+  }
+  
+  // Initialize Stripe (after dotenv.load())
+  debugPrint('[main] Initializing Stripe...');
+  final stripeService = StripeService();
+  try {
+    await stripeService.init();
+    debugPrint('[main] Stripe initialized successfully');
+  } catch (e) {
+    // Log error but don't crash the app
+    debugPrint('[main] ERROR: Failed to initialize Stripe: $e');
+  }
+  
   runApp(const MyApp());
 }
 
@@ -36,6 +68,7 @@ class MyApp extends StatelessWidget {
           '/ride-reservation': (context) => const RideReservationScreen(),
           '/choose-ride': (context) => const ChooseRideScreen(),
           '/voucher': (context) => const VoucherScreen(),
+          '/payment': (context) => const PaymentScreen(),
         },
       ),
     );

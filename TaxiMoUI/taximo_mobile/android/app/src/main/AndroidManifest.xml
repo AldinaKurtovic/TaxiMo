@@ -2,11 +2,12 @@
     <application
         android:label="taximo_mobile"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-        <!-- Google Maps API Key (replace with your real key) -->
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme">
+        <!-- Google Maps API Key  -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDoUHlGfoKOgbY62xwsYp8Im79PpPugHEE" />
+            android:value="AIzaSyAiwMKSTEqRNLCwKzbxhgRjEJttz1Yudps" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
