@@ -92,13 +92,14 @@ class UserHomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  // First row: Trip History and Promo Codes
                   Row(
                     children: [
                       Expanded(
                         child: _QuickActionCard(
                           title: 'Trip History',
                           icon: Icons.history,
-                          onTap: null, // Keep navigation logic unchanged (UI only).
+                          onTap: () => Navigator.pushNamed(context, '/trip-history'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -106,7 +107,20 @@ class UserHomeScreen extends StatelessWidget {
                         child: _QuickActionCard(
                           title: 'Promo Codes',
                           icon: Icons.local_offer_outlined,
-                          onTap: null, // Keep navigation logic unchanged (UI only).
+                          onTap: () => Navigator.pushNamed(context, '/promo-codes'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Second row: Reviews and Payment
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickActionCard(
+                          title: 'Reviews',
+                          icon: Icons.star,
+                          onTap: () => Navigator.pushNamed(context, '/reviews'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -114,7 +128,7 @@ class UserHomeScreen extends StatelessWidget {
                         child: _QuickActionCard(
                           title: 'Payment',
                           icon: Icons.credit_card,
-                          onTap: null, // Keep navigation logic unchanged (UI only).
+                          onTap: () => Navigator.pushNamed(context, '/payment-history'),
                         ),
                       ),
                     ],

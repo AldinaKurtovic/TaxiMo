@@ -26,5 +26,20 @@ class PromoCodeService {
       throw Exception('Error loading promo codes');
     }
   }
+
+  /// Get all promo codes (for viewing in promo codes screen)
+  Future<List<PromoCodeDto>> getAllPromoCodes() async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/PromoCode');
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+      return jsonList
+          .map((json) => PromoCodeDto.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('Error loading promo codes: ${response.statusCode} - ${response.body}');
+    }
+  }
 }
 

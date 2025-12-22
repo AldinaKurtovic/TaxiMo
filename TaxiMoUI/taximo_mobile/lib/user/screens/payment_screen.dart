@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/ride_request_dto.dart';
+import '../models/payment_history_dto.dart';
 import '../services/ride_service.dart';
+import '../services/payment_service.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../../services/stripe_service.dart';
+import 'payment_history_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -211,11 +214,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final colorScheme = theme.colorScheme;
     final args = ModalRoute.of(context)?.settings.arguments;
     
-    if (args is! Map<String, dynamic>) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Payment')),
-        body: const Center(child: Text('Invalid payment data')),
-      );
+    // If no arguments, show payment history screen
+    if (args == null || args is! Map<String, dynamic>) {
+      return const PaymentHistoryScreen();
     }
 
     _initializePaymentMethod();

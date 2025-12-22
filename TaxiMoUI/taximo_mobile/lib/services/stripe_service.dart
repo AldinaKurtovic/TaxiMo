@@ -63,24 +63,17 @@ class StripeService {
     required int paymentId,
   }) async {
     try {
-      // TEMPORARY: Force currency and amount for debugging
-      final debugCurrency = 'eur';
-      final debugAmount = 500.0; // 5 EUR
-      
-      debugPrint('[StripeService] createPaymentIntent called');
-      debugPrint('[StripeService] Original amount: $amount, currency: $currency');
-      debugPrint('[StripeService] DEBUG: Using forced amount: $debugAmount, currency: $debugCurrency');
-      debugPrint('[StripeService] rideId: $rideId, paymentId: $paymentId');
+      debugPrint('[StripeService] createPaymentIntent - amount: $amount, currency: $currency, rideId: $rideId, paymentId: $paymentId');
 
       // Convert amount to cents (long - Dart int is 64-bit)
-      final amountInCents = (debugAmount * 100).round();
+      final amountInCents = (amount * 100).round();
       debugPrint('[StripeService] Amount in cents: $amountInCents');
 
       // Call backend endpoint
       final uri = Uri.parse('${ApiConfig.baseUrl}/api/Stripe/create-payment-intent');
       final body = jsonEncode({
         'amount': amountInCents,
-        'currency': debugCurrency,
+        'currency': currency.toLowerCase(),
         'rideId': rideId,
         'paymentId': paymentId,
       });

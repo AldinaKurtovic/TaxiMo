@@ -8,6 +8,11 @@ import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
 import 'user/screens/voucher_screen.dart';
 import 'user/screens/payment_screen.dart';
+import 'user/screens/payment_history_screen.dart';
+import 'user/screens/rate_trip_screen.dart';
+import 'user/screens/reviews_screen.dart';
+import 'user/screens/promo_codes_screen.dart';
+import 'user/screens/trip_history_screen.dart';
 import 'driver/screens/driver_home_screen.dart';
 import 'services/stripe_service.dart';
 
@@ -69,6 +74,11 @@ class MyApp extends StatelessWidget {
           '/choose-ride': (context) => const ChooseRideScreen(),
           '/voucher': (context) => const VoucherScreen(),
           '/payment': (context) => const PaymentScreen(),
+          '/payment-history': (context) => const PaymentHistoryScreen(),
+          '/rate-trip': (context) => const RateTripScreen(),
+          '/reviews': (context) => const ReviewsScreen(),
+          '/promo-codes': (context) => const PromoCodesScreen(),
+          '/trip-history': (context) => const TripHistoryScreen(),
         },
       ),
     );

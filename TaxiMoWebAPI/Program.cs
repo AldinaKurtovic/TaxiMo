@@ -106,6 +106,7 @@ builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
 builder.Services.AddScoped<IPromoUsageService, PromoUsageService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
+builder.Services.AddScoped<TaxiMo.Services.Interfaces.IStripeService, TaxiMo.Services.Services.StripeService>();
 
 // Register ExceptionFilter for dependency injection
 builder.Services.AddTransient<ExceptionFilter>();

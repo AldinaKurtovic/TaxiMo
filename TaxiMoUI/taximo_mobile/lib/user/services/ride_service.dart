@@ -146,5 +146,29 @@ class RideService {
     }
   }
 
+  /// Get completed rides for the current user
+  /// Optionally filter by status (default: "completed")
+  Future<List<Map<String, dynamic>>> getRideHistory({String? status}) async {
+    final statusParam = status ?? 'completed';
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/Ride?status=$statusParam');
+    
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      
+      // Handle both array and wrapped response
+      if (jsonData is List) {
+        return jsonData.cast<Map<String, dynamic>>();
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        return (jsonData['data'] as List).cast<Map<String, dynamic>>();
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Failed to fetch ride history: ${response.statusCode} - ${response.body}');
+    }
+  }
+
 }
 

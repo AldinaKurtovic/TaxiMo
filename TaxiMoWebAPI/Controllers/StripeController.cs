@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Stripe;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.DTOs;
+using TaxiMo.Services.Interfaces;
 
 namespace TaxiMoWebAPI.Controllers
 {
@@ -14,15 +15,18 @@ namespace TaxiMoWebAPI.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<StripeController> _logger;
         private readonly TaxiMoDbContext _context;
+        private readonly IStripeService _stripeService;
 
         public StripeController(
             IConfiguration configuration,
             ILogger<StripeController> logger,
-            TaxiMoDbContext context)
+            TaxiMoDbContext context,
+            IStripeService stripeService)
         {
             _configuration = configuration;
             _logger = logger;
             _context = context;
+            _stripeService = stripeService;
         }
 
         #region Helpers
@@ -60,39 +64,37 @@ namespace TaxiMoWebAPI.Controllers
         // ======================================================
         [HttpPost("create-payment-intent")]
         [Authorize(Roles = "User,Admin")]
-        public IActionResult CreatePaymentIntent([FromBody] StripePaymentIntentRequestDto request)
+        public async Task<IActionResult> CreatePaymentIntent([FromBody] StripePaymentIntentRequestDto request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            StripeConfiguration.ApiKey = GetStripeSecretKey();
-
-            var options = new PaymentIntentCreateOptions
+            try
             {
-                Amount = request.Amount,
-                Currency = request.Currency.ToLower(),
-                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // Use StripeService to create PaymentIntent
+                var clientSecret = await _stripeService.CreatePaymentIntentAsync(
+                    request.Amount,
+                    request.Currency,
+                    request.RideId,
+                    request.PaymentId);
+
+                return Ok(new StripePaymentIntentResponseDto
                 {
-                    Enabled = true
-                },
-                Metadata = new Dictionary<string, string>
-                {
-                    { "rideId", request.RideId.ToString() },
-                    { "paymentId", request.PaymentId.ToString() }
-                }
-            };
-
-            var service = new PaymentIntentService();
-            var paymentIntent = service.Create(options);
-
-            _logger.LogInformation(
-                "PaymentIntent created - PI: {PI}, RideId: {RideId}, PaymentId: {PaymentId}",
-                paymentIntent.Id, request.RideId, request.PaymentId);
-
-            return Ok(new StripePaymentIntentResponseDto
+                    ClientSecret = clientSecret
+                });
+            }
+            catch (InvalidOperationException ex)
             {
-                ClientSecret = paymentIntent.ClientSecret
-            });
+                _logger.LogError(ex, "Error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}",
+                    request.RideId, request.PaymentId);
+                return StatusCode(500, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}",
+                    request.RideId, request.PaymentId);
+                return StatusCode(500, new { message = "An error occurred while creating the payment intent" });
+            }
         }
 
         // ======================================================
