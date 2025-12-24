@@ -23,7 +23,14 @@ class _RateTripScreenState extends State<RateTripScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRideData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_ride == null) {
+      _loadRideData();
+    }
   }
 
   void _loadRideData() {
@@ -39,20 +46,44 @@ class _RateTripScreenState extends State<RateTripScreen> {
 
   Future<void> _checkExistingReview() async {
     if (_ride == null) return;
-    
+
     try {
-      final review = await _reviewService.getReviewByRideId(_ride!.rideId);
+      final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+      final currentUser = authProvider.currentUser;
+
+      if (currentUser == null) return;
+
+      // Check for existing review by rideId AND userId
+      final review = await _reviewService.getReviewByRideIdAndUserId(
+        _ride!.rideId,
+        currentUser.userId,
+      );
+
       if (review != null) {
         setState(() {
           _existingReview = review;
           _selectedRating = review.rating.toInt();
           _feedbackController.text = review.comment ?? '';
         });
+
+        // Show message and navigate back
+        Future.microtask(() {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You have already reviewed this trip.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            Navigator.of(context).pop(false);
+          }
+        });
       }
     } catch (e) {
-      // Review doesn't exist yet, that's fine
+      // No review exists → OK
     }
   }
+
 
   Future<void> _submitReview() async {
     if (_ride == null || _selectedRating == 0) {
@@ -60,6 +91,28 @@ class _RateTripScreenState extends State<RateTripScreen> {
         const SnackBar(
           content: Text('Please select a rating'),
           backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Prevent submission if review already exists
+    if (_existingReview != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have already reviewed this trip'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Validate that trip is completed
+    if (_ride!.status.toLowerCase() != 'completed') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You can only review completed trips. Current status: ${_ride!.status}'),
+          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -76,6 +129,30 @@ class _RateTripScreenState extends State<RateTripScreen> {
         ),
       );
       return;
+    }
+
+    // Double-check for existing review before submission (by rideId AND userId)
+    try {
+      final existingReview = await _reviewService.getReviewByRideIdAndUserId(
+        _ride!.rideId,
+        currentUser.userId,
+      );
+      if (existingReview != null) {
+        setState(() {
+          _existingReview = existingReview;
+          _selectedRating = existingReview.rating.toInt();
+          _feedbackController.text = existingReview.comment ?? '';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have already reviewed this trip.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      // If check fails, continue with submission (backend will handle duplicate)
     }
 
     setState(() {

@@ -46,5 +46,17 @@ class DriverService {
       throw Exception('Error loading driver profile');
     }
   }
+
+  /// Get driver review stats (averageRating, totalReviews)
+  Future<Map<String, dynamic>> getDriverStats(int driverId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/Driver/$driverId/stats');
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Error loading driver stats: ${response.statusCode}');
+    }
+  }
 }
 

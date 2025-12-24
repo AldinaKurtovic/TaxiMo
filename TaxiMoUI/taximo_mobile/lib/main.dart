@@ -18,8 +18,11 @@ import 'driver/screens/driver_home_screen.dart';
 import 'driver/providers/driver_provider.dart';
 import 'driver/providers/ride_requests_provider.dart';
 import 'driver/providers/active_rides_provider.dart';
+import 'driver/providers/driver_reviews_provider.dart';
 import 'driver/screens/ride_requests_screen.dart';
 import 'driver/screens/active_ride_screen.dart';
+import 'driver/screens/driver_reviews_screen.dart';
+import 'driver/screens/driver_statistics_screen.dart';
 import 'services/stripe_service.dart';
 
 void main() async {
@@ -66,6 +69,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(create: (_) => ActiveRidesProvider()),
+        ChangeNotifierProvider(create: (_) => DriverReviewsProvider()),
       ],
       child: MaterialApp(
         title: 'TaxiMo Mobile',
@@ -93,6 +97,12 @@ class MyApp extends StatelessWidget {
             final args = ModalRoute.of(context)?.settings.arguments;
             final rideId = args is int ? args : null;
             return ActiveRideScreen(rideId: rideId);
+          },
+          '/driver-reviews': (context) {
+            return const DriverReviewsScreen();
+          },
+          '/driver-statistics': (context) {
+            return const DriverStatisticsScreen();
           },
         },
       ),

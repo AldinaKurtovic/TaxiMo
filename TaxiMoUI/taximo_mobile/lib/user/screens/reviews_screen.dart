@@ -43,16 +43,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         return;
       }
 
-      final reviewsData = await _reviewService.getReviews();
-      
-      // Filter reviews by current user ID and map to DTOs
-      final reviews = reviewsData
-          .where((json) => json['riderId'] == currentUser.userId)
-          .map((json) => ReviewDto.fromJson(json))
-          .toList();
-
-      // Sort by created date (most recent first)
-      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Use the new method that properly handles ReviewResponse format
+      final reviews = await _reviewService.getReviewsByUserId(currentUser.userId);
 
       setState(() {
         _reviews = reviews;
@@ -163,6 +155,25 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Driver name
+            if (review.driverName != null && review.driverName!.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.deepPurple),
+                  const SizedBox(width: 8),
+                  Text(
+                    review.driverName!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            
             // Rating stars
             Row(
               children: List.generate(5, (index) {
@@ -189,12 +200,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               const SizedBox(height: 12),
             ],
             
-            // Ride ID and Date
+            // Trip reference and Date
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Ride ID: ${review.rideId}',
+                  'Trip #${review.rideId}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],

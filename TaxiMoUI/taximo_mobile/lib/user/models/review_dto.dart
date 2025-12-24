@@ -6,6 +6,9 @@ class ReviewDto {
   final double rating;
   final String? comment;
   final DateTime createdAt;
+  // Optional fields from ReviewResponse
+  final String? userName;
+  final String? driverName;
 
   ReviewDto({
     required this.reviewId,
@@ -15,19 +18,55 @@ class ReviewDto {
     required this.rating,
     this.comment,
     required this.createdAt,
+    this.userName,
+    this.driverName,
   });
 
-  factory ReviewDto.fromJson(Map<String, dynamic> json) {
-    return ReviewDto(
-      reviewId: json['reviewId'] as int,
-      rideId: json['rideId'] as int,
-      riderId: json['riderId'] as int,
-      driverId: json['driverId'] as int,
-      rating: (json['rating'] as num).toDouble(),
-      comment: json['comment'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-    );
+ factory ReviewDto.fromJson(Map<String, dynamic> json) {
+  // Handle both ReviewDto format (with riderId) and ReviewResponse format (with userId)
+  int? riderId;
+  final riderIdValue = json['riderId'];
+  final userIdValue = json['userId'];
+  
+  if (userIdValue != null) {
+    riderId = userIdValue is int ? userIdValue : (userIdValue as num?)?.toInt();
+  } else if (riderIdValue != null) {
+    riderId = riderIdValue is int ? riderIdValue : (riderIdValue as num?)?.toInt();
   }
+
+  // Safely extract all fields - ReviewResponse may not have rideId, driverId, createdAt
+  final reviewIdValue = json['reviewId'];
+  final rideIdValue = json['rideId'];
+  final driverIdValue = json['driverId'];
+  final ratingValue = json['rating'];
+  final createdAtValue = json['createdAt'];
+
+  return ReviewDto(
+    reviewId: reviewIdValue is int 
+        ? reviewIdValue 
+        : (reviewIdValue is num ? reviewIdValue.toInt() : 0),
+    rideId: rideIdValue is int 
+        ? rideIdValue 
+        : (rideIdValue is num ? rideIdValue.toInt() : 0), // Default to 0 if missing
+    riderId: riderId ?? 0,
+    driverId: driverIdValue is int 
+        ? driverIdValue 
+        : (driverIdValue is num ? driverIdValue.toInt() : 0), // Default to 0 if missing
+    rating: ratingValue is double 
+        ? ratingValue 
+        : (ratingValue is int 
+            ? ratingValue.toDouble() 
+            : (ratingValue is num ? ratingValue.toDouble() : 0.0)),
+    comment: json['comment'] as String? ?? json['description'] as String?,
+    createdAt: createdAtValue != null
+        ? (createdAtValue is String 
+            ? DateTime.tryParse(createdAtValue) ?? DateTime.now()
+            : DateTime.now())
+        : DateTime.now(), // Default to now if missing
+    userName: json['userName'] as String?,
+    driverName: json['driverName'] as String?,
+  );
+}
 }
 
 class ReviewCreateDto {

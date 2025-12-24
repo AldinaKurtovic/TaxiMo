@@ -15,17 +15,20 @@ namespace TaxiMoWebAPI.Controllers
     {
         private readonly IDriverService _driverService;
         private readonly IVehicleService _vehicleService;
+        private readonly IReviewService _reviewService;
         private readonly IMapper _mapper;
         private readonly ILogger<DriverController> _logger;
 
         public DriverController(
             IDriverService driverService,
             IVehicleService vehicleService,
+            IReviewService reviewService,
             IMapper mapper,
             ILogger<DriverController> logger)
         {
             _driverService = driverService;
             _vehicleService = vehicleService;
+            _reviewService = reviewService;
             _mapper = mapper;
             _logger = logger;
         }
@@ -50,6 +53,35 @@ namespace TaxiMoWebAPI.Controllers
                 return NotFound(new { message = $"Driver with ID {id} not found" });
 
             return Ok(_mapper.Map<DriverDto>(driver));
+        }
+
+        // GET: api/driver/{id}/stats
+        [HttpGet("{id:int}/stats")]
+        public async Task<ActionResult<object>> GetDriverStats(int id)
+        {
+            try
+            {
+                var driver = await _driverService.GetByIdAsync(id);
+                if (driver == null)
+                    return NotFound(new { message = $"Driver with ID {id} not found" });
+
+                var (averageRating, totalReviews) = await _reviewService.GetDriverReviewStatsAsync(id);
+                var (totalCompletedRides, totalEarnings) = await _reviewService.GetDriverRideStatsAsync(id);
+
+                return Ok(new
+                {
+                    driverId = id,
+                    averageRating = averageRating,
+                    totalReviews = totalReviews,
+                    totalCompletedRides = totalCompletedRides,
+                    totalEarnings = totalEarnings
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving driver stats for driver {DriverId}", id);
+                return StatusCode(500, new { message = $"An error occurred while retrieving driver stats" });
+            }
         }
 
         // GET: api/driver/free

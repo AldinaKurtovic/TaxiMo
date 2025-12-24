@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../providers/driver_provider.dart';
 import '../providers/active_rides_provider.dart';
+import '../providers/driver_reviews_provider.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../user/models/review_dto.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -23,13 +26,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (driver != null && driver.username.isNotEmpty) {
         driverProvider.loadDriverProfile(driver.username);
         
-        // Load active rides
-        final activeRidesProvider = Provider.of<ActiveRidesProvider>(context, listen: false);
+        // Load active rides and reviews
+        final activeRidesProvider = context.read<ActiveRidesProvider>();
+        final reviewsProvider = context.read<DriverReviewsProvider>();
         final driverProfile = driverProvider.driverProfile;
         final driverId = driverProfile?.driverId ?? driver.driverId ?? 0;
         
         if (driverId > 0) {
+          print("DriverHomeScreen: Loading data for driverId: $driverId");
           activeRidesProvider.loadActiveRides(driverId);
+          // Load stats and reviews separately from backend
+          reviewsProvider.loadDriverStats(driverId);
+          reviewsProvider.loadDriverReviews(driverId);
+        } else {
+          print("DriverHomeScreen: Invalid driverId: $driverId");
         }
       }
     });
@@ -137,88 +147,281 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
                 const SizedBox(height: 24),
                 
-                // Driver Stats
-                if (profile != null) ...[
-                  const Text(
-                    'Driver Statistics',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                // Ride Requests Section
+                const Text(
+                  'Ride Requests',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/ride-requests');
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.directions_car,
+                              color: Colors.deepPurple,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'View Ride Requests',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Accept or reject ride requests assigned to you',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Card(
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  color: Colors.amber,
-                                  size: 32,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  profile.ratingAvg.toStringAsFixed(1),
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Text(
-                                  'Rating',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Card(
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                const Icon(
-                                  Icons.directions_car,
-                                  color: Colors.deepPurple,
-                                  size: 32,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${profile.totalRides}',
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Text(
-                                  'Total Rides',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Statistics Card
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ] else if (driverProvider.isLoading) ...[
-                  const Center(child: CircularProgressIndicator()),
-                ],
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/driver-statistics');
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.bar_chart,
+                              color: Colors.deepPurple,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'View Statistics',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'See your performance metrics',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Driver Reviews Section
+                Consumer<DriverReviewsProvider>(
+                  builder: (context, reviewsProvider, child) {
+                    if (reviewsProvider.isLoading && reviewsProvider.reviews.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    
+                    if (reviewsProvider.errorMessage != null && reviewsProvider.reviews.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Reviews',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Average Rating Card - Tappable to navigate to reviews
+                        Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              final driverProvider = context.read<DriverProvider>();
+                              final driverProfile = driverProvider.driverProfile;
+                              final driverId = driverProfile?.driverId ?? driverProvider.currentDriver?.driverId ?? 0;
+                              if (driverId > 0) {
+                                print("Navigating to reviews screen with driverId: $driverId");
+                                Navigator.pushNamed(
+                                  context,
+                                  '/driver-reviews',
+                                  arguments: driverId,
+                                );
+                              } else {
+                                print("Cannot navigate - invalid driverId: $driverId");
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          reviewsProvider.averageRating > 0
+                                              ? reviewsProvider.averageRating.toStringAsFixed(2)
+                                              : 'N/A',
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          reviewsProvider.totalReviews == 0
+                                              ? 'No reviews yet'
+                                              : '${reviewsProvider.totalReviews} ${reviewsProvider.totalReviews == 1 ? 'review' : 'reviews'}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Recent Reviews List
+                        if (reviewsProvider.recentReviews.isNotEmpty) ...[
+                          const Text(
+                            'Recent Reviews',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...reviewsProvider.recentReviews.map((review) => _buildReviewCard(review)),
+                        ] else ...[
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: Colors.grey[600]),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'No reviews yet',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
                 
                 const SizedBox(height: 24),
                 
@@ -363,75 +566,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   },
                 ),
                 
-                // Ride Requests Section
-                const Text(
-                  'Ride Requests',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/ride-requests');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.deepPurple[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.directions_car,
-                              color: Colors.deepPurple,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'View Ride Requests',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Accept or reject ride requests assigned to you',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
                 const SizedBox(height: 24),
                 const Text(
                   'Driver Dashboard',
@@ -446,6 +580,74 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildReviewCard(ReviewDto review) {
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User name
+            if (review.userName != null && review.userName!.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.deepPurple),
+                  const SizedBox(width: 8),
+                  Text(
+                    review.userName!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            
+            // Rating stars
+            Row(
+              children: [
+                ...List.generate(5, (index) {
+                  return Icon(
+                    index < review.rating.toInt()
+                        ? Icons.star
+                        : Icons.star_border,
+                    size: 16,
+                    color: Colors.amber[700],
+                  );
+                }),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('MMM d, yyyy').format(review.createdAt),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            if (review.comment != null && review.comment!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                review.comment!,
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

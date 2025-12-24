@@ -61,6 +61,52 @@ namespace TaxiMoWebAPI.Controllers
                 return StatusCode(500, new { message = $"An error occurred while retrieving the {EntityName}" });
             }
         }
+
+        // GET: api/Review/by-rider/{riderId}
+        [HttpGet("by-rider/{riderId}")]
+        public async Task<ActionResult<IEnumerable<ReviewDto>>> GetByRiderId(int riderId)
+        {
+            try
+            {
+                var entities = await _reviewService.GetByRiderIdAsync(riderId);
+                var dtos = Mapper.Map<List<ReviewDto>>(entities);
+                return Ok(dtos);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error retrieving reviews for rider {RiderId}", riderId);
+                return StatusCode(500, new { message = $"An error occurred while retrieving reviews for rider {riderId}" });
+            }
+        }
+
+        // GET: api/Review/by-driver/{driverId}
+        [HttpGet("by-driver/{driverId}")]
+        public async Task<ActionResult<IEnumerable<object>>> GetByDriverId(int driverId)
+        {
+            try
+            {
+                var entities = await _reviewService.GetByDriverIdAsync(driverId);
+                
+                // Map to DriverReviewDto format with rider name
+                var dtos = entities.Select(r => new
+                {
+                    reviewId = r.ReviewId,
+                    rideId = r.RideId,
+                    riderId = r.RiderId,
+                    riderName = r.Rider != null ? $"{r.Rider.FirstName} {r.Rider.LastName}".Trim() : "Unknown",
+                    rating = r.Rating,
+                    comment = r.Comment,
+                    createdAt = r.CreatedAt
+                }).ToList();
+
+                return Ok(dtos);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error retrieving reviews for driver {DriverId}", driverId);
+                return StatusCode(500, new { message = $"An error occurred while retrieving reviews for driver {driverId}" });
+            }
+        }
     }
 }
 

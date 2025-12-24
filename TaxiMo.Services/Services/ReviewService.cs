@@ -75,6 +75,61 @@ namespace TaxiMo.Services.Services
             await Context.SaveChangesAsync();
             return existingReview;
         }
+
+        public async Task<List<Review>> GetByRiderIdAsync(int riderId)
+        {
+            var query = AddInclude(DbSet);
+            return await query.Where(r => r.RiderId == riderId).ToListAsync();
+        }
+
+        public async Task<List<Review>> GetByDriverIdAsync(int driverId)
+        {
+            var query = DbSet
+                .Include(r => r.Ride)
+                .Include(r => r.Rider)
+                .Where(r => r.Ride.DriverId == driverId)
+                .OrderByDescending(r => r.CreatedAt);
+            
+            return await query.ToListAsync();
+        }
+
+        public async Task<(decimal averageRating, int totalReviews)> GetDriverReviewStatsAsync(int driverId)
+        {
+            var reviews = await DbSet
+                .Include(r => r.Ride)
+                .Where(r => r.Ride.DriverId == driverId)
+                .ToListAsync();
+
+            if (reviews.Count == 0)
+            {
+                return (0, 0);
+            }
+
+            var averageRating = reviews.Average(r => r.Rating);
+            var totalReviews = reviews.Count;
+
+            return (averageRating, totalReviews);
+        }
+
+        public async Task<(int totalCompletedRides, decimal totalEarnings)> GetDriverRideStatsAsync(int driverId)
+        {
+            // Count completed rides for the driver
+            var totalCompletedRides = await Context.Rides
+                .Where(r => r.DriverId == driverId && r.Status.ToLower() == "completed")
+                .CountAsync();
+
+            // Calculate total earnings from payments for completed rides
+            // Use Include to join with Ride and filter by DriverId and status
+            var totalEarnings = await Context.Payments
+                .Include(p => p.Ride)
+                .Where(p =>
+                    p.Ride.DriverId == driverId &&
+                    p.Ride.Status.ToLower() == "completed" &&
+                    p.Status.ToLower() == "completed")
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            return (totalCompletedRides, totalEarnings);
+        }
     }
 }
 

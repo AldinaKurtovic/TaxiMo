@@ -28,7 +28,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   final ReviewService _reviewService = ReviewService();
   List<RideHistoryDto> _allRides = [];
   List<RideHistoryDto> _filteredRides = [];
-  Map<int, ReviewDto?> _rideReviews = {}; // Cache reviews by rideId
+  Map<int, ReviewDto> _rideReviews = {}; // Cache reviews by rideId
   bool _isLoading = true;
   bool _isLoadingReviews = false;
   String? _errorMessage;
@@ -89,27 +89,36 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       });
     }
   }
-
   Future<void> _loadReviewsForRides(List<RideHistoryDto> rides) async {
     setState(() {
       _isLoadingReviews = true;
     });
 
     try {
-      final reviewsData = await _reviewService.getReviews();
-      final reviewsMap = <int, ReviewDto>{};
+      final authProvider =
+          Provider.of<MobileAuthProvider>(context, listen: false);
+      final currentUser = authProvider.currentUser;
 
-      for (var reviewJson in reviewsData) {
-        final review = ReviewDto.fromJson(reviewJson);
-        reviewsMap[review.rideId] = review;
+      if (currentUser == null) return;
+
+      // Use the new endpoint that returns reviews with rideId
+      final reviews = await _reviewService.getReviewsByRider(currentUser.userId);
+
+      // Populate map EXACTLY as specified
+      _rideReviews.clear();
+      for (final review in reviews) {
+        if (review.rideId > 0) {
+          _rideReviews[review.rideId] = review;
+        }
       }
 
       setState(() {
-        _rideReviews = reviewsMap;
         _isLoadingReviews = false;
       });
+
+      // Debug: Print map keys
+      print('RideReviews keys: ${_rideReviews.keys}');
     } catch (e) {
-      // Don't fail the whole screen if reviews fail to load
       setState(() {
         _isLoadingReviews = false;
       });
@@ -481,10 +490,12 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   Widget _buildRatingSection(RideHistoryDto ride) {
-    final review = _rideReviews[ride.rideId];
+    if (ride.status.toLowerCase() != 'completed') {
+      return const SizedBox.shrink();
+    }
     
-    if (review != null) {
-      // Show submitted rating
+    if (_rideReviews.containsKey(ride.rideId)) {
+      final review = _rideReviews[ride.rideId]!;
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -540,7 +551,6 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         ),
       );
     } else {
-      // Show rate button
       return SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
@@ -566,6 +576,59 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   Future<void> _navigateToRateTrip(RideHistoryDto ride) async {
+    // Guard: Check if trip is completed
+    if (ride.status.toLowerCase() != 'completed') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You can only review completed trips. Current status: ${ride.status}'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Guard: Check if review already exists for this trip
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+
+    if (currentUser != null) {
+      // Check if review exists in cache
+      if (_rideReviews.containsKey(ride.rideId) && _rideReviews[ride.rideId] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have already reviewed this trip.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Double-check with API (in case cache is stale)
+      try {
+        final existingReview = await _reviewService.getReviewByRideIdAndUserId(
+          ride.rideId,
+          currentUser.userId,
+        );
+        
+        if (existingReview != null) {
+          // Update cache
+          setState(() {
+            _rideReviews[ride.rideId] = existingReview;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You have already reviewed this trip.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        // If check fails, continue with navigation (backend will handle duplicate)
+      }
+    }
+
     final result = await Navigator.pushNamed(
       context,
       '/rate-trip',

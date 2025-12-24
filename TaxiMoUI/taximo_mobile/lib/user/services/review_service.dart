@@ -53,6 +53,52 @@ class ReviewService {
     }
   }
 
+  /// Get review for a specific ride by a specific user (rideId AND userId)
+  Future<ReviewDto?> getReviewByRideIdAndUserId(int rideId, int userId) async {
+    try {
+      final reviews = await getReviews();
+      
+      for (final reviewJson in reviews) {
+        // Check if rideId matches
+        final reviewRideId = reviewJson['rideId'];
+        if (reviewRideId != rideId) continue;
+        
+        // Check if userId matches (check both userId and riderId fields)
+        final userIdValue = reviewJson['userId'];
+        final riderIdValue = reviewJson['riderId'];
+        
+        int? reviewUserId;
+        
+        // Try userId first (ReviewResponse format)
+        if (userIdValue != null) {
+          if (userIdValue is int) {
+            reviewUserId = userIdValue;
+          } else if (userIdValue is num) {
+            reviewUserId = userIdValue.toInt();
+          }
+        }
+        
+        // Fallback to riderId if userId not found
+        if (reviewUserId == null && riderIdValue != null) {
+          if (riderIdValue is int) {
+            reviewUserId = riderIdValue;
+          } else if (riderIdValue is num) {
+            reviewUserId = riderIdValue.toInt();
+          }
+        }
+        
+        // If userId matches, return this review
+        if (reviewUserId != null && reviewUserId == userId) {
+          return ReviewDto.fromJson(reviewJson);
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Create a new review
   Future<ReviewDto> createReview(ReviewCreateDto review) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/Review');
@@ -71,6 +117,143 @@ class ReviewService {
     } else {
       final errorBody = response.body;
       throw Exception('Failed to create review: ${response.statusCode} - $errorBody');
+    }
+  }
+
+  /// Get reviews for a specific driver
+  Future<List<ReviewDto>> getReviewsByDriverId(int driverId) async {
+    try {
+      final reviews = await getReviews();
+      final driverReviews = reviews
+          .where((r) => r['driverId'] == driverId)
+          .map((json) => ReviewDto.fromJson(json))
+          .toList();
+      
+      // Sort by created date (most recent first)
+      driverReviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      return driverReviews;
+    } catch (e) {
+      throw Exception('Failed to fetch driver reviews: $e');
+    }
+  }
+
+  /// Get reviews for the current user (rider)
+  Future<List<ReviewDto>> getReviewsByUserId(int userId) async {
+    try {
+      final reviews = await getReviews();
+      final userReviews = <ReviewDto>[];
+      
+      for (final reviewJson in reviews) {
+        try {
+          // The API returns ReviewResponse with 'userId' field (mapped from RiderId)
+          // Check both 'userId' (from ReviewResponse) and 'riderId' (from ReviewDto)
+          final userIdValue = reviewJson['userId'];
+          final riderIdValue = reviewJson['riderId'];
+          
+          int? reviewUserId;
+          
+          // Try userId first (ReviewResponse format)
+          if (userIdValue != null) {
+            if (userIdValue is int) {
+              reviewUserId = userIdValue;
+            } else if (userIdValue is num) {
+              reviewUserId = userIdValue.toInt();
+            }
+          }
+          
+          // Fallback to riderId if userId not found
+          if (reviewUserId == null && riderIdValue != null) {
+            if (riderIdValue is int) {
+              reviewUserId = riderIdValue;
+            } else if (riderIdValue is num) {
+              reviewUserId = riderIdValue.toInt();
+            }
+          }
+          
+          // Compare and add if matches
+          if (reviewUserId != null && reviewUserId == userId) {
+            final review = ReviewDto.fromJson(reviewJson);
+            userReviews.add(review);
+          }
+        } catch (e) {
+          // Skip invalid review entries
+          continue;
+        }
+      }
+      
+      // Sort by created date (most recent first)
+      userReviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      return userReviews;
+    } catch (e) {
+      throw Exception('Failed to fetch user reviews: $e');
+    }
+  }
+
+  /// Get reviews by rider ID (returns reviews with rideId included)
+  Future<List<ReviewDto>> getReviewsByRider(int riderId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/Review/by-rider/$riderId');
+    
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      
+      // Handle both array and wrapped response
+      List<dynamic> reviewList;
+      if (jsonData is List) {
+        reviewList = jsonData;
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        reviewList = jsonData['data'] as List;
+      } else {
+        return [];
+      }
+      
+      return reviewList
+          .map((json) => ReviewDto.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('Failed to fetch reviews by rider: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  /// Get reviews for a specific driver
+  Future<List<ReviewDto>> getReviewsByDriver(int driverId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/Review/by-driver/$driverId');
+    
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+      
+      // Handle both array and wrapped response
+      List<dynamic> reviewList;
+      if (jsonData is List) {
+        reviewList = jsonData;
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        reviewList = jsonData['data'] as List;
+      } else {
+        return [];
+      }
+      
+      // Map the response to ReviewDto
+      return reviewList.map((json) {
+        final reviewJson = json as Map<String, dynamic>;
+        // Map riderName to userName for ReviewDto
+        return ReviewDto(
+          reviewId: reviewJson['reviewId'] as int,
+          rideId: reviewJson['rideId'] as int,
+          riderId: reviewJson['riderId'] as int,
+          driverId: driverId,
+          rating: (reviewJson['rating'] as num).toDouble(),
+          comment: reviewJson['comment'] as String?,
+          createdAt: DateTime.parse(reviewJson['createdAt'] as String),
+          userName: reviewJson['riderName'] as String?,
+        );
+      }).toList();
+    } else {
+      throw Exception('Failed to fetch reviews by driver: ${response.statusCode} - ${response.body}');
     }
   }
 }
