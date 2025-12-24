@@ -6,6 +6,7 @@ using TaxiMo.Services.Database;
 using TaxiMo.Services.Interfaces;
 using TaxiMo.Services.Mappings;
 using TaxiMo.Services.Services;
+using TaxiMo.Services.Services.RideStateMachine;
 using TaxiMoWebAPI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -110,6 +111,16 @@ builder.Services.AddScoped<TaxiMo.Services.Interfaces.IStripeService, TaxiMo.Ser
 
 // Register ExceptionFilter for dependency injection
 builder.Services.AddTransient<ExceptionFilter>();
+
+// Register Ride State Machine states
+
+builder.Services.AddTransient<InitialRideState>();
+builder.Services.AddTransient<RequestedRideState>();
+builder.Services.AddTransient<AcceptedRideState>();
+builder.Services.AddTransient<ActiveRideState>();
+builder.Services.AddTransient<CompletedRideState>();
+builder.Services.AddTransient<CancelledRideState>();
+builder.Services.AddTransient<RideStateFactory>();
 
 var app = builder.Build();
 

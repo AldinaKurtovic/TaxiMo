@@ -130,6 +130,136 @@ namespace TaxiMoWebAPI.Controllers
                 return StatusCode(500, new { message = $"An error occurred while creating the {EntityName}" });
             }
         }
+
+        // PUT: api/Ride/{id}/accept
+        [HttpPut("{id}/accept")]
+        [Authorize(Roles = "Driver")]
+        public async Task<ActionResult<RideDto>> AcceptRide(int id)
+        {
+            try
+            {
+                var driverIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(driverIdClaim) || !int.TryParse(driverIdClaim, out int driverId))
+                {
+                    return Unauthorized(new { message = "Driver ID not found in claims" });
+                }
+
+                var ride = await _rideService.AcceptRideAsync(id, driverId);
+                var rideDto = Mapper.Map<RideDto>(ride);
+                return Ok(rideDto);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error accepting ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error accepting ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while accepting the ride" });
+            }
+        }
+
+        // PUT: api/Ride/{id}/reject
+        [HttpPut("{id}/reject")]
+        [Authorize(Roles = "Driver")]
+        public async Task<ActionResult<RideDto>> RejectRide(int id)
+        {
+            try
+            {
+                var driverIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(driverIdClaim) || !int.TryParse(driverIdClaim, out int driverId))
+                {
+                    return Unauthorized(new { message = "Driver ID not found in claims" });
+                }
+
+                var ride = await _rideService.RejectRideAsync(id, driverId);
+                var rideDto = Mapper.Map<RideDto>(ride);
+                return Ok(rideDto);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error rejecting ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error rejecting ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while rejecting the ride" });
+            }
+        }
+
+        // PUT: api/Ride/{id}/start
+        [HttpPut("{id}/start")]
+        [Authorize(Roles = "Driver")]
+        public async Task<ActionResult<RideDto>> StartRide(int id)
+        {
+            try
+            {
+                var ride = await _rideService.StartRideAsync(id);
+                var rideDto = Mapper.Map<RideDto>(ride);
+                return Ok(rideDto);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error starting ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error starting ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while starting the ride" });
+            }
+        }
+
+        // PUT: api/Ride/{id}/complete
+        [HttpPut("{id}/complete")]
+        [Authorize(Roles = "Driver")]
+        public async Task<ActionResult<RideDto>> CompleteRide(int id)
+        {
+            try
+            {
+                var ride = await _rideService.CompleteRideAsync(id);
+                var rideDto = Mapper.Map<RideDto>(ride);
+                return Ok(rideDto);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error completing ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error completing ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while completing the ride" });
+            }
+        }
+
+        // PUT: api/Ride/{id}/cancel
+        [HttpPut("{id}/cancel")]
+        [Authorize(Roles = "User,Admin")]
+        public async Task<ActionResult<RideDto>> CancelRide(int id)
+        {
+            try
+            {
+                var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                var isAdmin = roles.Contains("Admin");
+
+                var ride = await _rideService.CancelRideAsync(id, isAdmin);
+                var rideDto = Mapper.Map<RideDto>(ride);
+                return Ok(rideDto);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error cancelling ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error cancelling ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while cancelling the ride" });
+            }
+        }
     }
 }
 

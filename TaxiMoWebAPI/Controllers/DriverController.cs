@@ -42,7 +42,7 @@ namespace TaxiMoWebAPI.Controllers
         }
 
         // GET: api/driver/{id}
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<DriverDto>> GetDriver(int id)
         {
             var driver = await _driverService.GetByIdAsync(id);
@@ -105,7 +105,7 @@ namespace TaxiMoWebAPI.Controllers
         }
 
         // PUT: api/driver/{id}
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<ActionResult<object>> UpdateDriver(int id, DriverUpdateDto dto, [FromQuery] bool isSelfUpdate = false)
         {
             _logger.LogInformation("UpdateDriver request received. Id: {Id}, Dto.DriverId: {DriverId}", id, dto.DriverId);
@@ -159,7 +159,7 @@ namespace TaxiMoWebAPI.Controllers
         }
 
         // DELETE: api/driver/{id}
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteDriver(int id)
         {
             _logger.LogInformation("DeleteDriver request received. Id: {Id}", id);
@@ -193,7 +193,7 @@ namespace TaxiMoWebAPI.Controllers
 
         // POST: api/driver/{id}/assign-vehicle
         // Helper endpoint to assign a vehicle to a driver
-        [HttpPost("{id}/assign-vehicle")]
+        [HttpPost("{id:int}/assign-vehicle")]
         public async Task<ActionResult<object>> AssignVehicleToDriver(int id, VehicleCreateDto vehicleDto)
         {
             _logger.LogInformation("AssignVehicleToDriver request received. DriverId: {DriverId}", id);

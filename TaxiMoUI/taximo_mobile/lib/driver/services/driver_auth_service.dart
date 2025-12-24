@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../providers/auth_provider.dart';
-import '../models/user_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../models/driver_model.dart';
 import '../../config/api_config.dart';
 
-class MobileAuthService {
-  /// User login using dedicated user authentication endpoint
-  Future<UserModel?> login(String username, String password) async {
+class DriverAuthService {
+  /// Driver login using dedicated driver authentication endpoint
+  Future<DriverModel?> login(String username, String password) async {
     // Save credentials for future API calls
     AuthProvider.username = username;
     AuthProvider.password = password;
 
     try {
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/Auth/User/Login'),
+        Uri.parse('${ApiConfig.baseUrl}/api/Auth/Driver/Login'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -25,12 +25,13 @@ class MobileAuthService {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        return UserModel.fromJson(jsonData);
+        return DriverModel.fromJson(jsonData);
       } else {
         return null;
       }
     } catch (e) {
-      throw Exception('User login failed: $e');
+      throw Exception('Driver login failed: $e');
     }
   }
 }
+

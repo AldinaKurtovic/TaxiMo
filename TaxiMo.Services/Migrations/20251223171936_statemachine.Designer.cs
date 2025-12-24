@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaxiMo.Services.Database;
 
@@ -11,9 +12,11 @@ using TaxiMo.Services.Database;
 namespace TaxiMo.Services.Migrations
 {
     [DbContext(typeof(TaxiMoDbContext))]
-    partial class TaxiMoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251223171936_statemachine")]
+    partial class statemachine
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -475,6 +478,11 @@ namespace TaxiMo.Services.Migrations
 
                     b.Property<DateTime>("RequestedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("RideState")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("RiderId")
                         .HasColumnType("int");

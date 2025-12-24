@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/mobile_auth_provider.dart';
+import '../../driver/providers/driver_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _isDriverLogin = false;
 
   @override
   void dispose() {
@@ -27,41 +29,63 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final provider = Provider.of<MobileAuthProvider>(context, listen: false);
-    final success = await provider.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    final username = _emailController.text.trim();
+    final password = _passwordController.text;
 
-    if (!mounted) return;
+    if (_isDriverLogin) {
+      // Driver login
+      final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+      final success = await driverProvider.login(username, password);
 
-    if (success && provider.currentUser != null) {
-      final user = provider.currentUser!;
-      
-      // Navigate based on user roles
-      if (user.isUser) {
-        Navigator.pushReplacementNamed(context, '/user-home');
-      } else if (user.isDriver) {
+      if (!mounted) return;
+
+      if (success && driverProvider.currentDriver != null) {
         Navigator.pushReplacementNamed(context, '/driver-home');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unknown user role. Please contact support.'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: Text(driverProvider.errorMessage ?? 'Login failed'),
+            backgroundColor: Colors.red[300],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Login failed'),
-          backgroundColor: Colors.red[300],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      // User login
+      final userProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+      final success = await userProvider.login(username, password);
+
+      if (!mounted) return;
+
+      if (success && userProvider.currentUser != null) {
+        final user = userProvider.currentUser!;
+        
+        // Navigate based on user roles
+        if (user.isUser) {
+          Navigator.pushReplacementNamed(context, '/user-home');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unknown user role. Please contact support.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userProvider.errorMessage ?? 'Login failed'),
+            backgroundColor: Colors.red[300],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -101,7 +125,84 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
+                  
+                  // Role Toggle
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isDriverLogin = false;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: !_isDriverLogin
+                                      ? Colors.deepPurple
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'User',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: !_isDriverLogin
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                    fontWeight: !_isDriverLogin
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isDriverLogin = true;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _isDriverLogin
+                                      ? Colors.deepPurple
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Driver',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: _isDriverLogin
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                    fontWeight: _isDriverLogin
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   
                   // Email/Username Field
                   TextFormField(
@@ -161,10 +262,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
                   
                   // Login Button
-                  Consumer<MobileAuthProvider>(
-                    builder: (context, provider, child) {
+                  Consumer2<MobileAuthProvider, DriverProvider>(
+                    builder: (context, userProvider, driverProvider, child) {
+                      final isLoading = _isDriverLogin
+                          ? driverProvider.isLoading
+                          : userProvider.isLoading;
                       return ElevatedButton(
-                        onPressed: provider.isLoading ? null : _handleLogin,
+                        onPressed: isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -173,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: Colors.deepPurple,
                           foregroundColor: Colors.white,
                         ),
-                        child: provider.isLoading
+                        child: isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,

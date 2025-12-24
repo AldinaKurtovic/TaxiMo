@@ -157,7 +157,8 @@ namespace TaxiMo.Services.Database
                 new { Username = "driver.amina", FirstName = "Amina", LastName = "Kovacevic", Email = "amina.kovacevic@taximo.ba", Phone = "38762234567", LicenseNumber = "BIH-2019-045", LicenseExpiry = baseDate.AddYears(1).AddMonths(6), RatingAvg = 4.9m, TotalRides = 2100, Status = "active", CreatedAt = baseDate.AddDays(-450), UpdatedAt = baseDate.AddDays(-2) },
                 new { Username = "driver.mirza", FirstName = "Mirza", LastName = "Begic", Email = "mirza.begic@taximo.ba", Phone = "38762345678", LicenseNumber = "BIH-2021-078", LicenseExpiry = baseDate.AddYears(3), RatingAvg = 4.6m, TotalRides = 850, Status = "active", CreatedAt = baseDate.AddDays(-350), UpdatedAt = baseDate.AddDays(-3) },
                 new { Username = "driver.sara", FirstName = "Sara", LastName = "Dedic", Email = "sara.dedic@taximo.ba", Phone = "38762456789", LicenseNumber = "BIH-2018-112", LicenseExpiry = baseDate.AddMonths(8), RatingAvg = 4.7m, TotalRides = 1650, Status = "offline", CreatedAt = baseDate.AddDays(-500), UpdatedAt = baseDate.AddDays(-10) },
-                new { Username = "driver.emir", FirstName = "Emir", LastName = "Jahic", Email = "emir.jahic@taximo.ba", Phone = "38762567890", LicenseNumber = "BIH-2022-023", LicenseExpiry = baseDate.AddYears(4), RatingAvg = 4.5m, TotalRides = 420, Status = "active", CreatedAt = baseDate.AddDays(-250), UpdatedAt = baseDate.AddDays(-5) }
+                new { Username = "driver.emir", FirstName = "Emir", LastName = "Jahic", Email = "emir.jahic@taximo.ba", Phone = "38762567890", LicenseNumber = "BIH-2022-023", LicenseExpiry = baseDate.AddYears(4), RatingAvg = 4.5m, TotalRides = 420, Status = "active", CreatedAt = baseDate.AddDays(-250), UpdatedAt = baseDate.AddDays(-5) },
+                new { Username = "driver", FirstName = "Driver", LastName = "Driver", Email = "driver@taximo.ba", Phone = "3876243190", LicenseNumber = "BIH-2022-025", LicenseExpiry = baseDate.AddYears(4), RatingAvg = 4.5m, TotalRides = 150, Status = "active", CreatedAt = baseDate.AddDays(-250), UpdatedAt = baseDate.AddDays(-5) }
             };
 
             foreach (var driverData in driversToSeed)
@@ -254,7 +255,7 @@ namespace TaxiMo.Services.Database
             var drivers = await context.Drivers.ToListAsync();
             var driverRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Driver");
 
-            if (driverRole == null || drivers.Count < 5)
+            if (driverRole == null || drivers.Count < 6)
             {
                 return; // Cannot proceed without required entities
             }
@@ -667,7 +668,7 @@ namespace TaxiMo.Services.Database
         private static async Task UpsertDriverAvailabilitiesAsync(TaxiMoDbContext context, DateTime baseDate)
         {
             var drivers = await context.Drivers.ToListAsync();
-            if (drivers.Count < 5) return;
+            if (drivers.Count < 6) return;
 
             var availabilitiesToSeed = new[]
             {
@@ -675,7 +676,8 @@ namespace TaxiMo.Services.Database
                 new { DriverId = drivers[1].DriverId, IsOnline = true, CurrentLat = (decimal?)43.8586m, CurrentLng = (decimal?)18.4281m, LastLocationUpdate = (DateTime?)baseDate.AddMinutes(-10), UpdatedAt = baseDate.AddMinutes(-10) },
                 new { DriverId = drivers[2].DriverId, IsOnline = false, CurrentLat = (decimal?)43.8517m, CurrentLng = (decimal?)18.3889m, LastLocationUpdate = (DateTime?)baseDate.AddHours(-2), UpdatedAt = baseDate.AddHours(-2) },
                 new { DriverId = drivers[3].DriverId, IsOnline = false, CurrentLat = (decimal?)null, CurrentLng = (decimal?)null, LastLocationUpdate = (DateTime?)null, UpdatedAt = baseDate.AddDays(-1) },
-                new { DriverId = drivers[4].DriverId, IsOnline = true, CurrentLat = (decimal?)43.8625m, CurrentLng = (decimal?)18.4103m, LastLocationUpdate = (DateTime?)baseDate.AddMinutes(-15), UpdatedAt = baseDate.AddMinutes(-15) }
+                new { DriverId = drivers[4].DriverId, IsOnline = true, CurrentLat = (decimal?)43.8625m, CurrentLng = (decimal?)18.4103m, LastLocationUpdate = (DateTime?)baseDate.AddMinutes(-15), UpdatedAt = baseDate.AddMinutes(-15) },
+                new { DriverId = drivers[5].DriverId, IsOnline = true, CurrentLat = (decimal?)43.8563m, CurrentLng = (decimal?)18.4131m, LastLocationUpdate = (DateTime?)baseDate.AddMinutes(-5), UpdatedAt = baseDate.AddMinutes(-5) }
             };
 
             foreach (var availabilityData in availabilitiesToSeed)
@@ -842,7 +844,7 @@ namespace TaxiMo.Services.Database
         private static async Task UpsertDriverAuthTokensAsync(TaxiMoDbContext context, DateTime baseDate)
         {
             var drivers = await context.Drivers.ToListAsync();
-            if (drivers.Count < 5) return;
+            if (drivers.Count < 6) return;
 
             var tokensToSeed = new[]
             {
@@ -850,7 +852,8 @@ namespace TaxiMo.Services.Database
                 new { DriverId = drivers[1].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_amina_002", RefreshTokenHash = "fake_refresh_token_hash_driver_amina_002", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)null, IpAddress = "192.168.1.201" },
                 new { DriverId = drivers[2].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_mirza_003", RefreshTokenHash = "fake_refresh_token_hash_driver_mirza_003", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)null, IpAddress = "192.168.1.202" },
                 new { DriverId = drivers[3].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_sara_004", RefreshTokenHash = "fake_refresh_token_hash_driver_sara_004", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)baseDate.AddDays(-2), IpAddress = "192.168.1.203" },
-                new { DriverId = drivers[4].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_emir_005", RefreshTokenHash = "fake_refresh_token_hash_driver_emir_005", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)null, IpAddress = "192.168.1.204" }
+                new { DriverId = drivers[4].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_emir_005", RefreshTokenHash = "fake_refresh_token_hash_driver_emir_005", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)null, IpAddress = "192.168.1.204" },
+                new { DriverId = drivers[5].DriverId, DeviceId = "mobile-app", TokenHash = "fake_token_hash_driver_demo_006", RefreshTokenHash = "fake_refresh_token_hash_driver_demo_006", ExpiresAt = baseDate.AddDays(7), RevokedAt = (DateTime?)null, IpAddress = "192.168.1.205" }
             };
 
             foreach (var tokenData in tokensToSeed)

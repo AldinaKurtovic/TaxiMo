@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'auth/providers/mobile_auth_provider.dart';
 import 'auth/screens/login_screen.dart';
+import 'driver/providers/driver_provider.dart';
 import 'user/screens/user_home_screen.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
@@ -14,6 +15,11 @@ import 'user/screens/reviews_screen.dart';
 import 'user/screens/promo_codes_screen.dart';
 import 'user/screens/trip_history_screen.dart';
 import 'driver/screens/driver_home_screen.dart';
+import 'driver/providers/driver_provider.dart';
+import 'driver/providers/ride_requests_provider.dart';
+import 'driver/providers/active_rides_provider.dart';
+import 'driver/screens/ride_requests_screen.dart';
+import 'driver/screens/active_ride_screen.dart';
 import 'services/stripe_service.dart';
 
 void main() async {
@@ -57,6 +63,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MobileAuthProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
+        ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
+        ChangeNotifierProvider(create: (_) => ActiveRidesProvider()),
       ],
       child: MaterialApp(
         title: 'TaxiMo Mobile',
@@ -79,6 +88,12 @@ class MyApp extends StatelessWidget {
           '/reviews': (context) => const ReviewsScreen(),
           '/promo-codes': (context) => const PromoCodesScreen(),
           '/trip-history': (context) => const TripHistoryScreen(),
+          '/ride-requests': (context) => const RideRequestsScreen(),
+          '/active-ride': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final rideId = args is int ? args : null;
+            return ActiveRideScreen(rideId: rideId);
+          },
         },
       ),
     );
@@ -90,27 +105,23 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MobileAuthProvider>(
-      builder: (context, authProvider, child) {
-        // Show login screen if not authenticated
-        if (!authProvider.isAuthenticated) {
-          return const LoginScreen();
-        }
-
-        // Navigate based on user role
-        final user = authProvider.currentUser;
-        if (user == null) {
-          return const LoginScreen();
-        }
-
-        if (user.isUser) {
-          return const UserHomeScreen();
-        } else if (user.isDriver) {
+    return Consumer2<MobileAuthProvider, DriverProvider>(
+      builder: (context, authProvider, driverProvider, child) {
+        // Check driver authentication first
+        if (driverProvider.isAuthenticated && driverProvider.currentDriver != null) {
           return const DriverHomeScreen();
-        } else {
-          // Unknown role, show login
-          return const LoginScreen();
         }
+
+        // Check user authentication
+        if (authProvider.isAuthenticated && authProvider.currentUser != null) {
+          final user = authProvider.currentUser!;
+          if (user.isUser) {
+            return const UserHomeScreen();
+          }
+        }
+
+        // Show login screen if not authenticated
+        return const LoginScreen();
       },
     );
   }

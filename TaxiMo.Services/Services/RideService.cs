@@ -1,19 +1,29 @@
+using AutoMapper;
 using EasyNetQ;
 using Microsoft.EntityFrameworkCore;
 using TaxiMo.Model.Messages;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.Interfaces;
+using TaxiMo.Services.Services.RideStateMachine;
 
 namespace TaxiMo.Services.Services
 {
     public class RideService : BaseCRUDService<Ride>, IRideService
     {
         private readonly IRidePriceCalculator _priceCalculator;
+        private readonly RideStateFactory _stateFactory;
+        private readonly IMapper _mapper;
 
-        public RideService(TaxiMoDbContext context, IRidePriceCalculator priceCalculator) : base(context)
+        public RideService(
+            TaxiMoDbContext context, 
+            IRidePriceCalculator priceCalculator,
+            RideStateFactory stateFactory,
+            IMapper mapper) : base(context)
         {
             _priceCalculator = priceCalculator;
+            _stateFactory = stateFactory;
+            _mapper = mapper;
         }
 
         public async Task<List<Ride>> GetAllAsync(string? search = null, string? status = null)
@@ -60,7 +70,10 @@ namespace TaxiMo.Services.Services
                 ride.FareEstimate = _priceCalculator.CalculateFareEstimate(distanceKm, _priceCalculator.PricePerKm);
             }
 
-            DbSet.Add(ride);
+            // Use InitialRideState to initialize the ride
+            var initialState = _stateFactory.GetInitialState();
+            initialState.InitializeRide(ride);
+            Context.Rides.Add(ride);
             await Context.SaveChangesAsync();
 
             // Create payment record with provided payment method
@@ -164,6 +177,76 @@ namespace TaxiMo.Services.Services
 
             await Context.SaveChangesAsync();
             return existingRide;
+        }
+
+        public async Task<Ride> AcceptRideAsync(int rideId, int driverId)
+        {
+            var ride = await GetByIdAsync(rideId);
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            var state = _stateFactory.GetState(ride.Status);
+            var updatedRide = await state.AcceptAsync(rideId, driverId);
+            await Context.SaveChangesAsync();
+            return updatedRide;
+        }
+
+        public async Task<Ride> RejectRideAsync(int rideId, int driverId)
+        {
+            var ride = await GetByIdAsync(rideId);
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            var state = _stateFactory.GetState(ride.Status);
+            var updatedRide = await state.RejectAsync(rideId, driverId);
+            await Context.SaveChangesAsync();
+            return updatedRide;
+        }
+
+        public async Task<Ride> StartRideAsync(int rideId)
+        {
+            var ride = await GetByIdAsync(rideId);
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            var state = _stateFactory.GetState(ride.Status);
+            var updatedRide = await state.StartAsync(rideId);
+            await Context.SaveChangesAsync();
+            return updatedRide;
+        }
+
+        public async Task<Ride> CompleteRideAsync(int rideId)
+        {
+            var ride = await GetByIdAsync(rideId);
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            var state = _stateFactory.GetState(ride.Status);
+            var updatedRide = await state.CompleteAsync(rideId);
+            await Context.SaveChangesAsync();
+            return updatedRide;
+        }
+
+        public async Task<Ride> CancelRideAsync(int rideId, bool isAdmin)
+        {
+            var ride = await GetByIdAsync(rideId);
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            var state = _stateFactory.GetState(ride.Status);
+            var updatedRide = await state.CancelAsync(rideId, isAdmin);
+            await Context.SaveChangesAsync();
+            return updatedRide;
         }
     }
 }

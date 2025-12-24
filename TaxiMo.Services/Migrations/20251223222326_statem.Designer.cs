@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaxiMo.Services.Database;
 
@@ -11,9 +12,11 @@ using TaxiMo.Services.Database;
 namespace TaxiMo.Services.Migrations
 {
     [DbContext(typeof(TaxiMoDbContext))]
-    partial class TaxiMoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251223222326_statem")]
+    partial class statem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

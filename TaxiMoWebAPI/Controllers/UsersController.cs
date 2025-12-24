@@ -25,17 +25,6 @@ namespace TaxiMoWebAPI.Controllers
             _logger = logger;
         }
 
-        // LOGIN
-        [AllowAnonymous]
-        [HttpPost("login")]
-        public async Task<ActionResult<UserResponse>> Login(UserLoginRequest request)
-        {
-            var user = await _userService.AuthenticateAsync(request);
-            if (user == null)
-                return Unauthorized(new { message = "Invalid username or password" });
-
-            return Ok(user);
-        }
 
         // GET ALL USERS
         [HttpGet]
