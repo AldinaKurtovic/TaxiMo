@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../models/ride_route_dto.dart';
 import '../models/driver_dto.dart';
@@ -169,40 +170,56 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
             color: colorScheme.surfaceContainerHighest,
             child: Stack(
               children: [
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: _centerPoint(route.pickup, route.destination),
-                    zoom: _calculateZoom(bounds),
+                FlutterMap(
+                  options: MapOptions(
+                    initialCenter: _centerPoint(route.pickup, route.destination),
+                    initialZoom: _calculateZoom(bounds),
+                    minZoom: 5.0,
+                    maxZoom: 18.0,
+                    interactionOptions: InteractionOptions(
+                      flags: InteractiveFlag.none,
+                    ),
                   ),
-                  markers: {
-                    Marker(
-                      markerId: const MarkerId('pickup'),
-                      position: route.pickup,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.taximo.mobile',
                     ),
-                    Marker(
-                      markerId: const MarkerId('destination'),
-                      position: route.destination,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                    ),
-                  },
-                  polylines: route.polylinePoints.isNotEmpty
-                      ? {
+                    if (route.polylinePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
                           Polyline(
-                            polylineId: const PolylineId('route'),
                             points: route.polylinePoints,
+                            strokeWidth: 4,
                             color: colorScheme.primary,
-                            width: 4,
                           ),
-                        }
-                      : {},
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                  scrollGesturesEnabled: false,
-                  zoomGesturesEnabled: false,
-                  tiltGesturesEnabled: false,
-                  rotateGesturesEnabled: false,
+                        ],
+                      ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: route.pickup,
+                          width: 40,
+                          height: 40,
+                          child: Icon(
+                            Icons.radio_button_checked,
+                            color: colorScheme.primary,
+                            size: 40,
+                          ),
+                        ),
+                        Marker(
+                          point: route.destination,
+                          width: 40,
+                          height: 40,
+                          child: Icon(
+                            Icons.location_on,
+                            color: colorScheme.error,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 // Distance and duration overlay
                 Positioned(

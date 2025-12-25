@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/ride_route_dto.dart';
 
 enum LocationSelection { pickup, destination }
@@ -14,6 +15,7 @@ class RideReservationScreen extends StatefulWidget {
 
 class _RideReservationScreenState extends State<RideReservationScreen> {
   static const LatLng _mostar = LatLng(43.3438, 17.8078);
+  final MapController _mapController = MapController();
 
   LocationSelection _selection = LocationSelection.pickup;
   LatLng? _pickup;
@@ -21,16 +23,6 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
 
   void _setSelection(LocationSelection selection) {
     setState(() => _selection = selection);
-  }
-
-  void _handleMapTap(LatLng position) {
-    setState(() {
-      if (_selection == LocationSelection.pickup) {
-        _pickup = position;
-      } else {
-        _destination = position;
-      }
-    });
   }
 
   String _formatLatLng(LatLng? p, String placeholder) {
@@ -55,26 +47,15 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
   double _toRadians(double degrees) => degrees * (math.pi / 180.0);
 
   @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final markers = <Marker>{
-      if (_pickup != null)
-        Marker(
-          markerId: const MarkerId('pickup'),
-          position: _pickup!,
-          infoWindow: const InfoWindow(title: 'Pickup'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-        ),
-      if (_destination != null)
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: _destination!,
-          infoWindow: const InfoWindow(title: 'Destination'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-    };
 
     final canProceed = _pickup != null && _destination != null;
 
@@ -85,14 +66,55 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(target: _mostar, zoom: 13),
-              myLocationButtonEnabled: false,
-              myLocationEnabled: false,
-              zoomControlsEnabled: false,
-              compassEnabled: false,
-              markers: markers,
-              onTap: _handleMapTap,
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _mostar,
+                initialZoom: 13.0,
+                onTap: (tapPosition, latLng) {
+                  setState(() {
+                    if (_selection == LocationSelection.pickup) {
+                      _pickup = latLng;
+                    } else {
+                      _destination = latLng;
+                    }
+                  });
+                },
+                minZoom: 5.0,
+                maxZoom: 18.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.taximo.mobile',
+                ),
+                MarkerLayer(
+                  markers: [
+                    if (_pickup != null)
+                      Marker(
+                        point: _pickup!,
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          Icons.radio_button_checked,
+                          color: colorScheme.primary,
+                          size: 40,
+                        ),
+                      ),
+                    if (_destination != null)
+                      Marker(
+                        point: _destination!,
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          Icons.location_on,
+                          color: colorScheme.error,
+                          size: 40,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
           SafeArea(

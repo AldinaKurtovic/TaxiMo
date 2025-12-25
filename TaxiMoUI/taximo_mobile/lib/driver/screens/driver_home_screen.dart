@@ -6,6 +6,7 @@ import '../providers/active_rides_provider.dart';
 import '../providers/driver_reviews_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../user/models/review_dto.dart';
+import 'active_ride_driver_screen.dart'; // DEMO: For demo entry point
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -53,6 +54,26 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
+          // Navigation icon for active rides
+          Consumer<ActiveRidesProvider>(
+            builder: (context, activeRidesProvider, child) {
+              final currentRide = activeRidesProvider.currentActiveRide;
+              if (currentRide != null && currentRide.status.toLowerCase() == 'active') {
+                return IconButton(
+                  icon: const Icon(Icons.navigation),
+                  tooltip: 'View Active Ride Map',
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/active-ride-driver',
+                      arguments: currentRide.rideId,
+                    );
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -449,11 +470,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             ),
                             child: InkWell(
                               onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/active-ride',
-                                  arguments: currentRide.rideId,
-                                );
+                                // Navigate to route tracking screen if active, otherwise to detail screen
+                                if (currentRide.status.toLowerCase() == 'active') {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/active-ride-driver',
+                                    arguments: currentRide.rideId,
+                                  );
+                                } else {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/active-ride',
+                                    arguments: currentRide.rideId,
+                                  );
+                                }
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Padding(
@@ -544,14 +574,30 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      'Tap to ${currentRide.status.toLowerCase() == 'accepted' ? 'start' : 'complete'} ride',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                        fontStyle: FontStyle.italic,
+                                    if (currentRide.status.toLowerCase() == 'active')
+                                      Row(
+                                        children: [
+                                          Icon(Icons.navigation, size: 16, color: Colors.deepPurple),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Tap to view route tracking',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    else
+                                      Text(
+                                        'Tap to ${currentRide.status.toLowerCase() == 'accepted' ? 'start' : 'complete'} ride',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontStyle: FontStyle.italic,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -565,6 +611,102 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
+                
+                const SizedBox(height: 24),
+                
+                // ========== DEMO ENTRY POINT - REMOVE IN PRODUCTION ==========
+                // This button allows opening Active Ride screen for demo/testing without real backend state
+                Card(
+                  elevation: 2,
+                  color: Colors.orange[50],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.orange, width: 2),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      // DEMO: Open Active Ride screen with mock rideId
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ActiveRideDriverScreen(rideId: 1),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.orange[800],
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'DEMO',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'View Active Ride Demo',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Open route tracking screen (demo mode)',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // ========== END DEMO ENTRY POINT ==========
                 
                 const SizedBox(height: 24),
                 const Text(

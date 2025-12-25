@@ -21,6 +21,7 @@ import 'driver/providers/active_rides_provider.dart';
 import 'driver/providers/driver_reviews_provider.dart';
 import 'driver/screens/ride_requests_screen.dart';
 import 'driver/screens/active_ride_screen.dart';
+import 'driver/screens/active_ride_driver_screen.dart';
 import 'driver/screens/driver_reviews_screen.dart';
 import 'driver/screens/driver_statistics_screen.dart';
 import 'services/stripe_service.dart';
@@ -97,6 +98,11 @@ class MyApp extends StatelessWidget {
             final args = ModalRoute.of(context)?.settings.arguments;
             final rideId = args is int ? args : null;
             return ActiveRideScreen(rideId: rideId);
+          },
+          '/active-ride-driver': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final rideId = args is int ? args : null;
+            return ActiveRideDriverScreen(rideId: rideId);
           },
           '/driver-reviews': (context) {
             return const DriverReviewsScreen();
