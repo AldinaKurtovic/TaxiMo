@@ -31,38 +31,51 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      userId: json['userId'] as int,
-      firstName: json['firstName'] as String? ?? '',
-      lastName: json['lastName'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      username: json['username'] as String? ?? '',
-      phone: json['phone'] as String?,
-      dateOfBirth: json['dateOfBirth'] != null
-          ? DateTime.parse(json['dateOfBirth'] as String)
+      userId: json['userId'] as int? ?? 0,
+      firstName: (json['firstName'] as String?)?.trim() ?? '',
+      lastName: (json['lastName'] as String?)?.trim() ?? '',
+      email: (json['email'] as String?)?.trim() ?? '',
+      username: (json['username'] as String?)?.trim() ?? '',
+      phone: (json['phone'] as String?)?.trim(),
+      dateOfBirth: json['dateOfBirth'] != null && json['dateOfBirth'] is String
+          ? DateTime.tryParse(json['dateOfBirth'] as String)
           : null,
-      status: json['status'] as String? ?? 'Inactive',
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      roles: json['roles'] != null
+      status: (json['status'] as String?)?.trim() ?? 'Inactive',
+      createdAt: json['createdAt'] != null && json['createdAt'] is String
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null && json['updatedAt'] is String
+          ? DateTime.tryParse(json['updatedAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      roles: json['roles'] != null && json['roles'] is List
           ? (json['roles'] as List).map((e) => e.toString()).toList()
           : [],
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'userId': userId,
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
       'username': username,
-      'phone': phone,
-      'dateOfBirth': dateOfBirth?.toIso8601String(),
       'status': status,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'roles': roles,
     };
+    
+    // Only include optional fields if they are not null
+    if (phone != null && phone!.isNotEmpty) {
+      json['phone'] = phone;
+    }
+    
+    if (dateOfBirth != null) {
+      json['dateOfBirth'] = dateOfBirth!.toIso8601String();
+    }
+    
+    return json;
   }
 }
 

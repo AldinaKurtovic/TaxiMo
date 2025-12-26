@@ -11,7 +11,6 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  final _searchController = TextEditingController();
   final List<int> _availableYears = List.generate(5, (index) => DateTime.now().year - index);
 
   @override
@@ -20,12 +19,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<StatisticsProvider>(context, listen: false).fetchAll();
     });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   String _getMonthName(int month) {
@@ -75,26 +68,226 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
+  /// Calculates the overall average rating from monthly data
+  double _calculateAverageRating(List<Map<String, dynamic>> data) {
+    if (data.isEmpty) return 0.0;
+    
+    // Filter out months with zero values (no data)
+    final validData = data.where((item) {
+      final value = (item['value'] as num?)?.toDouble() ?? 0.0;
+      return value > 0;
+    }).toList();
+    
+    if (validData.isEmpty) return 0.0;
+    
+    final sum = validData.fold<double>(
+      0.0,
+      (acc, item) => acc + ((item['value'] as num?)?.toDouble() ?? 0.0),
+    );
+    
+    return sum / validData.length;
+  }
+
+  /// Returns a quality label based on rating
+  String _getQualityLabel(double rating) {
+    if (rating >= 4.5) return 'Excellent';
+    if (rating >= 4.0) return 'Very Good';
+    if (rating >= 3.5) return 'Good';
+    if (rating >= 3.0) return 'Fair';
+    if (rating > 0) return 'Needs Improvement';
+    return 'No Rating';
+  }
+
+  /// Returns a color based on rating
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    if (rating > 0) return Colors.red;
+    return Colors.grey;
+  }
+
   Widget _buildRatingChart(List<Map<String, dynamic>> data) {
+    final averageRating = _calculateAverageRating(data);
+    final hasData = averageRating > 0;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Circular Progress Chart
+          SizedBox(
+            width: 180,
+            height: 180,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Background circle
+                SizedBox(
+                  width: 180,
+                  height: 180,
+                  child: CircularProgressIndicator(
+                    value: 1.0,
+                    strokeWidth: 12,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[200]!),
+                  ),
+                ),
+                // Progress circle
+                if (hasData)
+                  SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: CircularProgressIndicator(
+                      value: averageRating / 5.0,
+                      strokeWidth: 12,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _getRatingColor(averageRating),
+                      ),
+                    ),
+                  ),
+                // Center content
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hasData ? averageRating.toStringAsFixed(1) : '0.0',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: hasData
+                            ? _getRatingColor(averageRating)
+                            : Colors.grey[400],
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '/ 5.0',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Star Icons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              if (!hasData) {
+                return Icon(
+                  Icons.star_border,
+                  color: Colors.grey[300],
+                  size: 32,
+                );
+              }
+              
+              final filledStars = averageRating.floor();
+              final hasHalfStar = (averageRating - filledStars) >= 0.5;
+              
+              if (index < filledStars) {
+                return Icon(
+                  Icons.star,
+                  color: Colors.amber[700],
+                  size: 32,
+                );
+              } else if (index == filledStars && hasHalfStar) {
+                return Icon(
+                  Icons.star_half,
+                  color: Colors.amber[700],
+                  size: 32,
+                );
+              } else {
+                return Icon(
+                  Icons.star_border,
+                  color: Colors.grey[300],
+                  size: 32,
+                );
+              }
+            }),
+          ),
+          const SizedBox(height: 24),
+          // Quality Label
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: hasData
+                  ? _getRatingColor(averageRating).withOpacity(0.1)
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _getQualityLabel(averageRating),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: hasData
+                    ? _getRatingColor(averageRating)
+                    : Colors.grey[600],
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Calculates appropriate Y-axis max value and interval for revenue chart.
+  /// Uses dynamic scaling with small padding to prevent line from being stuck at bottom.
+  /// Returns a tuple: (maxY, interval)
+  (double, double) _calculateRevenueYAxis(List<FlSpot> spots) {
+    if (spots.isEmpty) {
+      return (10.0, 2.5);
+    }
+
+    // Find max value in data
+    final maxValue = spots.map((s) => s.y).fold(0.0, (a, b) => a > b ? a : b);
+    
+    // Dynamic maxY with 30% padding, minimum 10
+    final maxY = maxValue == 0 ? 10.0 : maxValue * 1.3;
+    
+    // Use 4 grid lines for clean appearance
+    final interval = maxY / 4;
+    
+    return (maxY, interval);
+  }
+
+  Widget _buildRevenueChart(List<Map<String, dynamic>> data) {
     if (data.isEmpty) {
       return const Center(
         child: Text('No data available', style: TextStyle(color: Colors.grey)),
       );
     }
 
-    final spots = data.map((item) {
+    // Ensure data is sorted by month (1-12)
+    final sortedData = List<Map<String, dynamic>>.from(data);
+    sortedData.sort((a, b) => (a['month'] as num).compareTo(b['month'] as num));
+
+    final spots = sortedData.map((item) {
       return FlSpot(
         (item['month'] as num).toDouble(),
         (item['value'] as num).toDouble(),
       );
     }).toList();
 
+    // Calculate dynamic Y-axis scaling
+    final (maxY, interval) = _calculateRevenueYAxis(spots);
+
     return LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: 0.2,
+          horizontalInterval: interval,
           getDrawingHorizontalLine: (value) {
             return FlLine(
               color: Colors.grey[300]!,
@@ -107,10 +300,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
-              interval: 0.2,
+              interval: interval,
               getTitlesWidget: (value, meta) {
                 return Text(
-                  value.toStringAsFixed(1),
+                  value.toInt().toString(),
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -150,111 +343,55 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             spots: spots,
             isCurved: true,
             curveSmoothness: 0.35,
-            color: Colors.blue,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: false),
-          ),
-        ],
-        minY: 4.0,
-        maxY: 4.6,
-      ),
-    );
-  }
-
-  Widget _buildRevenueChart(List<Map<String, dynamic>> data) {
-    if (data.isEmpty) {
-      return const Center(
-        child: Text('No data available', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    final spots = data.map((item) {
-      return FlSpot(
-        (item['month'] as num).toDouble(),
-        (item['value'] as num).toDouble(),
-      );
-    }).toList();
-
-    // Calculate max value for Y-axis (round up to nearest 20k)
-    final maxValue = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    final maxY = ((maxValue / 20000).ceil() * 20000).toDouble();
-
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 20000,
-          getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: Colors.grey[300]!,
-              strokeWidth: 1,
-            );
-          },
-        ),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 50,
-              interval: 20000,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() % 20000 == 0) {
-                  final kValue = (value / 1000).toInt();
-                  return Text(
-                    '${kValue}k',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  );
-                }
-                return const Text('');
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= 1 && value.toInt() <= 12) {
-                  return Text(
-                    _getMonthName(value.toInt()),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  );
-                }
-                return const Text('');
-              },
-            ),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            curveSmoothness: 0.35,
             color: Colors.purple,
             barWidth: 3,
             isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: false),
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 3,
+                  color: Colors.purple,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.purple.withOpacity(0.25),
+                  Colors.purple.withOpacity(0.05),
+                  Colors.transparent,
+                ],
+              ),
+            ),
           ),
         ],
         minY: 0,
         maxY: maxY,
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (List<LineBarSpot> touchedSpots) {
+              return touchedSpots.map((LineBarSpot touchedSpot) {
+                final value = touchedSpot.y;
+                final month = _getMonthName(touchedSpot.x.toInt());
+                return LineTooltipItem(
+                  '$month: ${value.toInt()} KM',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+          handleBuiltInTouches: true,
+        ),
       ),
     );
   }
@@ -266,7 +403,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Search Bar Row
+          // Title and Year Selector Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -279,74 +416,36 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-              Row(
-                children: [
-                  // Year Selector
-                  Consumer<StatisticsProvider>(
-                    builder: (context, provider, _) {
-                      return Container(
-                        width: 100,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: DropdownButton<int>(
-                          value: provider.selectedYear,
-                          items: _availableYears.map((year) {
-                            return DropdownMenuItem(
-                              value: year,
-                              child: Text(year.toString()),
-                            );
-                          }).toList(),
-                          onChanged: (year) {
-                            if (year != null) {
-                              provider.setYear(year);
-                            }
-                          },
-                          isExpanded: true,
-                          underline: const SizedBox(),
-                          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  // Search Bar
-                  SizedBox(
-                    width: 320,
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search...',
-                        hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey[600]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.purple.shade300!, width: 2),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      onChanged: (value) {
-                        // Search functionality can be added here if needed
-                      },
+              // Year Selector
+              Consumer<StatisticsProvider>(
+                builder: (context, provider, _) {
+                  return Container(
+                    width: 120,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
-                  ),
-                ],
+                    child: DropdownButton<int>(
+                      value: provider.selectedYear,
+                      items: _availableYears.map((year) {
+                        return DropdownMenuItem(
+                          value: year,
+                          child: Text(year.toString()),
+                        );
+                      }).toList(),
+                      onChanged: (year) {
+                        if (year != null) {
+                          provider.setYear(year);
+                        }
+                      },
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                    ),
+                  );
+                },
               ),
             ],
           ),

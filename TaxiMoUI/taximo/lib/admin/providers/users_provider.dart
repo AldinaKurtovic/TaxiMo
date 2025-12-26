@@ -15,6 +15,7 @@ class UsersProvider extends ChangeNotifier {
   int get totalPages => (_filteredUsers.length / _itemsPerPage).ceil();
   int get currentPage => _currentPage;
   List<UserModel> get currentPageUsers {
+    if (_filteredUsers.isEmpty) return [];
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
     return _filteredUsers.sublist(

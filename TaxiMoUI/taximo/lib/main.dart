@@ -7,10 +7,11 @@ import 'admin/providers/promo_provider.dart';
 import 'admin/providers/reviews_provider.dart';
 import 'admin/providers/statistics_provider.dart';
 import 'admin/providers/rides_provider.dart';
-import 'mobile/auth/providers/auth_provider.dart';
-import 'mobile/auth/screens/mobile_login_screen.dart';
-import 'mobile/user/screens/user_home_screen.dart';
-import 'mobile/driver/screens/driver_home_screen.dart';
+import 'admin/providers/admin_profile_provider.dart';
+// Note: File still named admin_profile_provider.dart but class is UserProfileProvider
+import 'admin/screens/admin_login_screen.dart';
+import 'admin/screens/home/home_screen.dart';
+import 'admin/layout/master_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,9 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Mobile Auth Provider
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        // Admin Providers (kept for admin functionality)
+        // Admin Providers
         ChangeNotifierProvider(create: (_) => AdminAuthProvider()),
         ChangeNotifierProvider(create: (_) => UsersProvider()),
         ChangeNotifierProvider(create: (_) => DriversProvider()),
@@ -33,9 +32,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReviewsProvider()),
         ChangeNotifierProvider(create: (_) => StatisticsProvider()),
         ChangeNotifierProvider(create: (_) => RidesProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: MaterialApp(
-        title: 'TaxiMo',
+        title: 'TaxiMo Admin',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -43,9 +43,8 @@ class MyApp extends StatelessWidget {
         ),
         home: const AuthWrapper(),
         routes: {
-          '/login': (context) => const MobileLoginScreen(),
-          '/user-home': (context) => const UserHomeScreen(),
-          '/driver-home': (context) => const DriverHomeScreen(),
+          '/login': (context) => const AdminLoginScreen(),
+          '/home': (context) => const HomeScreen(),
         },
       ),
     );
@@ -58,7 +57,7 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
+    return Consumer<AdminAuthProvider>(
       builder: (context, authProvider, _) {
         // Show loading while checking auth state
         if (authProvider.isLoading) {
@@ -69,25 +68,28 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // If authenticated, navigate to appropriate home screen based on role
+        // If authenticated, navigate to admin home screen with master layout
         if (authProvider.isAuthenticated) {
-          final userRole = authProvider.userRole;
-          
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (userRole == 'DRIVER') {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
-              );
-            } else {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const UserHomeScreen()),
-              );
-            }
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const MasterScreen(
+                  child: HomeScreen(),
+                  currentRoute: '/home',
+                ),
+              ),
+            );
           });
+          // Show a loading indicator while navigating
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
 
         // Show login screen if not authenticated
-        return const MobileLoginScreen();
+        return const AdminLoginScreen();
       },
     );
   }

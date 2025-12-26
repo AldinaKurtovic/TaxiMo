@@ -11,6 +11,7 @@ class RidesProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   List<RideModel> _rides = [];
+  List<RideModel> _activeRides = []; // Separate list for active rides (for map)
   List<DriverModel> _freeDrivers = [];
   RideFilter _currentFilter = RideFilter.all;
   String? _searchQuery;
@@ -18,6 +19,7 @@ class RidesProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   List<RideModel> get rides => _rides;
+  List<RideModel> get activeRides => _activeRides; // Getter for active rides (for map)
   List<DriverModel> get freeDrivers => _freeDrivers;
   RideFilter get currentFilter => _currentFilter;
   String? get searchQuery => _searchQuery;
@@ -87,6 +89,8 @@ class RidesProvider with ChangeNotifier {
       // Fetch with current search query and status filter
       fetchRides(search: _searchQuery, status: status);
     }
+    // Always refresh active rides for the map regardless of filter
+    fetchActiveRides();
     notifyListeners();
   }
 
@@ -118,11 +122,34 @@ class RidesProvider with ChangeNotifier {
       }
       fetchRides(search: _searchQuery, status: status);
     }
+    // Always refresh active rides for the map
+    fetchActiveRides();
+  }
+
+  // Fetch active rides separately for the map (always shows active rides regardless of filter)
+  // Fetches all rides and filters client-side for active/accepted/requested status
+  Future<void> fetchActiveRides() async {
+    try {
+      // Fetch all rides (no status filter) to get active rides
+      final ridesList = await _ridesService.getAll();
+      _activeRides = ridesList
+          .map((json) => RideModel.fromJson(json as Map<String, dynamic>))
+          .where((ride) {
+            final statusLower = ride.status.toLowerCase();
+            return statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested';
+          })
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching active rides: $e');
+      _activeRides = [];
+    }
   }
 
   // Initial load method
   Future<void> loadRides() async {
     await fetchRides();
+    await fetchActiveRides(); // Also fetch active rides for the map
   }
 }
 

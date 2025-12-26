@@ -32,13 +32,14 @@ class ReviewsProvider extends ChangeNotifier {
   // Filtering
   String? _searchQuery;
   double? _minRatingFilter;
+  String? _driverNameFilter;
 
   List<ReviewModel> get reviews => _reviews;
   List<ReviewModel> get filteredReviews => _filteredReviews;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchAll({String? search, double? minRating}) async {
+  Future<void> fetchAll({String? search, double? minRating, String? driverName}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -58,6 +59,9 @@ class ReviewsProvider extends ChangeNotifier {
       
       _searchQuery = search;
       _minRatingFilter = minRating;
+      if (driverName != null) {
+        _driverNameFilter = driverName == 'All' ? null : driverName;
+      }
       _applyFilters();
       
       // Apply sorting after filtering
@@ -114,6 +118,13 @@ class ReviewsProvider extends ChangeNotifier {
       }).toList();
     }
 
+    // Apply driver name filter (client-side)
+    if (_driverNameFilter != null && _driverNameFilter!.isNotEmpty) {
+      _filteredReviews = _filteredReviews.where((review) {
+        return review.driverName == _driverNameFilter;
+      }).toList();
+    }
+
     // Reset to first page if current page is out of bounds
     if (_currentPage > totalPages && totalPages > 0) {
       _currentPage = 1;
@@ -123,14 +134,29 @@ class ReviewsProvider extends ChangeNotifier {
   void search(String? query) {
     _searchQuery = query;
     // Re-fetch from API with search parameter
-    fetchAll(search: query, minRating: _minRatingFilter);
+    fetchAll(search: query, minRating: _minRatingFilter, driverName: _driverNameFilter != null ? _driverNameFilter : 'All');
   }
 
   void setMinRatingFilter(double? minRating) {
     _minRatingFilter = minRating;
     // Re-fetch from API with rating filter
-    fetchAll(search: _searchQuery, minRating: minRating);
+    fetchAll(search: _searchQuery, minRating: minRating, driverName: _driverNameFilter != null ? _driverNameFilter : 'All');
   }
+
+  void setDriverNameFilter(String? driverName) {
+    _driverNameFilter = driverName == 'All' ? null : driverName;
+    _applyFilters();
+    _currentPage = 1;
+    notifyListeners();
+  }
+
+  List<String> get availableDriverNames {
+    final driverNames = _reviews.map((review) => review.driverName).toSet().toList();
+    driverNames.sort();
+    return driverNames;
+  }
+
+  String? get driverNameFilter => _driverNameFilter;
 
   void sort(String column) {
     if (_sortColumn == column) {
@@ -192,7 +218,7 @@ class ReviewsProvider extends ChangeNotifier {
 
     try {
       await _reviewsService.update(id, reviewData);
-      await fetchAll(search: _searchQuery, minRating: _minRatingFilter);
+      await fetchAll(search: _searchQuery, minRating: _minRatingFilter, driverName: _driverNameFilter != null ? _driverNameFilter : 'All');
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('Error updating review: $e');
@@ -209,7 +235,7 @@ class ReviewsProvider extends ChangeNotifier {
 
     try {
       await _reviewsService.delete(id);
-      await fetchAll(search: _searchQuery, minRating: _minRatingFilter);
+      await fetchAll(search: _searchQuery, minRating: _minRatingFilter, driverName: _driverNameFilter != null ? _driverNameFilter : 'All');
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('Error deleting review: $e');

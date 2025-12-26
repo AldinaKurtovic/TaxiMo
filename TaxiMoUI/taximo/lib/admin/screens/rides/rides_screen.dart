@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/rides_provider.dart';
 import '../../models/ride_model.dart';
 import '../../models/driver_model.dart';
-import 'widgets/rides_map_widget.dart';
+import 'widgets/admin_map_widget.dart';
 
 class RidesScreen extends StatefulWidget {
   const RidesScreen({super.key});
@@ -334,10 +334,10 @@ class _RidesScreenState extends State<RidesScreen> {
   }
 
   Widget _buildMapWidget(RidesProvider provider) {
-    return RidesMapWidget(
-      rides: provider.filteredRides,
+    // Use activeRides from provider (always shows active rides regardless of filter)
+    return AdminMapWidget(
+      activeRides: provider.activeRides,
       freeDrivers: provider.freeDrivers,
-      currentFilter: provider.currentFilter,
       selectedRide: _selectedRide,
       selectedDriver: _selectedDriver,
       onRideSelected: (ride) {

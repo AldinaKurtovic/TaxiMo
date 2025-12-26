@@ -224,6 +224,24 @@ namespace TaxiMo.Services.Services
             // Password update
             if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
             {
+                // Old password is required when changing password
+                if (string.IsNullOrWhiteSpace(dto.OldPassword))
+                {
+                    throw new UserException("Old password is required when changing password.");
+                }
+                
+                // Verify old password
+                var isOldPasswordValid = PasswordHelper.VerifyPassword(
+                    dto.OldPassword, 
+                    user.PasswordHash, 
+                    user.PasswordSalt
+                );
+                
+                if (!isOldPasswordValid)
+                {
+                    throw new UserException("Old password is incorrect.");
+                }
+                
                 PasswordHelper.CreatePasswordHash(dto.NewPassword, out string hash, out string salt);
                 user.PasswordHash = hash;
                 user.PasswordSalt = salt;

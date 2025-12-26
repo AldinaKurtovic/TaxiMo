@@ -9,6 +9,7 @@ import '../screens/promo_codes/promo_codes_screen.dart';
 import '../screens/reviews/reviews_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/rides/rides_screen.dart';
+import '../screens/profile/profile_screen.dart';
 
 class MasterScreen extends StatefulWidget {
   final Widget child;
@@ -184,16 +185,22 @@ class _MasterScreenState extends State<MasterScreen> {
                         onSelected: (value) {
                           if (value == 'logout') {
                             _handleLogout();
+                          } else if (value == 'profile') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MasterScreen(
+                                  child: const ProfileScreen(),
+                                  currentRoute: '/profile',
+                                ),
+                              ),
+                            );
                           }
                         },
                         itemBuilder: (context) => [
                           const PopupMenuItem(
                             value: 'profile',
                             child: Text('Profile'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'settings',
-                            child: Text('Settings'),
                           ),
                           const PopupMenuItem(
                             value: 'logout',

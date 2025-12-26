@@ -260,18 +260,12 @@ class _DriversScreenState extends State<DriversScreen> {
                         border: Border.all(color: Colors.grey[200]!),
                       ),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
-                            ),
-                            child: DataTable(
-                              headingRowHeight: 56,
-                              dataRowHeight: 64,
-                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                              columnSpacing: 50,
-                              horizontalMargin: 24,
+                        child: DataTable(
+                          headingRowHeight: 56,
+                          dataRowHeight: 64,
+                          headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                          columnSpacing: 32,
+                          horizontalMargin: 24,
                         columns: [
                         DataColumn(
                           label: Padding(
@@ -463,8 +457,6 @@ class _DriversScreenState extends State<DriversScreen> {
                           ],
                         );
                       }).toList(),
-                            ),
-                          ),
                         ),
                       ),
                     );

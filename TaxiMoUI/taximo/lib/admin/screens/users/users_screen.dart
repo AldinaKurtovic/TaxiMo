@@ -117,85 +117,35 @@ class _UsersScreenState extends State<UsersScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Header with Add User button, Status filter, and Search
+          // Header with Add User button and Search
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left side: Add User Button and Status Filter
-              Row(
-                children: [
-                  // Add User Button
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddUserModal(context),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text(
-                      'ADD USER',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple[50],
-                      foregroundColor: Colors.purple[700],
-                      side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
+              // Left side: Add User Button
+              ElevatedButton.icon(
+                onPressed: () => _showAddUserModal(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text(
+                  'ADD USER',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(width: 12),
-                  // Status Filter
-                  Container(
-                    height: 44, // Match button height
-                    width: 130, // Fixed width for compact appearance
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedStatusFilter == null 
-                            ? 'All' 
-                            : _selectedStatusFilter,
-                        isExpanded: true,
-                        items: ['All', 'Active', 'Inactive'].map((status) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(
-                              status,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          bool? isActive;
-                          if (value == 'All') {
-                            _selectedStatusFilter = null;
-                            isActive = null;
-                          } else if (value == 'Active') {
-                            _selectedStatusFilter = 'Active';
-                            isActive = true;
-                          } else {
-                            _selectedStatusFilter = 'Inactive';
-                            isActive = false;
-                          }
-                          setState(() {});
-                          Provider.of<UsersProvider>(context, listen: false)
-                              .setStatusFilter(isActive);
-                        },
-                      ),
-                    ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[50],
+                  foregroundColor: Colors.purple[700],
+                  side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
                   ),
-                ],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
               ),
               // Search Bar (right side)
               SizedBox(
@@ -287,29 +237,6 @@ class _UsersScreenState extends State<UsersScreen> {
                   );
                 }
 
-                if (provider.currentPageUsers.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No users found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     return Container(
@@ -320,18 +247,12 @@ class _UsersScreenState extends State<UsersScreen> {
                         border: Border.all(color: Colors.grey[200]!),
                       ),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
-                            ),
-                            child: DataTable(
-                              headingRowHeight: 56,
-                              dataRowHeight: 64,
-                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                              columnSpacing: 50,
-                              horizontalMargin: 24,
+                        child: DataTable(
+                          headingRowHeight: 56,
+                          dataRowHeight: 64,
+                          headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                          columnSpacing: 32,
+                          horizontalMargin: 24,
                         columns: [
                         DataColumn(
                           label: Padding(
@@ -360,7 +281,7 @@ class _UsersScreenState extends State<UsersScreen> {
                               ),
                               const SizedBox(width: 4),
                               IconButton(
-                                icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                icon: Icon(Icons.sort, size: 16, color: Colors.grey[600]),
                                 onPressed: () {
                                   provider.sort('name');
                                 },
@@ -373,14 +294,85 @@ class _UsersScreenState extends State<UsersScreen> {
                             ],
                           ),
                         ),
-                        const DataColumn(
-                          label: Text(
-                            'Status',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Color(0xFF424242),
-                            ),
+                        DataColumn(
+                          label: Consumer<UsersProvider>(
+                            builder: (context, provider, _) {
+                              final currentFilter = _selectedStatusFilter ?? 'All';
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Status',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  PopupMenuButton<String>(
+                                    icon: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Icon(Icons.filter_alt, size: 16, color: currentFilter != 'All' ? Colors.blue : Colors.grey[600]),
+                                        if (currentFilter != 'All')
+                                          Positioned(
+                                            right: -4,
+                                            top: -4,
+                                            child: Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.blue,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 24,
+                                      minHeight: 24,
+                                    ),
+                                    onSelected: (value) {
+                                      bool? isActive;
+                                      if (value == 'All') {
+                                        setState(() {
+                                          _selectedStatusFilter = null;
+                                        });
+                                        isActive = null;
+                                      } else if (value == 'Active') {
+                                        setState(() {
+                                          _selectedStatusFilter = 'Active';
+                                        });
+                                        isActive = true;
+                                      } else {
+                                        setState(() {
+                                          _selectedStatusFilter = 'Inactive';
+                                        });
+                                        isActive = false;
+                                      }
+                                      provider.setStatusFilter(isActive);
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'All',
+                                        child: Text('All'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Active',
+                                        child: Text('Active'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Inactive',
+                                        child: Text('Inactive'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         DataColumn(
@@ -397,7 +389,7 @@ class _UsersScreenState extends State<UsersScreen> {
                               ),
                               const SizedBox(width: 4),
                               IconButton(
-                                icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                icon: Icon(Icons.sort, size: 16, color: Colors.grey[600]),
                                 onPressed: () {
                                   provider.sort('email');
                                 },
@@ -434,7 +426,44 @@ class _UsersScreenState extends State<UsersScreen> {
                           ),
                         ),
                       ],
-                      rows: provider.currentPageUsers.map((user) {
+                      rows: provider.currentPageUsers.isEmpty
+                          ? [
+                              DataRow(
+                                cells: [
+                                  DataCell(Container()),
+                                  DataCell(
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 32.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.people_outline,
+                                              size: 32,
+                                              color: Colors.grey[400],
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              'No users found',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                ],
+                              ),
+                            ]
+                          : provider.currentPageUsers.map((user) {
                         return DataRow(
                           cells: [
                             DataCell(
@@ -539,8 +568,6 @@ class _UsersScreenState extends State<UsersScreen> {
                           ],
                         );
                       }).toList(),
-                            ),
-                          ),
                         ),
                       ),
                     );

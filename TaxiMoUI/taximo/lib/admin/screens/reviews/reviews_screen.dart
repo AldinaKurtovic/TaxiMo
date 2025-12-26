@@ -12,6 +12,7 @@ class ReviewsScreen extends StatefulWidget {
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
   final _searchController = TextEditingController();
+  String? _selectedDriverFilter;
 
   @override
   void initState() {
@@ -153,29 +154,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   );
                 }
 
-                if (provider.currentPageReviews.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.star_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No reviews found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     return Container(
@@ -186,18 +164,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                         border: Border.all(color: Colors.grey[200]!),
                       ),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minWidth: constraints.maxWidth - 48, // Full width minus container padding
-                            ),
-                            child: DataTable(
-                              headingRowHeight: 56,
-                              dataRowHeight: 64,
-                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                              columnSpacing: 50,
-                              horizontalMargin: 24,
+                        child: DataTable(
+                          headingRowHeight: 56,
+                          dataRowHeight: 64,
+                          headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+                          columnSpacing: 32,
+                          horizontalMargin: 24,
                         columns: [
                           DataColumn(
                             label: Padding(
@@ -240,30 +212,67 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             ),
                           ),
                           DataColumn(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Driver Name',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
-                                  onPressed: () {
-                                    provider.sort('driverName');
-                                  },
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 24,
-                                    minHeight: 24,
-                                  ),
-                                ),
-                              ],
+                            label: Consumer<ReviewsProvider>(
+                              builder: (context, provider, _) {
+                                final driverNames = provider.availableDriverNames;
+                                final currentFilter = _selectedDriverFilter ?? 'All';
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Driver Name',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    PopupMenuButton<String>(
+                                      icon: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Icon(Icons.filter_alt, size: 16, color: currentFilter != 'All' ? Colors.blue : Colors.grey[600]),
+                                          if (currentFilter != 'All')
+                                            Positioned(
+                                              right: -4,
+                                              top: -4,
+                                              child: Container(
+                                                width: 6,
+                                                height: 6,
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.blue,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 24,
+                                        minHeight: 24,
+                                      ),
+                                      onSelected: (value) {
+                                        setState(() {
+                                          _selectedDriverFilter = value;
+                                        });
+                                        provider.setDriverNameFilter(value);
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'All',
+                                          child: Text('All Drivers'),
+                                        ),
+                                        ...driverNames.map((driverName) => PopupMenuItem(
+                                          value: driverName,
+                                          child: Text(driverName),
+                                        )),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                           DataColumn(
@@ -307,7 +316,44 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             ),
                           ),
                         ],
-                        rows: provider.currentPageReviews.map((review) {
+                        rows: provider.currentPageReviews.isEmpty
+                            ? [
+                                DataRow(
+                                  cells: [
+                                    const DataCell(SizedBox.shrink()),
+                                    DataCell(
+                                      Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 32.0),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.star_outline,
+                                                size: 32,
+                                                color: Colors.grey[400],
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'No reviews found',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const DataCell(SizedBox.shrink()),
+                                    const DataCell(SizedBox.shrink()),
+                                    const DataCell(SizedBox.shrink()),
+                                    const DataCell(SizedBox.shrink()),
+                                  ],
+                                ),
+                              ]
+                            : provider.currentPageReviews.map((review) {
                           return DataRow(
                             cells: [
                               DataCell(
@@ -358,8 +404,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             ],
                           );
                         }).toList(),
-                            ),
-                          ),
                         ),
                       ),
                     );
