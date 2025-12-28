@@ -4,6 +4,7 @@ import '../../providers/rides_provider.dart';
 import '../../models/ride_model.dart';
 import '../../models/driver_model.dart';
 import 'widgets/admin_map_widget.dart';
+import 'widgets/assign_driver_modal.dart';
 
 class RidesScreen extends StatefulWidget {
   const RidesScreen({super.key});
@@ -205,9 +206,49 @@ class _RidesScreenState extends State<RidesScreen> {
               ),
             ],
           ),
+          // Show "Assign to Ride" button for unassigned rides
+          if (_isUnassignedRide(ride)) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  _showAssignDriverModal(context, ride);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Assign to Ride',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
       ),
+    );
+  }
+
+  bool _isUnassignedRide(RideModel ride) {
+    // Show "Assign to Ride" button ONLY when status is "requested"
+    final statusLower = ride.status.toLowerCase();
+    return statusLower == 'requested';
+  }
+
+  void _showAssignDriverModal(BuildContext context, RideModel ride) {
+    showDialog(
+      context: context,
+      builder: (context) => AssignDriverModal(ride: ride),
     );
   }
 

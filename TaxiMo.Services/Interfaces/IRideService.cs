@@ -11,6 +11,7 @@ namespace TaxiMo.Services.Interfaces
         Task<Ride> StartRideAsync(int rideId);
         Task<Ride> CompleteRideAsync(int rideId);
         Task<Ride> CancelRideAsync(int rideId, bool isAdmin);
+        Task<Ride> AssignDriverAsync(int rideId, int driverId);
     }
 }
 

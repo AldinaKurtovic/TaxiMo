@@ -14,16 +14,19 @@ namespace TaxiMo.Services.Services
         private readonly IRidePriceCalculator _priceCalculator;
         private readonly RideStateFactory _stateFactory;
         private readonly IMapper _mapper;
+        private readonly IDriverService _driverService;
 
         public RideService(
             TaxiMoDbContext context, 
             IRidePriceCalculator priceCalculator,
             RideStateFactory stateFactory,
-            IMapper mapper) : base(context)
+            IMapper mapper,
+            IDriverService driverService) : base(context)
         {
             _priceCalculator = priceCalculator;
             _stateFactory = stateFactory;
             _mapper = mapper;
+            _driverService = driverService;
         }
 
         public async Task<List<Ride>> GetAllAsync(string? search = null, string? status = null)
@@ -247,6 +250,91 @@ namespace TaxiMo.Services.Services
             var updatedRide = await state.CancelAsync(rideId, isAdmin);
             await Context.SaveChangesAsync();
             return updatedRide;
+        }
+
+        public async Task<Ride> AssignDriverAsync(int rideId, int driverId)
+        {
+            // Validate that the ride exists
+            var ride = await Context.Rides
+                .Include(r => r.Driver)
+                .Include(r => r.Vehicle)
+                .FirstOrDefaultAsync(r => r.RideId == rideId);
+
+            if (ride == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
+            }
+
+            // Define statusLower once at the top and reuse it
+            var statusLower = ride.Status.ToLower();
+
+            // Reject assignment if ride is in a finished state
+            if (statusLower == RideStatuses.Completed || statusLower == RideStatuses.Cancelled)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException("Cannot assign driver to a finished ride.");
+            }
+
+            // Driver can only be assigned to requested rides
+            if (statusLower != RideStatuses.Requested)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException("Driver can only be assigned to requested rides.");
+            }
+
+            // Track old driver ID for re-assignment handling
+            var oldDriverId = ride.DriverId;
+
+            // Validate that the driver exists
+            var driver = await _driverService.GetByIdAsync(driverId);
+            if (driver == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Driver with ID {driverId} not found.");
+            }
+
+            // Validate that the driver is active
+            if (driver.Status.ToLower() != "active")
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Driver with ID {driverId} is not active.");
+            }
+
+            // Validate that the driver is currently free (not assigned to any active ride)
+            // Note: If re-assigning the same driver, skip this check
+            if (oldDriverId != driverId)
+            {
+                var freeDrivers = await _driverService.GetFreeDriversAsync();
+                if (!freeDrivers.Any(d => d.DriverId == driverId))
+                {
+                    throw new TaxiMo.Model.Exceptions.UserException($"Driver with ID {driverId} is not currently available.");
+                }
+            }
+
+            // Select the first active vehicle for the driver
+            var vehicle = driver.Vehicles?.FirstOrDefault(v => v.Status.ToLower() == "active");
+            if (vehicle == null)
+            {
+                throw new TaxiMo.Model.Exceptions.UserException($"Driver with ID {driverId} does not have an active vehicle assigned.");
+            }
+
+            // Handle re-assignment: if ride already has a different driver, the old driver becomes available again
+            // (Availability is managed through ride assignments - removing the ride assignment makes driver available)
+            // Assign the new driver and vehicle to the ride
+            ride.DriverId = driverId;
+            ride.VehicleId = vehicle.VehicleId;
+            // Keep status as "requested" - do NOT change to "active"
+            // Status will transition to "active" only when driver accepts the ride
+
+            await Context.SaveChangesAsync();
+
+            // Reload the ride with all related entities for the response
+            var updatedRide = await Context.Rides
+                .Include(r => r.Driver)
+                    .ThenInclude(d => d.DriverAvailabilities)
+                .Include(r => r.Rider)
+                .Include(r => r.PickupLocation)
+                .Include(r => r.DropoffLocation)
+                .Include(r => r.Vehicle)
+                .FirstOrDefaultAsync(r => r.RideId == rideId);
+
+            return updatedRide ?? ride;
         }
     }
 }

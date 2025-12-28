@@ -260,6 +260,36 @@ namespace TaxiMoWebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while cancelling the ride" });
             }
         }
+
+        // POST: api/Ride/{id}/assign-driver
+        [HttpPost("{id}/assign-driver")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<RideResponse>> AssignDriver(int id, [FromBody] TaxiMo.Services.DTOs.AssignDriverDto assignDriverDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    Logger.LogWarning("Assign driver failed - ModelState invalid: {ModelState}", 
+                        string.Join(", ", ModelState.SelectMany(x => x.Value?.Errors.Select(e => e.ErrorMessage) ?? Enumerable.Empty<string>())));
+                    return BadRequest(ModelState);
+                }
+
+                var ride = await _rideService.AssignDriverAsync(id, assignDriverDto.DriverId);
+                var response = Mapper.Map<RideResponse>(ride);
+                return Ok(response);
+            }
+            catch (TaxiMo.Model.Exceptions.UserException ex)
+            {
+                Logger.LogWarning(ex, "Error assigning driver to ride {RideId}", id);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error assigning driver to ride {RideId}", id);
+                return StatusCode(500, new { message = "An error occurred while assigning the driver" });
+            }
+        }
     }
 }
 

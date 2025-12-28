@@ -151,5 +151,29 @@ class RidesProvider with ChangeNotifier {
     await fetchRides();
     await fetchActiveRides(); // Also fetch active rides for the map
   }
+
+  // Assign driver to ride
+  Future<void> assignDriver(int rideId, int driverId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _ridesService.assignDriver(rideId, driverId);
+      _errorMessage = null;
+      
+      // Refresh rides and free drivers
+      await fetchRides(search: _searchQuery, status: _currentFilter == RideFilter.completed ? 'completed' : _currentFilter == RideFilter.cancelled ? 'cancelled' : null);
+      await fetchFreeDrivers();
+      await fetchActiveRides();
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error assigning driver: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
 

@@ -48,5 +48,25 @@ class RidesService {
       throw Exception('Failed to load free drivers: ${response.statusCode}');
     }
   }
+
+  Future<Map<String, dynamic>> assignDriver(int rideId, int driverId) async {
+    final uri = Uri.parse('$baseUrl/api/Ride/$rideId/assign-driver');
+    final response = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({'driverId': driverId}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 400) {
+      final errorBody = jsonDecode(response.body) as Map<String, dynamic>;
+      throw Exception(errorBody['message'] ?? 'Failed to assign driver');
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('Unauthorized: Please check your credentials');
+    } else {
+      throw Exception('Failed to assign driver: ${response.statusCode}');
+    }
+  }
 }
 
