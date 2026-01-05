@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/driver_reviews_provider.dart';
+import '../providers/driver_provider.dart';
 import '../../user/models/review_dto.dart';
 
 class DriverReviewsScreen extends StatefulWidget {
@@ -14,20 +15,18 @@ class DriverReviewsScreen extends StatefulWidget {
 }
 
 class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
-  int? _driverId;
-
   @override
   void initState() {
     super.initState();
-    // Read driverId from route arguments ONCE in initState
+    // Load reviews when screen is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      if (args is int && args > 0) {
-        _driverId = args;
-        print("DriverReviewsScreen: Loaded driverId from route: $_driverId");
-        context.read<DriverReviewsProvider>().loadDriverReviews(_driverId!);
-      } else {
-        print("DriverReviewsScreen: Invalid or missing driverId from route arguments: $args");
+      final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+      final driver = driverProvider.currentDriver;
+      final driverProfile = driverProvider.driverProfile;
+      final driverId = driverProfile?.driverId ?? driver?.driverId ?? 0;
+      
+      if (driverId > 0) {
+        context.read<DriverReviewsProvider>().loadDriverReviews(driverId);
       }
     });
   }
@@ -40,12 +39,16 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Reviews'),
+        title: const Text('Reviews'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
-      body: Consumer<DriverReviewsProvider>(
-        builder: (context, reviewsProvider, child) {
+      body: Consumer2<DriverReviewsProvider, DriverProvider>(
+        builder: (context, reviewsProvider, driverProvider, child) {
+          final driver = driverProvider.currentDriver;
+          final driverProfile = driverProvider.driverProfile;
+          final driverId = driverProfile?.driverId ?? driver?.driverId ?? 0;
+
           if (reviewsProvider.isLoading && reviewsProvider.reviews.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -70,8 +73,8 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      if (_driverId != null && _driverId! > 0) {
-                        context.read<DriverReviewsProvider>().loadDriverReviews(_driverId!);
+                      if (driverId > 0) {
+                        context.read<DriverReviewsProvider>().loadDriverReviews(driverId);
                       }
                     },
                     child: const Text('Retry'),
@@ -108,7 +111,7 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
             );
           }
 
-          if (_driverId == null || _driverId! <= 0) {
+          if (driverId <= 0) {
             return const Center(
               child: Text('Driver ID is required'),
             );
@@ -116,7 +119,7 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await context.read<DriverReviewsProvider>().refresh(_driverId!);
+              await context.read<DriverReviewsProvider>().refresh(driverId);
             },
             child: ListView.builder(
               padding: const EdgeInsets.all(16.0),

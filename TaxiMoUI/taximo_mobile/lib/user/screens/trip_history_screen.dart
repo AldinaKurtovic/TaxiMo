@@ -6,6 +6,7 @@ import '../models/review_dto.dart';
 import '../services/ride_service.dart';
 import '../services/review_service.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
+import '../widgets/user_app_bar.dart';
 import 'rate_trip_screen.dart';
 
 enum TimeFilter {
@@ -26,74 +27,52 @@ class TripHistoryScreen extends StatefulWidget {
 class _TripHistoryScreenState extends State<TripHistoryScreen> {
   final RideService _rideService = RideService();
   final ReviewService _reviewService = ReviewService();
-  List<RideHistoryDto> _allRides = [];
-  List<RideHistoryDto> _filteredRides = [];
+  Future<_TripHistoryData>? _historyFuture;
+  final ValueNotifier<TimeFilter> _filterNotifier = ValueNotifier<TimeFilter>(TimeFilter.thisMonth);
   Map<int, ReviewDto> _rideReviews = {}; // Cache reviews by rideId
-  bool _isLoading = true;
-  bool _isLoadingReviews = false;
-  String? _errorMessage;
-  TimeFilter _selectedFilter = TimeFilter.thisMonth;
 
   @override
   void initState() {
     super.initState();
-    _loadRideHistory();
+    _historyFuture = _loadRideHistory();
+  }
+  
+  @override
+  void dispose() {
+    _filterNotifier.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadRideHistory() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+  Future<_TripHistoryData> _loadRideHistory() async {
+    // Get current user
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    
+    if (currentUser == null) {
+      throw Exception('Please login to view trip history');
+    }
+
+    final ridesData = await _rideService.getRideHistory(status: 'completed');
+    
+    // Filter rides by current user ID and map to DTOs
+    final rides = ridesData
+        .where((json) => json['riderId'] == currentUser.userId)
+        .map((json) => RideHistoryDto.fromJson(json))
+        .toList();
+
+    // Sort by completed date (most recent first)
+    rides.sort((a, b) {
+      final aDate = a.completedAt ?? a.requestedAt;
+      final bDate = b.completedAt ?? b.requestedAt;
+      return bDate.compareTo(aDate);
     });
 
-    try {
-      // Get current user
-      final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
-      final currentUser = authProvider.currentUser;
-      
-      if (currentUser == null) {
-        setState(() {
-          _errorMessage = 'Please login to view trip history';
-          _isLoading = false;
-        });
-        return;
-      }
+    // Load reviews for all rides
+    await _loadReviewsForRides(rides);
 
-      final ridesData = await _rideService.getRideHistory(status: 'completed');
-      
-      // Filter rides by current user ID and map to DTOs
-      final rides = ridesData
-          .where((json) => json['riderId'] == currentUser.userId)
-          .map((json) => RideHistoryDto.fromJson(json))
-          .toList();
-
-      // Sort by completed date (most recent first)
-      rides.sort((a, b) {
-        final aDate = a.completedAt ?? a.requestedAt;
-        final bDate = b.completedAt ?? b.requestedAt;
-        return bDate.compareTo(aDate);
-      });
-
-      setState(() {
-        _allRides = rides;
-        _applyFilter();
-        _isLoading = false;
-      });
-
-      // Load reviews for all rides
-      _loadReviewsForRides(rides);
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load trip history: $e';
-        _isLoading = false;
-      });
-    }
+    return _TripHistoryData(rides: rides, reviews: Map.from(_rideReviews));
   }
   Future<void> _loadReviewsForRides(List<RideHistoryDto> rides) async {
-    setState(() {
-      _isLoadingReviews = true;
-    });
-
     try {
       final authProvider =
           Provider.of<MobileAuthProvider>(context, listen: false);
@@ -111,25 +90,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           _rideReviews[review.rideId] = review;
         }
       }
-
-      setState(() {
-        _isLoadingReviews = false;
-      });
-
-      // Debug: Print map keys
-      print('RideReviews keys: ${_rideReviews.keys}');
     } catch (e) {
-      setState(() {
-        _isLoadingReviews = false;
-      });
+      // Silently fail - reviews are optional
     }
   }
 
-  void _applyFilter() {
+  List<RideHistoryDto> _applyFilter(List<RideHistoryDto> allRides, TimeFilter filter) {
     final now = DateTime.now();
-    List<RideHistoryDto> filtered = List.from(_allRides);
+    List<RideHistoryDto> filtered = List.from(allRides);
 
-    switch (_selectedFilter) {
+    switch (filter) {
       case TimeFilter.thisMonth:
         filtered = filtered.where((ride) {
           final date = ride.completedAt ?? ride.requestedAt;
@@ -161,9 +131,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         break;
     }
 
-    setState(() {
-      _filteredRides = filtered;
-    });
+    return filtered;
   }
 
   String _getFilterLabel(TimeFilter filter) {
@@ -192,19 +160,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Trip History',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-      ),
+      appBar: const UserAppBar(title: 'Trip History'),
       body: Column(
         children: [
           // Filter Section
@@ -232,12 +188,17 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _getFilterLabel(_selectedFilter),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        ValueListenableBuilder<TimeFilter>(
+                          valueListenable: _filterNotifier,
+                          builder: (context, filter, _) {
+                            return Text(
+                              _getFilterLabel(filter),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 4),
                         const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
@@ -252,58 +213,85 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           
           // Content
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
+            child: FutureBuilder<_TripHistoryData>(
+              future: _historyFuture ?? _loadRideHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          snapshot.error.toString().replaceFirst('Exception: ', ''),
+                          style: TextStyle(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (!mounted) return;
+                            setState(() {
+                              _historyFuture = _loadRideHistory();
+                            });
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final data = snapshot.data!;
+                _rideReviews = data.reviews;
+
+                return ValueListenableBuilder<TimeFilter>(
+                  valueListenable: _filterNotifier,
+                  builder: (context, filter, _) {
+                    final filteredRides = _applyFilter(data.rides, filter);
+
+                    if (filteredRides.isEmpty) {
+                      return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                            Icon(Icons.history, size: 64, color: Colors.grey[400]),
                             const SizedBox(height: 16),
                             Text(
-                              _errorMessage!,
-                              style: TextStyle(color: Colors.grey[600]),
-                              textAlign: TextAlign.center,
+                              'No trips found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadRideHistory,
-                              child: const Text('Retry'),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Your completed trips will appear here',
+                              style: TextStyle(color: Colors.grey[500]),
                             ),
                           ],
                         ),
-                      )
-                    : _filteredRides.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.history, size: 64, color: Colors.grey[400]),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No trips found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Your completed trips will appear here',
-                                  style: TextStyle(color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredRides.length,
-                            itemBuilder: (context, index) {
-                              return _buildRideCard(_filteredRides[index]);
-                            },
-                          ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredRides.length,
+                      itemBuilder: (context, index) {
+                        final ride = filteredRides[index];
+                        return _buildRideCard(ride);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -312,6 +300,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   Widget _buildRideCard(RideHistoryDto ride) {
     return Container(
+      key: ValueKey(ride.rideId),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -612,10 +601,12 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         
         if (existingReview != null) {
           // Update cache
-          setState(() {
+          if (mounted) {
             _rideReviews[ride.rideId] = existingReview;
-          });
+            setState(() {});
+          }
           
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('You have already reviewed this trip.'),
@@ -635,9 +626,11 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       arguments: ride,
     );
 
-    // If review was submitted, reload reviews
-    if (result == true) {
-      _loadReviewsForRides(_allRides);
+    // If review was submitted, reload history (which includes reviews)
+    if (result == true && mounted) {
+      setState(() {
+        _historyFuture = _loadRideHistory();
+      });
     }
   }
 
@@ -673,14 +666,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               ...TimeFilter.values.map((filter) {
                 return ListTile(
                   title: Text(_getFilterLabel(filter)),
-                  trailing: _selectedFilter == filter
-                      ? const Icon(Icons.check, color: Colors.deepPurple)
-                      : null,
+                  trailing: ValueListenableBuilder<TimeFilter>(
+                    valueListenable: _filterNotifier,
+                    builder: (context, currentFilter, _) {
+                      return currentFilter == filter
+                          ? const Icon(Icons.check, color: Colors.deepPurple)
+                          : const SizedBox.shrink();
+                    },
+                  ),
                   onTap: () {
-                    setState(() {
-                      _selectedFilter = filter;
-                    });
-                    _applyFilter();
+                    _filterNotifier.value = filter;
                     Navigator.pop(context);
                   },
                 );
@@ -691,6 +686,17 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       },
     );
   }
+}
+
+// Immutable trip history data
+class _TripHistoryData {
+  final List<RideHistoryDto> rides;
+  final Map<int, ReviewDto> reviews;
+
+  const _TripHistoryData({
+    required this.rides,
+    required this.reviews,
+  });
 }
 
 // Custom painter for dashed line

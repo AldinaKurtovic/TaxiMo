@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/review_dto.dart';
 import '../services/review_service.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
+import '../widgets/user_app_bar.dart';
 
 class ReviewsScreen extends StatefulWidget {
   const ReviewsScreen({super.key});
@@ -14,48 +15,25 @@ class ReviewsScreen extends StatefulWidget {
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
   final ReviewService _reviewService = ReviewService();
-  List<ReviewDto> _reviews = [];
-  bool _isLoading = true;
-  String? _errorMessage;
+  Future<List<ReviewDto>>? _reviewsFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadReviews();
+    _reviewsFuture = _loadReviews();
   }
 
-  Future<void> _loadReviews() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
+  Future<List<ReviewDto>> _loadReviews() async {
       // Get current user
       final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
       final currentUser = authProvider.currentUser;
       
       if (currentUser == null) {
-        setState(() {
-          _errorMessage = 'Please login to view reviews';
-          _isLoading = false;
-        });
-        return;
+      throw Exception('Please login to view reviews');
       }
 
       // Use the new method that properly handles ReviewResponse format
-      final reviews = await _reviewService.getReviewsByUserId(currentUser.userId);
-
-      setState(() {
-        _reviews = reviews;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load reviews: $e';
-        _isLoading = false;
-      });
-    }
+    return await _reviewService.getReviewsByUserId(currentUser.userId);
   }
 
   String _formatDate(DateTime dateTime) {
@@ -67,43 +45,45 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'My Reviews',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
+      appBar: const UserAppBar(title: 'Reviews'),
+      body: FutureBuilder<List<ReviewDto>>(
+        future: _reviewsFuture ?? _loadReviews(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
-                        _errorMessage!,
+                    snapshot.error.toString().replaceFirst('Exception: ', ''),
                         style: TextStyle(color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _loadReviews,
+                    onPressed: () {
+                      if (!mounted) return;
+                      setState(() {
+                        _reviewsFuture = _loadReviews();
+                      });
+                    },
                         child: const Text('Retry'),
                       ),
                     ],
                   ),
-                )
-              : _reviews.isEmpty
-                  ? Center(
+            );
+          }
+
+          final reviews = snapshot.data ?? [];
+          
+          if (reviews.isEmpty) {
+            return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -124,13 +104,18 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                           ),
                         ],
                       ),
-                    )
-                  : ListView.builder(
+            );
+          }
+
+          return ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: _reviews.length,
+            itemCount: reviews.length,
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemBuilder: (context, index) {
-                        return _buildReviewCard(_reviews[index]);
+              final review = reviews[index];
+              return _buildReviewCard(review);
+            },
+          );
                       },
                     ),
     );
@@ -138,6 +123,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
   Widget _buildReviewCard(ReviewDto review) {
     return Container(
+      key: ValueKey(review.reviewId),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,

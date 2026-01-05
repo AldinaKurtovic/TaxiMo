@@ -17,28 +17,33 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String? _selectedPaymentMethod;
-  bool _initialized = false;
   bool _isCreatingRide = false;
   bool _isProcessingPayment = false;
+  bool _hasNavigated = false; // Prevent multiple navigations
   final RideService _rideService = RideService();
   final StripeService _stripeService = StripeService();
+  
+  // Cached payment arguments
+  Map<String, dynamic>? _paymentArgs;
 
-  void _initializePaymentMethod() {
-    if (!_initialized) {
-      _selectedPaymentMethod = 'cash'; // Default to cash
-      _initialized = true;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_paymentArgs == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        _paymentArgs = args;
+        _selectedPaymentMethod ??= 'cash'; // Default to cash
+      }
     }
   }
 
   Future<void> _createRideWithPayment() async {
-    if (_selectedPaymentMethod == null) {
+    if (_selectedPaymentMethod == null || _paymentArgs == null) {
       return;
     }
 
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is! Map<String, dynamic>) {
-      return;
-    }
+    final args = _paymentArgs!;
 
     final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
     final currentUser = authProvider.currentUser;
@@ -54,6 +59,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isCreatingRide = true;
     });
@@ -106,9 +112,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         );
 
-        // Navigate back to home screen
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        Navigator.pushReplacementNamed(context, '/user-home');
+        // Navigate to home screen (single atomic operation)
+        await Future.delayed(Duration.zero);
+        if (!mounted || _hasNavigated) return;
+        _hasNavigated = true;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/user-home',
+          (route) => false,
+        );
       } else if (paymentMethod == 'online') {
         // Online payment - process Stripe payment
         await _processStripePayment(response);
@@ -133,11 +145,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _processStripePayment(RideBookingResponse response) async {
+    if (!mounted) return;
     setState(() {
       _isProcessingPayment = true;
     });
 
     try {
+      // Yield UI thread to prevent blocking
+      await Future.delayed(Duration.zero);
+      
+      if (!mounted) return;
+      
       // Use EUR for Stripe (backend returns KM, but Stripe needs EUR)
       final stripeCurrency = 'eur';
       
@@ -162,9 +180,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           );
 
-          // Navigate back to home screen
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          Navigator.pushReplacementNamed(context, '/user-home');
+          // Navigate to home screen (single atomic operation)
+          await Future.delayed(Duration.zero);
+          if (!mounted || _hasNavigated) return;
+          _hasNavigated = true;
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/user-home',
+            (route) => false,
+          );
           break;
 
         case PaymentResult.cancelled:
@@ -212,19 +236,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final args = ModalRoute.of(context)?.settings.arguments;
     
     // If no arguments, show payment history screen
-    if (args == null || args is! Map<String, dynamic>) {
+    if (_paymentArgs == null) {
       return const PaymentHistoryScreen();
     }
 
-    _initializePaymentMethod();
+    final fareFinal = (_paymentArgs!['fareFinal'] as num).toDouble();
 
-    final fareFinal = (args['fareFinal'] as num).toDouble();
-
-    return Scaffold(
-      body: Column(
+    return AbsorbPointer(
+      absorbing: _isProcessingPayment || _isCreatingRide,
+      child: Scaffold(
+        body: Column(
         children: [
           // Purple header
           Container(
@@ -280,6 +303,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     description: 'Prepare your cash',
                     isSelected: _selectedPaymentMethod == 'cash',
                     onTap: () {
+                      if (!mounted) return;
                       setState(() {
                         _selectedPaymentMethod = 'cash';
                       });
@@ -295,6 +319,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     description: 'Pay with your paypal balance',
                     isSelected: _selectedPaymentMethod == 'online',
                     onTap: () {
+                      if (!mounted) return;
                       setState(() {
                         _selectedPaymentMethod = 'online';
                       });
@@ -347,6 +372,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

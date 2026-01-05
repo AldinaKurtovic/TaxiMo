@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../auth/providers/auth_provider.dart';
 import '../../config/api_config.dart';
 import '../models/ride_request_dto.dart';
 
@@ -37,10 +38,18 @@ class LocationDto {
 
 class RideService {
   Map<String, String> _headers() {
+    final user = AuthProvider.username;
+    final pass = AuthProvider.password;
+    
+    if (user == null || user.isEmpty || pass == null || pass.isEmpty) {
+      throw Exception('Authentication credentials are missing. Please login again.');
+    }
+    
+    final credentials = base64Encode(utf8.encode('$user:$pass'));
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Basic bW9iaWxlOnRlc3Q=',
+      'Authorization': 'Basic $credentials',
     };
   }
 
@@ -154,7 +163,7 @@ class RideService {
     
     final response = await http.get(uri, headers: _headers());
 
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       final jsonData = jsonDecode(response.body);
       
       // Handle both array and wrapped response

@@ -55,5 +55,10 @@ class MobileAuthProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  void updateCurrentUser(UserModel user) {
+    _currentUser = user;
+    notifyListeners();
+  }
 }
 

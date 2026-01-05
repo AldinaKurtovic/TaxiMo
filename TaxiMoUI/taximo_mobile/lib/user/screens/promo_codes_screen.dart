@@ -12,53 +12,35 @@ class PromoCodesScreen extends StatefulWidget {
 
 class _PromoCodesScreenState extends State<PromoCodesScreen> {
   final PromoCodeService _promoCodeService = PromoCodeService();
-  List<PromoCodeDto> _promoCodes = [];
-  bool _isLoading = true;
-  String? _errorMessage;
+  late final Future<List<PromoCodeDto>> _promoCodesFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadPromoCodes();
+    _promoCodesFuture = _loadPromoCodes();
   }
 
-  Future<void> _loadPromoCodes() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+  Future<List<PromoCodeDto>> _loadPromoCodes() async {
+    final promoCodes = await _promoCodeService.getAllPromoCodes();
+    
+    // Sort by status (active first) and then by validUntil date
+    promoCodes.sort((a, b) {
+      if (a.status.toLowerCase() == 'active' && b.status.toLowerCase() != 'active') {
+        return -1;
+      } else if (a.status.toLowerCase() != 'active' && b.status.toLowerCase() == 'active') {
+        return 1;
+      }
+      return b.validUntil.compareTo(a.validUntil);
     });
 
-    try {
-      final promoCodes = await _promoCodeService.getAllPromoCodes();
-      
-      // Sort by status (active first) and then by validUntil date
-      promoCodes.sort((a, b) {
-        if (a.status.toLowerCase() == 'active' && b.status.toLowerCase() != 'active') {
-          return -1;
-        } else if (a.status.toLowerCase() != 'active' && b.status.toLowerCase() == 'active') {
-          return 1;
-        }
-        return b.validUntil.compareTo(a.validUntil);
-      });
-
-      setState(() {
-        _promoCodes = promoCodes;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load promo codes: $e';
-        _isLoading = false;
-      });
-    }
+    return promoCodes;
   }
 
   String _formatDate(DateTime dateTime) {
     return DateFormat('MMM d, yyyy').format(dateTime);
   }
 
-  bool _isValid(PromoCodeDto promo) {
-    final now = DateTime.now();
+  bool _isValid(PromoCodeDto promo, DateTime now) {
     return promo.status.toLowerCase() == 'active' &&
            now.isAfter(promo.validFrom) &&
            now.isBefore(promo.validUntil);
@@ -108,59 +90,78 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
           
           // Content
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                            const SizedBox(height: 16),
-                            Text(
-                              _errorMessage!,
-                              style: TextStyle(color: Colors.grey[600]),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadPromoCodes,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+            child: FutureBuilder<List<PromoCodeDto>>(
+              future: _promoCodesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          snapshot.error.toString().replaceFirst('Exception: ', ''),
+                          style: TextStyle(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
                         ),
-                      )
-                    : _promoCodes.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.local_offer_outlined, size: 64, color: Colors.grey[400]),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No promo codes available',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Check back later for new offers',
-                                  style: TextStyle(color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _promoCodes.length,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              return _buildPromoCodeCard(_promoCodes[index]);
-                            },
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (!mounted) return;
+                            setState(() {
+                              _promoCodesFuture = _loadPromoCodes();
+                            });
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final promoCodes = snapshot.data ?? [];
+
+                if (promoCodes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.local_offer_outlined, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No promo codes available',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Check back later for new offers',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: promoCodes.length,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    final promo = promoCodes[index];
+                    return _buildPromoCodeCard(promo);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -168,11 +169,13 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   }
 
   Widget _buildPromoCodeCard(PromoCodeDto promo) {
-    final isValid = _isValid(promo);
-    final isExpired = DateTime.now().isAfter(promo.validUntil);
+    final now = DateTime.now();
+    final isValid = _isValid(promo, now);
+    final isExpired = now.isAfter(promo.validUntil);
     final isInactive = promo.status.toLowerCase() != 'active';
 
     return Container(
+      key: ValueKey(promo.promoId),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,

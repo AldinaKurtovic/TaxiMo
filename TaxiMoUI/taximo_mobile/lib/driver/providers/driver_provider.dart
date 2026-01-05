@@ -75,5 +75,10 @@ class DriverProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  set currentDriver(DriverModel? driver) {
+    _currentDriver = driver;
+    notifyListeners();
+  }
 }
 

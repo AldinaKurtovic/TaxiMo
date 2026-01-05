@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/payment_history_dto.dart';
 import '../services/payment_service.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
+import '../widgets/user_app_bar.dart';
 
 class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -14,83 +15,68 @@ class PaymentHistoryScreen extends StatefulWidget {
 
 class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   final PaymentService _paymentService = PaymentService();
-  List<PaymentHistoryDto> _allPayments = [];
-  List<PaymentHistoryDto> _filteredPayments = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-  String _selectedStatusFilter = 'all';
+  Future<List<PaymentHistoryDto>>? _paymentsFuture;
+  final ValueNotifier<String> _filterNotifier = ValueNotifier<String>('all');
+  List<PaymentHistoryDto>? _cachedPayments;
 
   @override
   void initState() {
     super.initState();
-    _loadPayments();
+    _paymentsFuture = _loadPayments();
+  }
+  
+  @override
+  void dispose() {
+    _filterNotifier.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadPayments() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<List<PaymentHistoryDto>> _loadPayments() async {
+    // Get current user
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    
+    if (currentUser == null) {
+      throw Exception('Please login to view payment history');
+    }
 
-    try {
-      // Get current user
-      final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
-      final currentUser = authProvider.currentUser;
-      
-      if (currentUser == null) {
-        setState(() {
-          _errorMessage = 'Please login to view payment history';
-          _isLoading = false;
-        });
-        return;
+    final paymentsData = await _paymentService.getPayments();
+    
+    // Filter payments by current user ID and map to DTOs
+    final payments = paymentsData
+        .where((json) => json['userId'] == currentUser.userId)
+        .map((json) => PaymentHistoryDto.fromJson(json))
+        .toList();
+
+    // Sort by paid date or payment ID (most recent first)
+    payments.sort((a, b) {
+      if (a.paidAt != null && b.paidAt != null) {
+        return b.paidAt!.compareTo(a.paidAt!);
+      } else if (a.paidAt != null) {
+        return -1;
+      } else if (b.paidAt != null) {
+        return 1;
+      } else {
+        return b.paymentId.compareTo(a.paymentId);
       }
+    });
 
-      final paymentsData = await _paymentService.getPayments();
-      
-      // Filter payments by current user ID and map to DTOs
-      final payments = paymentsData
-          .where((json) => json['userId'] == currentUser.userId)
-          .map((json) => PaymentHistoryDto.fromJson(json))
-          .toList();
-
-      // Sort by paid date or payment ID (most recent first)
-      payments.sort((a, b) {
-        if (a.paidAt != null && b.paidAt != null) {
-          return b.paidAt!.compareTo(a.paidAt!);
-        } else if (a.paidAt != null) {
-          return -1;
-        } else if (b.paidAt != null) {
-          return 1;
-        } else {
-          return b.paymentId.compareTo(a.paymentId);
-        }
-      });
-
-      setState(() {
-        _allPayments = payments;
-        _applyFilter();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load payment history: $e';
-        _isLoading = false;
-      });
+    // Cache the payments
+    if (mounted) {
+      _cachedPayments = payments;
     }
+
+    return payments;
   }
 
-  void _applyFilter() {
-    List<PaymentHistoryDto> filtered = List.from(_allPayments);
-
-    if (_selectedStatusFilter != 'all') {
-      filtered = filtered.where((payment) {
-        return payment.status.toLowerCase() == _selectedStatusFilter.toLowerCase();
-      }).toList();
+  List<PaymentHistoryDto> _applyFilter(List<PaymentHistoryDto> allPayments, String filter) {
+    if (filter == 'all') {
+      return allPayments;
     }
-
-    setState(() {
-      _filteredPayments = filtered;
-    });
+    
+    return allPayments.where((payment) {
+      return payment.status.toLowerCase() == filter.toLowerCase();
+    }).toList();
   }
 
   String _formatDateTime(DateTime? dateTime) {
@@ -109,19 +95,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Payment History',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-      ),
+      appBar: const UserAppBar(title: 'Payments'),
       body: Column(
         children: [
           // Filter Section
@@ -149,12 +123,17 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _getFilterLabel(_selectedStatusFilter),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        ValueListenableBuilder<String>(
+                          valueListenable: _filterNotifier,
+                          builder: (context, filter, _) {
+                            return Text(
+                              _getFilterLabel(filter),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 4),
                         const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
@@ -169,60 +148,90 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           
           // Content
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
+            child: FutureBuilder<List<PaymentHistoryDto>>(
+              future: _paymentsFuture ?? _loadPayments(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          snapshot.error.toString().replaceFirst('Exception: ', ''),
+                          style: TextStyle(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (!mounted) return;
+                            setState(() {
+                              _paymentsFuture = _loadPayments();
+                            });
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final allPayments = snapshot.data ?? [];
+                if (allPayments.isNotEmpty && _cachedPayments == null) {
+                  _cachedPayments = allPayments;
+                }
+
+                return ValueListenableBuilder<String>(
+                  valueListenable: _filterNotifier,
+                  builder: (context, filter, _) {
+                    final paymentsToShow = _cachedPayments ?? allPayments;
+                    final filteredPayments = _applyFilter(paymentsToShow, filter);
+
+                    if (filteredPayments.isEmpty) {
+                      return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                            Icon(Icons.payment, size: 64, color: Colors.grey[400]),
                             const SizedBox(height: 16),
                             Text(
-                              _errorMessage!,
-                              style: TextStyle(color: Colors.grey[600]),
-                              textAlign: TextAlign.center,
+                              'No payments found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadPayments,
-                              child: const Text('Retry'),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Your payment history will appear here',
+                              style: TextStyle(color: Colors.grey[500]),
                             ),
                           ],
                         ),
-                      )
-                    : _filteredPayments.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.payment, size: 64, color: Colors.grey[400]),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No payments found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Your payment history will appear here',
-                                  style: TextStyle(color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredPayments.length,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            shrinkWrap: false,
-                            itemBuilder: (context, index) {
-                              return _buildPaymentCard(_filteredPayments[index]);
-                            },
-                          ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredPayments.length,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      shrinkWrap: false,
+                      itemBuilder: (context, index) {
+                        final payment = filteredPayments[index];
+                        return _buildPaymentCard(payment);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -233,6 +242,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     final theme = Theme.of(context);
     
     return Container(
+      key: ValueKey(payment.paymentId),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -424,14 +434,16 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
               ...['all', 'completed', 'pending', 'failed', 'cancelled'].map((status) {
                 return ListTile(
                   title: Text(_getFilterLabel(status)),
-                  trailing: _selectedStatusFilter == status
-                      ? const Icon(Icons.check, color: Colors.deepPurple)
-                      : null,
+                  trailing: ValueListenableBuilder<String>(
+                    valueListenable: _filterNotifier,
+                    builder: (context, currentFilter, _) {
+                      return currentFilter == status
+                          ? const Icon(Icons.check, color: Colors.deepPurple)
+                          : const SizedBox.shrink();
+                    },
+                  ),
                   onTap: () {
-                    setState(() {
-                      _selectedStatusFilter = status;
-                    });
-                    _applyFilter();
+                    _filterNotifier.value = status;
                     Navigator.pop(context);
                   },
                 );

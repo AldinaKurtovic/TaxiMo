@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../providers/driver_provider.dart';
-import '../providers/active_rides_provider.dart';
 import '../providers/driver_reviews_provider.dart';
+import '../providers/ride_requests_provider.dart';
+import '../layout/driver_main_navigation.dart';
 import '../../auth/screens/login_screen.dart';
-import '../../user/models/review_dto.dart';
-import 'active_ride_driver_screen.dart'; // DEMO: For demo entry point
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -19,7 +17,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load driver profile and active rides after screen is built
+    // Load driver profile, reviews, and ride requests after screen is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final driverProvider = Provider.of<DriverProvider>(context, listen: false);
       final driver = driverProvider.currentDriver;
@@ -27,20 +25,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (driver != null && driver.username.isNotEmpty) {
         driverProvider.loadDriverProfile(driver.username);
         
-        // Load active rides and reviews
-        final activeRidesProvider = context.read<ActiveRidesProvider>();
-        final reviewsProvider = context.read<DriverReviewsProvider>();
         final driverProfile = driverProvider.driverProfile;
         final driverId = driverProfile?.driverId ?? driver.driverId ?? 0;
         
         if (driverId > 0) {
-          print("DriverHomeScreen: Loading data for driverId: $driverId");
-          activeRidesProvider.loadActiveRides(driverId);
-          // Load stats and reviews separately from backend
+          // Load reviews
+          final reviewsProvider = context.read<DriverReviewsProvider>();
           reviewsProvider.loadDriverStats(driverId);
           reviewsProvider.loadDriverReviews(driverId);
-        } else {
-          print("DriverHomeScreen: Invalid driverId: $driverId");
+          
+          // Load ride requests
+          final rideRequestsProvider = context.read<RideRequestsProvider>();
+          rideRequestsProvider.loadRideRequests(driverId);
         }
       }
     });
@@ -48,34 +44,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TaxiMo - Driver'),
+        title: const Text('Home'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          // Navigation icon for active rides
-          Consumer<ActiveRidesProvider>(
-            builder: (context, activeRidesProvider, child) {
-              final currentRide = activeRidesProvider.currentActiveRide;
-              if (currentRide != null && currentRide.status.toLowerCase() == 'active') {
-                return IconButton(
-                  icon: const Icon(Icons.navigation),
-                  tooltip: 'View Active Ride Map',
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/active-ride-driver',
-                      arguments: currentRide.rideId,
-                    );
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
             onPressed: () {
               final driverProvider = Provider.of<DriverProvider>(context, listen: false);
               driverProvider.logout();
@@ -90,634 +71,61 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           final profile = driverProvider.driverProfile;
           
           if (driver == null) {
-            return const Center(child: Text('No driver data available'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.person_off_outlined,
+                    size: 64,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No driver data available',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome Card
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                // Welcome Title
+                Text(
+                  'Welcome back',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.5,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Welcome, ${driver.fullName}!',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                            ),
-                            if (profile != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: profile.isOnline
-                                      ? Colors.green
-                                      : Colors.grey,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  profile.isOnline ? 'Online' : 'Offline',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Email: ${driver.email}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        if (driver.phone != null)
-                          Text(
-                            'Phone: ${driver.phone}',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: driver.roles.map((role) {
-                            return Chip(
-                              label: Text(role.name),
-                              backgroundColor: Colors.deepPurple[100],
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Here's your driver overview",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 24),
                 
-                // Ride Requests Section
-                const Text(
-                  'Ride Requests',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/ride-requests');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.deepPurple[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.directions_car,
-                              color: Colors.deepPurple,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'View Ride Requests',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Accept or reject ride requests assigned to you',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                // Driver Info Card
+                _buildWelcomeCard(context, driver, profile),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 
-                // Statistics Card
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/driver-statistics');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.deepPurple[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.bar_chart,
-                              color: Colors.deepPurple,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'View Statistics',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'See your performance metrics',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                // Primary Action: Ride Requests
+                _buildRideRequestsCard(context, driverProvider),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 
-                // Driver Reviews Section
-                Consumer<DriverReviewsProvider>(
-                  builder: (context, reviewsProvider, child) {
-                    if (reviewsProvider.isLoading && reviewsProvider.reviews.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    
-                    if (reviewsProvider.errorMessage != null && reviewsProvider.reviews.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Reviews',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Average Rating Card - Tappable to navigate to reviews
-                        Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              final driverProvider = context.read<DriverProvider>();
-                              final driverProfile = driverProvider.driverProfile;
-                              final driverId = driverProfile?.driverId ?? driverProvider.currentDriver?.driverId ?? 0;
-                              if (driverId > 0) {
-                                print("Navigating to reviews screen with driverId: $driverId");
-                                Navigator.pushNamed(
-                                  context,
-                                  '/driver-reviews',
-                                  arguments: driverId,
-                                );
-                              } else {
-                                print("Cannot navigate - invalid driverId: $driverId");
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber[100],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 32,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          reviewsProvider.averageRating > 0
-                                              ? reviewsProvider.averageRating.toStringAsFixed(2)
-                                              : 'N/A',
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          reviewsProvider.totalReviews == 0
-                                              ? 'No reviews yet'
-                                              : '${reviewsProvider.totalReviews} ${reviewsProvider.totalReviews == 1 ? 'review' : 'reviews'}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.arrow_forward_ios,
-                                    color: Colors.grey,
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Recent Reviews List
-                        if (reviewsProvider.recentReviews.isNotEmpty) ...[
-                          const Text(
-                            'Recent Reviews',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ...reviewsProvider.recentReviews.map((review) => _buildReviewCard(review)),
-                        ] else ...[
-                          Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.grey[600]),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'No reviews yet',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Active Ride Section
-                Consumer<ActiveRidesProvider>(
-                  builder: (context, activeRidesProvider, child) {
-                    final currentRide = activeRidesProvider.currentActiveRide;
-                    
-                    if (currentRide != null) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Current Ride',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                // Navigate to route tracking screen if active, otherwise to detail screen
-                                if (currentRide.status.toLowerCase() == 'active') {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/active-ride-driver',
-                                    arguments: currentRide.rideId,
-                                  );
-                                } else {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/active-ride',
-                                    arguments: currentRide.rideId,
-                                  );
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: currentRide.status.toLowerCase() == 'active'
-                                                ? Colors.green
-                                                : Colors.blue,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            currentRide.status.toUpperCase(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.arrow_forward_ios,
-                                          color: Colors.grey,
-                                          size: 20,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.person, color: Colors.deepPurple),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            currentRide.passengerName,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.location_on, color: Colors.green, size: 16),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            currentRide.pickupAddress,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[700],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.location_on, color: Colors.red, size: 16),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            currentRide.dropoffAddress,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[700],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if (currentRide.status.toLowerCase() == 'active')
-                                      Row(
-                                        children: [
-                                          Icon(Icons.navigation, size: 16, color: Colors.deepPurple),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Tap to view route tracking',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    else
-                                      Text(
-                                        'Tap to ${currentRide.status.toLowerCase() == 'accepted' ? 'start' : 'complete'} ride',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    }
-                    
-                    return const SizedBox.shrink();
-                  },
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // ========== DEMO ENTRY POINT - REMOVE IN PRODUCTION ==========
-                // This button allows opening Active Ride screen for demo/testing without real backend state
-                Card(
-                  elevation: 2,
-                  color: Colors.orange[50],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.orange, width: 2),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      // DEMO: Open Active Ride screen with mock rideId
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ActiveRideDriverScreen(rideId: 1),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.orange[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.play_circle_outline,
-                              color: Colors.orange[800],
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'DEMO',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'View Active Ride Demo',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Open route tracking screen (demo mode)',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey[400],
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // ========== END DEMO ENTRY POINT ==========
-                
-                const SizedBox(height: 24),
-                const Text(
-                  'Driver Dashboard',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text('Driver-specific features will be implemented here.'),
+                // Reviews Card (moved to bottom)
+                _buildReviewsCard(context),
               ],
             ),
           );
@@ -726,72 +134,310 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  Widget _buildReviewCard(ReviewDto review) {
+  Widget _buildWelcomeCard(
+    BuildContext context,
+    dynamic driver,
+    dynamic profile,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isOnline = profile?.isOnline ?? false;
+
     return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withValues(alpha: 0.12),
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(24.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // User name
-            if (review.userName != null && review.userName!.isNotEmpty) ...[
-              Row(
+            // Avatar
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: colorScheme.primaryContainer,
+              foregroundColor: colorScheme.onPrimaryContainer,
+              child: Text(
+                driver.firstName.isNotEmpty
+                    ? driver.firstName[0].toUpperCase()
+                    : 'D',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            // Name and Role
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.person, size: 16, color: Colors.deepPurple),
-                  const SizedBox(width: 8),
                   Text(
-                    review.userName!,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                    driver.fullName,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Driver',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-            ],
-            
-            // Rating stars
-            Row(
-              children: [
-                ...List.generate(5, (index) {
-                  return Icon(
-                    index < review.rating.toInt()
-                        ? Icons.star
-                        : Icons.star_border,
-                    size: 16,
-                    color: Colors.amber[700],
-                  );
-                }),
-                const SizedBox(width: 8),
-                Text(
-                  DateFormat('MMM d, yyyy').format(review.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
             ),
-            if (review.comment != null && review.comment!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                review.comment!,
-                style: const TextStyle(
-                  fontSize: 14,
+            // Status Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: isOnline 
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : Colors.grey.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isOnline 
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.3),
+                  width: 1,
                 ),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: isOnline ? Colors.green : Colors.grey[600],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOnline ? 'Online' : 'Offline',
+                    style: TextStyle(
+                      color: isOnline ? Colors.green[700] : Colors.grey[700],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
+  Widget _buildRideRequestsCard(
+    BuildContext context,
+    DriverProvider driverProvider,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final driverProfile = driverProvider.driverProfile;
+    final driverId = driverProfile?.driverId ?? driverProvider.currentDriver?.driverId ?? 0;
+
+    return Consumer<RideRequestsProvider>(
+      builder: (context, rideRequestsProvider, child) {
+        final pendingCount = rideRequestsProvider.rideRequests
+            .where((r) => r.status.toLowerCase() == 'pending')
+            .length;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: colorScheme.outline.withValues(alpha: 0.12),
+            ),
+          ),
+          child: InkWell(
+            onTap: () {
+              Navigator.pushNamed(context, '/ride-requests');
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: colorScheme.primary.withValues(alpha: 0.95),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.directions_car,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ride Requests',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              'View All',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontWeight: FontWeight.w400,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.white.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (pendingCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$pendingCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildReviewsCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Consumer<DriverReviewsProvider>(
+      builder: (context, reviewsProvider, child) {
+        final averageRating = reviewsProvider.averageRating;
+        final totalReviews = reviewsProvider.totalReviews;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: colorScheme.outline.withValues(alpha: 0.12),
+            ),
+          ),
+          child: InkWell(
+            onTap: () {
+              final navigationState = context.findAncestorStateOfType<DriverMainNavigationState>();
+              if (navigationState != null) {
+                navigationState.changeTab(3);
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    color: Colors.amber[700],
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Star Rating Display
+                        if (averageRating > 0) ...[
+                          ...List.generate(5, (index) {
+                            return Icon(
+                              index < averageRating.round()
+                                  ? Icons.star_rounded
+                                  : Icons.star_border_rounded,
+                              size: 18,
+                              color: Colors.amber[700],
+                            );
+                          }),
+                          const SizedBox(width: 8),
+                          Text(
+                            averageRating.toStringAsFixed(1),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ] else
+                          Text(
+                            'No ratings yet',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        const Spacer(),
+                        Text(
+                          totalReviews == 0
+                              ? 'No reviews'
+                              : '$totalReviews ${totalReviews == 1 ? 'review' : 'reviews'}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

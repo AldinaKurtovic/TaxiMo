@@ -411,8 +411,12 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Refresh to get updated ride
-          provider.refresh(driverId);
+          // Navigate to Active Ride Driver screen immediately
+          Navigator.pushReplacementNamed(
+            context,
+            '/active-ride-driver',
+            arguments: ride.rideId,
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

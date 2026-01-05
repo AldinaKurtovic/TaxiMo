@@ -11,7 +11,7 @@ namespace TaxiMoWebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,User")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;

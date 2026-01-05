@@ -89,8 +89,30 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
       final activeRide = ride; // Non-null local variable
       setState(() {
         _currentRide = activeRide;
-        // Don't initialize route automatically - wait for user to select position
+        // Automatically initialize driver position at pickup location
+        if (activeRide.pickupLocation != null) {
+          _driverCurrentPosition = LatLng(
+            activeRide.pickupLocation!.lat,
+            activeRide.pickupLocation!.lng,
+          );
+          _isPositionSelected = true;
+        }
+        // Automatically initialize route for ride simulation
+        if (activeRide.dropoffLocation != null && _driverCurrentPosition != null) {
+          final destination = LatLng(
+            activeRide.dropoffLocation!.lat,
+            activeRide.dropoffLocation!.lng,
+          );
+          _routePoints = _generateRoutePoints(_driverCurrentPosition!, destination);
+          _currentRouteIndex = 0;
+          _isRideStarted = true;
+          // Location updates will start when map is ready (in _onMapReady)
+        }
       });
+      // Start location updates if map is already ready, otherwise wait for _onMapReady
+      if (_isMapReady && _isRideStarted && _locationUpdateTimer == null) {
+        _startLocationUpdates();
+      }
     }
   }
 
@@ -159,50 +181,32 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
 
     setState(() {
       _currentRide = mockRide;
-      // Don't initialize route or start updates yet - wait for user to select position and press START RIDE
-    });
+      // Automatically initialize driver position at pickup location
+      _driverCurrentPosition = LatLng(
+        mockPickupLocation.lat,
+        mockPickupLocation.lng,
+      );
+        _isPositionSelected = true;
+      // Automatically initialize route for ride simulation
+      final destination = LatLng(
+        mockDropoffLocation.lat,
+        mockDropoffLocation.lng,
+      );
+        _routePoints = _generateRoutePoints(_driverCurrentPosition!, destination);
+        _currentRouteIndex = 0;
+      _isRideStarted = true;
+      // Location updates will start when map is ready (in _onMapReady)
+      });
+    // Start location updates if map is already ready, otherwise wait for _onMapReady
+    if (_isMapReady && _isRideStarted && _locationUpdateTimer == null) {
+      _startLocationUpdates();
+    }
   }
   // ========== END DEMO MODE ==========
 
+  // Map tap handler removed - no longer needed as driver position is automatically set at pickup
   void _onMapTap(TapPosition tapPosition, LatLng point) {
-    if (!_isPositionSelected && !_isRideStarted) {
-      // User selects their starting position
-      setState(() {
-        _driverCurrentPosition = point;
-        _isPositionSelected = true;
-      });
-      
-      // Center map on selected position if map is ready
-      if (_isMapReady) {
-        _mapController.move(point, 15.0);
-      }
-    }
-  }
-
-  void _startRide() {
-    if (_currentRide == null || _driverCurrentPosition == null) return;
-    
-    // Generate route from selected position to destination
-    if (_currentRide!.dropoffLocation != null) {
-      final destination = LatLng(
-        _currentRide!.dropoffLocation!.lat,
-        _currentRide!.dropoffLocation!.lng,
-      );
-      
-      setState(() {
-        _isRideStarted = true;
-        _routePoints = _generateRoutePoints(_driverCurrentPosition!, destination);
-        _currentRouteIndex = 0;
-      });
-      
-      // Start simulated movement
-      _startLocationUpdates();
-      
-      // Center map on driver position if map is ready
-      if (_isMapReady && _driverCurrentPosition != null) {
-        _mapController.move(_driverCurrentPosition!, 15.0);
-      }
-    }
+    // Tap handling removed - ride starts automatically at pickup location
   }
 
   void _initializeRoute(RideRequestModel ride) {
@@ -230,11 +234,10 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
       _isMapReady = true;
     });
     
-    // Center map on pickup/destination center when ready (if not already centered by user selection)
+    // Center map on pickup/destination center when ready
     if (_currentRide != null && 
         _currentRide!.pickupLocation != null && 
-        _currentRide!.dropoffLocation != null &&
-        !_isPositionSelected) {
+        _currentRide!.dropoffLocation != null) {
       final pickup = LatLng(
         _currentRide!.pickupLocation!.lat,
         _currentRide!.pickupLocation!.lng,
@@ -245,6 +248,11 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
       );
       final center = _centerPoint(pickup, destination);
       _mapController.move(center, 13.0);
+      
+      // Start location updates if ride is already started but updates haven't started yet
+      if (_isRideStarted && _locationUpdateTimer == null) {
+        _startLocationUpdates();
+      }
     }
   }
 
@@ -285,6 +293,9 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   }
 
   void _startLocationUpdates() {
+    // Cancel any existing timer to prevent multiple timers
+    _locationUpdateTimer?.cancel();
+    
     // Simulate realistic vehicle movement (~60 km/h = 16.67 m/s)
     // Update every 1 second, moving approximately 15-20 meters per tick
     _locationUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -458,14 +469,14 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
                   minZoom: 5.0,
                   maxZoom: 18.0,
                   onMapReady: _onMapReady,
-                  onTap: _onMapTap, // Handle tap to select driver position
+                  onTap: _onMapTap, // Map tap handler (no longer used, kept for compatibility)
                 ),
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.taximo.mobile',
                   ),
-                  // Route polyline (only shown after START RIDE)
+                  // Route polyline (shown when ride is active)
                   if (_isRideStarted && _routePoints.isNotEmpty)
                     PolylineLayer(
                       polylines: [
@@ -505,53 +516,7 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
                   ),
                 ],
               ),
-              // Overlay message (before position is selected)
-              // IgnorePointer allows taps to pass through to the map underneath
-              if (!_isPositionSelected)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(24.0),
-                          margin: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.touch_app,
-                                size: 48,
-                                color: Colors.deepPurple,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Tap on the map to select your current location',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              // Overlay message removed - driver position is automatically set at pickup location
               // Bottom panel with ride info
               Positioned(
                 bottom: 0,
@@ -578,27 +543,7 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // START RIDE button (shown after position is selected, before ride starts)
-                        if (_isPositionSelected && !_isRideStarted) ...[
-                          ElevatedButton.icon(
-                            onPressed: _startRide,
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text(
-                              'START RIDE',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ],
-                        
-                        // Ride info row (shown after ride starts)
+                        // Ride info row (always shown since ride is already started)
                         if (_isRideStarted) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -728,7 +673,7 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
             ),
           );
           // Navigate back to driver home
-          Navigator.of(context).pop();
+          Navigator.pushNamedAndRemoveUntil(context, '/driver-home', (route) => false);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

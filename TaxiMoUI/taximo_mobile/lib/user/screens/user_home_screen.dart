@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
+import '../layout/user_main_navigation.dart';
+import '../widgets/user_app_bar.dart';
 
 class UserHomeScreen extends StatelessWidget {
   const UserHomeScreen({super.key});
@@ -11,19 +13,7 @@ class UserHomeScreen extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TaxiMo'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              final provider = Provider.of<MobileAuthProvider>(context, listen: false);
-              provider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          ),
-        ],
-      ),
+      appBar: const UserAppBar(title: 'Home'),
       body: Consumer<MobileAuthProvider>(
         builder: (context, provider, child) {
           final user = provider.currentUser;
@@ -32,153 +22,56 @@ class UserHomeScreen extends StatelessWidget {
             return const Center(child: Text('No user data available'));
           }
 
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Welcome section
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: colorScheme.primaryContainer,
-                        foregroundColor: colorScheme.onPrimaryContainer,
-                        child: const Icon(Icons.person),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome back, ${user.firstName} 👋',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Ready for your next ride?',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Primary action
-                  _PrimaryActionCard(
-                    title: 'Book a Ride',
-                    subtitle: 'Choose pickup & destination in seconds',
-                    icon: Icons.local_taxi,
-                    onTap: () => Navigator.pushNamed(context, '/ride-reservation'),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Secondary actions
                   Text(
-                    'Quick actions',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  'Welcome back 👋',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  // First row: Trip History and Promo Codes
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickActionCard(
-                          title: 'Trip History',
-                          icon: Icons.history,
-                          onTap: () => Navigator.pushNamed(context, '/trip-history'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickActionCard(
-                          title: 'Promo Codes',
-                          icon: Icons.local_offer_outlined,
-                          onTap: () => Navigator.pushNamed(context, '/promo-codes'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Second row: Reviews and Payment
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickActionCard(
-                          title: 'Reviews',
-                          icon: Icons.star,
-                          onTap: () => Navigator.pushNamed(context, '/reviews'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickActionCard(
-                          title: 'Payment',
-                          icon: Icons.credit_card,
-                          onTap: () => Navigator.pushNamed(context, '/payment-history'),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Optional: light profile summary (downplayed)
-                  Card(
-                    elevation: 0,
-                    color: colorScheme.surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.verified_user_outlined, color: colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Account',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            user.email,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          if (user.phone != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              user.phone!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                const SizedBox(height: 6),
+                  Text(
+                    'Ready for your next ride?',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
+                  ),
+
+                const SizedBox(height: 40),
+
+                // Primary action card
+                _PrimaryActionCard(
+                      title: 'Book a Ride',
+                      subtitle: 'Choose pickup & destination in seconds',
+                      icon: Icons.local_taxi,
+                      onTap: () => Navigator.pushNamed(context, '/ride-reservation'),
+                    ),
+
+                const SizedBox(height: 40),
+
+                // Quick Actions section
+                Text(
+                  'Quick Actions',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _QuickActionsGrid(
+                  onNavigate: (index) {
+                    // Navigate by updating the navigation index
+                    final navigationState = context.findAncestorStateOfType<UserMainNavigationState>();
+                    if (navigationState != null) {
+                      navigationState.changeTab(index);
+                    }
+                  },
                   ),
                 ],
-              ),
             ),
           );
         },
@@ -205,49 +98,85 @@ class _PrimaryActionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Material(
-      color: colorScheme.primary,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
+    // Create a subtle gradient using primary color with slight variation
+    final primaryColor = colorScheme.primary;
+    final gradientStart = primaryColor;
+    final gradientEnd = primaryColor.withValues(alpha: 0.85);
+
+    return Container(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  color: colorScheme.onPrimary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [gradientStart, gradientEnd],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onPrimary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: colorScheme.onPrimary, size: 28),
                 ),
-                child: Icon(icon, color: colorScheme.onPrimary),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colorScheme.onPrimary,
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                        title,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimary,
+                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onPrimary.withValues(alpha: 0.85),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onPrimary.withValues(alpha: 0.9),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.arrow_forward_rounded, color: colorScheme.onPrimary),
-            ],
+                const SizedBox(width: 12),
+                Icon(Icons.arrow_forward_rounded, color: colorScheme.onPrimary, size: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -255,14 +184,62 @@ class _PrimaryActionCard extends StatelessWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final VoidCallback? onTap;
+class _QuickActionsGrid extends StatelessWidget {
+  final Function(int) onNavigate;
 
-  const _QuickActionCard({
-    required this.title,
+  const _QuickActionsGrid({required this.onNavigate});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final actions = [
+      _QuickAction(
+        icon: Icons.history_outlined,
+        label: 'Trip History',
+        onTap: () => onNavigate(1),
+      ),
+      _QuickAction(
+        icon: Icons.payment_outlined,
+        label: 'Payments',
+        onTap: () => onNavigate(2),
+      ),
+      _QuickAction(
+        icon: Icons.star_outline,
+        label: 'Reviews',
+        onTap: () => onNavigate(3),
+      ),
+      _QuickAction(
+        icon: Icons.person_outline,
+        label: 'Profile',
+        onTap: () => onNavigate(4),
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.5,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) => actions[index],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickAction({
     required this.icon,
+    required this.label,
     required this.onTap,
   });
 
@@ -271,29 +248,49 @@ class _QuickActionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerHighest,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: colorScheme.primary),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.12),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 28,
+                  color: colorScheme.primary,
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -5,6 +5,8 @@ import 'auth/providers/mobile_auth_provider.dart';
 import 'auth/screens/login_screen.dart';
 import 'driver/providers/driver_provider.dart';
 import 'user/screens/user_home_screen.dart';
+import 'user/layout/user_main_navigation.dart';
+import 'user/providers/user_profile_provider.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
 import 'user/screens/voucher_screen.dart';
@@ -14,8 +16,9 @@ import 'user/screens/rate_trip_screen.dart';
 import 'user/screens/reviews_screen.dart';
 import 'user/screens/promo_codes_screen.dart';
 import 'user/screens/trip_history_screen.dart';
-import 'driver/screens/driver_home_screen.dart';
+import 'driver/layout/driver_main_navigation.dart';
 import 'driver/providers/driver_provider.dart';
+import 'driver/providers/driver_profile_provider.dart';
 import 'driver/providers/ride_requests_provider.dart';
 import 'driver/providers/active_rides_provider.dart';
 import 'driver/providers/driver_reviews_provider.dart';
@@ -67,7 +70,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MobileAuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => DriverProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProfileProvider()),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(create: (_) => ActiveRidesProvider()),
         ChangeNotifierProvider(create: (_) => DriverReviewsProvider()),
@@ -82,8 +87,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: {
           '/login': (context) => const LoginScreen(),
-          '/user-home': (context) => const UserHomeScreen(),
-          '/driver-home': (context) => const DriverHomeScreen(),
+          '/user-home': (context) => const UserMainNavigation(),
+          '/driver-home': (context) => const DriverMainNavigation(),
           '/ride-reservation': (context) => const RideReservationScreen(),
           '/choose-ride': (context) => const ChooseRideScreen(),
           '/voucher': (context) => const VoucherScreen(),
@@ -125,14 +130,14 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, authProvider, driverProvider, child) {
         // Check driver authentication first
         if (driverProvider.isAuthenticated && driverProvider.currentDriver != null) {
-          return const DriverHomeScreen();
+          return const DriverMainNavigation();
         }
 
         // Check user authentication
         if (authProvider.isAuthenticated && authProvider.currentUser != null) {
           final user = authProvider.currentUser!;
           if (user.isUser) {
-            return const UserHomeScreen();
+            return const UserMainNavigation();
           }
         }
 
