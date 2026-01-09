@@ -58,5 +58,22 @@ class DriverService {
       throw Exception('Error loading driver stats: ${response.statusCode}');
     }
   }
+
+  /// Get ML-based recommended drivers for the current authenticated user
+  Future<List<DriverDto>> getRecommendedDrivers({int topN = 5}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendations/me').replace(
+      queryParameters: {'topN': topN.toString()},
+    );
+    final response = await http.get(uri, headers: _headers());
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+      return jsonList
+          .map((json) => DriverDto.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('Error loading recommended drivers: ${response.statusCode}');
+    }
+  }
 }
 

@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../layout/user_main_navigation.dart';
 import '../widgets/user_app_bar.dart';
+import '../models/driver_dto.dart';
+import '../services/driver_service.dart';
 
 class UserHomeScreen extends StatelessWidget {
   const UserHomeScreen({super.key});
@@ -51,6 +53,11 @@ class UserHomeScreen extends StatelessWidget {
                       icon: Icons.local_taxi,
                       onTap: () => Navigator.pushNamed(context, '/ride-reservation'),
                     ),
+
+                const SizedBox(height: 40),
+
+                // Recommended Drivers section
+                _RecommendedDriversSection(),
 
                 const SizedBox(height: 40),
 
@@ -292,6 +299,239 @@ class _QuickAction extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Recommended Drivers section widget that displays ML-based driver recommendations
+class _RecommendedDriversSection extends StatelessWidget {
+  const _RecommendedDriversSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final driverService = DriverService();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.recommend_outlined,
+              size: 20,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Recommended Drivers',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FutureBuilder<List<DriverDto>>(
+          future: driverService.getRecommendedDrivers(topN: 5),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return SizedBox(
+                height: 120,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              // Silently handle errors - just show empty state
+              return _EmptyRecommendationsMessage(colorScheme: colorScheme, theme: theme);
+            }
+
+            final drivers = snapshot.data ?? [];
+            
+            if (drivers.isEmpty) {
+              return _EmptyRecommendationsMessage(colorScheme: colorScheme, theme: theme);
+            }
+
+            return SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: drivers.length,
+                itemBuilder: (context, index) {
+                  final driver = drivers[index];
+                  return _RecommendedDriverCard(
+                    driver: driver,
+                    isFirst: index == 0,
+                    isLast: index == drivers.length - 1,
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Empty state message for when no recommendations are available
+class _EmptyRecommendationsMessage extends StatelessWidget {
+  final ColorScheme colorScheme;
+  final ThemeData theme;
+
+  const _EmptyRecommendationsMessage({
+    required this.colorScheme,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.12),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 24,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No recommendations available yet. Complete some rides to get personalized driver recommendations!',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual driver card for the recommended drivers horizontal list
+class _RecommendedDriverCard extends StatelessWidget {
+  final DriverDto driver;
+  final bool isFirst;
+  final bool isLast;
+
+  const _RecommendedDriverCard({
+    required this.driver,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      width: 200,
+      margin: EdgeInsets.only(
+        left: isFirst ? 0 : 12,
+        right: isLast ? 0 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    color: colorScheme.onPrimaryContainer,
+                    size: 24,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star,
+                        size: 14,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        driver.ratingAvg.toStringAsFixed(1),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              driver.fullName,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${driver.totalRides} rides',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );

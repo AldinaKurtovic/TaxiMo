@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using System.Security.Claims;
 using TaxiMo.Services.Database;
@@ -221,6 +222,33 @@ namespace TaxiMoWebAPI.Controllers
             {
                 var ride = await _rideService.CompleteRideAsync(id);
                 var rideDto = Mapper.Map<RideDto>(ride);
+
+                // Invalidate model cache for the rider if a review exists
+                // This marks the model for lazy retraining on the next recommendation request
+                // This handles the case where a review was submitted before ride completion
+                var reviewService = HttpContext.RequestServices.GetRequiredService<IReviewService>();
+                var recommendationService = HttpContext.RequestServices.GetRequiredService<IDriverRecommendationService>();
+                
+                var existingReview = await reviewService.GetByRideIdAsync(ride.RideId);
+                if (existingReview != null && ride.Status.ToLower() == "completed")
+                {
+                    // Invalidate model asynchronously (fire and forget)
+                    // The model will be retrained lazily on the next recommendation request
+                    _ = Task.Run(() =>
+                    {
+                        try
+                        {
+                            recommendationService.InvalidateUserModel(ride.RiderId);
+                            Logger.LogInformation("Invalidated ML model for user {UserId} after ride {RideId} completion. Model will be retrained on next recommendation request.", 
+                                ride.RiderId, ride.RideId);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Error invalidating model for user {UserId} after ride {RideId} completion", ride.RiderId, ride.RideId);
+                        }
+                    });
+                }
+
                 return Ok(rideDto);
             }
             catch (TaxiMo.Model.Exceptions.UserException ex)

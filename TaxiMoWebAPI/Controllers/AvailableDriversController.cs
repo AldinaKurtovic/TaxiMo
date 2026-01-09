@@ -1,6 +1,8 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using TaxiMo.Services.DTOs;
 using TaxiMo.Services.Interfaces;
 
@@ -11,34 +13,42 @@ namespace TaxiMoWebAPI.Controllers
     [Authorize(Roles = "User")]
     public class AvailableDriversController : ControllerBase
     {
-        private readonly IDriverService _driverService;
-        private readonly IMapper _mapper;
+        private readonly IDriverRecommendationService _recommendationService;
         private readonly ILogger<AvailableDriversController> _logger;
 
         public AvailableDriversController(
-            IDriverService driverService,
-            IMapper mapper,
+            IDriverRecommendationService recommendationService,
             ILogger<AvailableDriversController> logger)
         {
-            _driverService = driverService;
-            _mapper = mapper;
+            _recommendationService = recommendationService;
             _logger = logger;
         }
 
         // GET: api/rides/available-drivers
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DriverDto>>> GetAvailableDrivers()
+        public async Task<ActionResult<IEnumerable<DriverDto>>> GetAvailableDrivers([FromQuery] int topN = 5)
         {
             try
             {
-                var freeDrivers = await _driverService.GetFreeDriversAsync();
-                var driverDtos = _mapper.Map<List<DriverDto>>(freeDrivers);
-                return Ok(driverDtos);
+                // Get current user ID from claims
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                {
+                    _logger.LogWarning("Unable to get user ID from claims");
+                    return Unauthorized(new { message = "Unable to identify user" });
+                }
+
+                // Clamp topN to reasonable bounds (min 1, max 20)
+                topN = Math.Clamp(topN, 1, 20);
+
+                // Get recommended drivers using ML-based recommendation system
+                var recommendedDrivers = await _recommendationService.GetRecommendedDriversForUser(userId, topN);
+                return Ok(recommendedDrivers);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving available drivers");
-                return StatusCode(500, new { message = "An error occurred while retrieving available drivers" });
+                _logger.LogError(ex, "Error retrieving recommended drivers");
+                return StatusCode(500, new { message = "An error occurred while retrieving recommended drivers" });
             }
         }
     }

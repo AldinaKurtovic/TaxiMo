@@ -418,3 +418,6 @@ FodyWeavers.xsd
 *.msp
 # Local secrets
 TaxiMoWebAPI/appsettings.Development.json
+
+# ML.NET models
+**/Models/*.zip

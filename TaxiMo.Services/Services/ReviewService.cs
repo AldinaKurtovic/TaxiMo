@@ -93,6 +93,12 @@ namespace TaxiMo.Services.Services
             return await query.ToListAsync();
         }
 
+        public async Task<Review?> GetByRideIdAsync(int rideId)
+        {
+            var query = AddInclude(DbSet);
+            return await query.FirstOrDefaultAsync(r => r.RideId == rideId);
+        }
+
         public async Task<(decimal averageRating, int totalReviews)> GetDriverReviewStatsAsync(int driverId)
         {
             var reviews = await DbSet
