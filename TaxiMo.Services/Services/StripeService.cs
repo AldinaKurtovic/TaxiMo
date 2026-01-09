@@ -99,6 +99,43 @@ namespace TaxiMo.Services.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Confirms a PaymentIntent by retrieving it from Stripe and verifying its status
+        /// </summary>
+        public async Task<bool> ConfirmPaymentIntentAsync(string paymentIntentId)
+        {
+            try
+            {
+                // Configure Stripe API key
+                StripeConfiguration.ApiKey = GetSecretKey();
+
+                // Retrieve PaymentIntent from Stripe
+                var service = new PaymentIntentService();
+                var paymentIntent = await service.GetAsync(paymentIntentId);
+
+                _logger.LogInformation(
+                    "PaymentIntent retrieved - PaymentIntentId: {PaymentIntentId}, Status: {Status}",
+                    paymentIntent.Id, paymentIntent.Status);
+
+                // Check if payment was successful
+                return paymentIntent.Status == "succeeded";
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, 
+                    "Stripe error confirming PaymentIntent - PaymentIntentId: {PaymentIntentId}",
+                    paymentIntentId);
+                throw new InvalidOperationException($"Stripe error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Error confirming PaymentIntent - PaymentIntentId: {PaymentIntentId}",
+                    paymentIntentId);
+                throw;
+            }
+        }
     }
 }
 

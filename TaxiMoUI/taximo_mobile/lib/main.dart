@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'auth/providers/mobile_auth_provider.dart';
 import 'auth/screens/login_screen.dart';
+import 'auth/screens/register_screen.dart';
 import 'driver/providers/driver_provider.dart';
 import 'user/screens/user_home_screen.dart';
 import 'user/layout/user_main_navigation.dart';
@@ -87,6 +88,10 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: {
           '/login': (context) => const LoginScreen(),
+          '/register': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            return RegisterScreen();
+          },
           '/user-home': (context) => const UserMainNavigation(),
           '/driver-home': (context) => const DriverMainNavigation(),
           '/ride-reservation': (context) => const RideReservationScreen(),

@@ -11,6 +11,13 @@ namespace TaxiMo.Services.Interfaces
         /// <param name="paymentId">The payment ID in the database</param>
         /// <returns>Client secret for the PaymentIntent</returns>
         Task<string> CreatePaymentIntentAsync(long amount, string currency, int rideId, int paymentId);
+
+        /// <summary>
+        /// Confirms a PaymentIntent and returns the payment status
+        /// </summary>
+        /// <param name="paymentIntentId">The Stripe PaymentIntent ID</param>
+        /// <returns>True if payment was successful, false otherwise</returns>
+        Task<bool> ConfirmPaymentIntentAsync(string paymentIntentId);
     }
 }
 

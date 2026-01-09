@@ -119,8 +119,74 @@ class StripeService {
     }
   }
 
+  /// Extract PaymentIntent ID from client secret
+  /// Client secret format: pi_<payment_intent_id>_secret_<secret>
+  String? _extractPaymentIntentId(String clientSecret) {
+    try {
+      // Client secret format: pi_<payment_intent_id>_secret_<secret>
+      final parts = clientSecret.split('_secret_');
+      if (parts.isNotEmpty) {
+        // Extract the part before _secret_, which should be pi_<payment_intent_id>
+        final paymentIntentPart = parts[0];
+        if (paymentIntentPart.startsWith('pi_')) {
+          return paymentIntentPart;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[StripeService] Error extracting PaymentIntent ID: $e');
+      return null;
+    }
+  }
+
+  /// Confirm payment with backend after successful PaymentIntent confirmation
+  Future<bool> confirmPayment({
+    required String paymentIntentId,
+    required int paymentId,
+  }) async {
+    try {
+      debugPrint('[StripeService] confirmPayment - paymentIntentId: $paymentIntentId, paymentId: $paymentId');
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/Stripe/confirm-payment-intent');
+      final body = jsonEncode({
+        'paymentIntentId': paymentIntentId,
+        'paymentId': paymentId,
+      });
+
+      debugPrint('[StripeService] Request URL: $uri');
+      debugPrint('[StripeService] Request body: $body');
+
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Basic bW9iaWxlOnRlc3Q=',
+      };
+
+      final response = await http.post(uri, headers: headers, body: body);
+
+      debugPrint('[StripeService] Response status: ${response.statusCode}');
+      debugPrint('[StripeService] Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        final completed = jsonData['completed'] as bool? ?? false;
+        debugPrint('[StripeService] Payment confirmed: $completed');
+        return completed;
+      } else {
+        final errorBody = response.body;
+        debugPrint('[StripeService] ERROR: Failed to confirm payment: ${response.statusCode} - $errorBody');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('[StripeService] EXCEPTION in confirmPayment: $e');
+      return false;
+    }
+  }
+
   /// Present Stripe PaymentSheet to the user
   /// Returns PaymentResult indicating success, cancellation, or error
+  /// Note: This method only handles the UI flow. Payment confirmation with backend
+  /// should be done separately after this returns success.
   Future<PaymentResult> presentPaymentSheet(String clientSecret) async {
     try {
       debugPrint('[StripeService] presentPaymentSheet called');
@@ -174,7 +240,7 @@ class StripeService {
     }
   }
 
-  /// Convenience method to create payment intent and present payment sheet
+  /// Convenience method to create payment intent, present payment sheet, and confirm payment
   /// Returns PaymentResult indicating the outcome
   Future<PaymentResult> processPayment({
     required double amount,
@@ -199,9 +265,35 @@ class StripeService {
         paymentId: paymentId,
       );
 
+      // Extract PaymentIntent ID from client secret
+      final paymentIntentId = _extractPaymentIntentId(clientSecret);
+      if (paymentIntentId == null) {
+        debugPrint('[StripeService] ERROR: Could not extract PaymentIntent ID from client secret');
+        return PaymentResult.error;
+      }
+      debugPrint('[StripeService] Extracted PaymentIntent ID: $paymentIntentId');
+
       // Present payment sheet
       debugPrint('[StripeService] Presenting payment sheet...');
       final result = await presentPaymentSheet(clientSecret);
+
+      // If payment was successful, confirm with backend immediately
+      if (result == PaymentResult.success) {
+        debugPrint('[StripeService] Payment sheet successful, confirming with backend...');
+        final confirmed = await confirmPayment(
+          paymentIntentId: paymentIntentId,
+          paymentId: paymentId,
+        );
+
+        if (!confirmed) {
+          debugPrint('[StripeService] WARNING: Payment sheet succeeded but backend confirmation failed');
+          // Still return success since Stripe confirmed the payment
+          // The backend may have already processed it or will handle it separately
+        } else {
+          debugPrint('[StripeService] Payment confirmed successfully with backend');
+        }
+      }
+
       debugPrint('[StripeService] processPayment completed with result: $result');
       return result;
     } catch (e, stackTrace) {

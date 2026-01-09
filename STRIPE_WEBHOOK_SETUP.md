@@ -1,6 +1,18 @@
-# Stripe Webhook Setup Guide
+# ⚠️ OBSOLETE: Stripe Webhook Setup Guide
 
-This guide explains how to set up Stripe webhooks so that payment status is automatically updated to "completed" when a payment succeeds.
+**This document is OBSOLETE and no longer applies to the current implementation.**
+
+The project has been updated to use **immediate payment confirmation** instead of webhooks. Payments are now confirmed synchronously after the user completes payment in the mobile app, without relying on webhook callbacks.
+
+For the current payment flow, see the payment implementation in:
+- Backend: `TaxiMoWebAPI/Controllers/StripeController.cs` (confirm-payment-intent endpoint)
+- Mobile: `TaxiMoUI/taximo_mobile/lib/services/stripe_service.dart`
+
+---
+
+## Historical Information (No Longer Applicable)
+
+This guide previously explained how to set up Stripe webhooks so that payment status is automatically updated to "completed" when a payment succeeds.
 
 ## Overview
 

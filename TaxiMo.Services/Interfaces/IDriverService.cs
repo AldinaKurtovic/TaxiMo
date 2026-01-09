@@ -15,6 +15,7 @@ namespace TaxiMo.Services.Interfaces
         Task<bool> DeleteAsync(int id);
         Task<Driver?> GetByUsernameAsync(string username);
         Task<DriverResponse?> AuthenticateAsync(DriverLoginRequest request);
+        Task<DriverResponse> RegisterAsync(DriverRegisterDto dto);
         Task<bool> EmailExistsAsync(string email);
         Task<bool> EmailExistsAsync(string email, int excludeId);
         Task<List<Driver>> GetFreeDriversAsync();

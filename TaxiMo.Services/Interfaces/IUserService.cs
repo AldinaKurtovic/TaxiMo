@@ -16,6 +16,7 @@ namespace TaxiMo.Services.Interfaces
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetByUsernameAsync(string username);
         Task<UserResponse?> AuthenticateAsync(UserLoginRequest request);
+        Task<UserResponse> RegisterAsync(UserRegisterDto dto);
         Task<UserResponse> GetUserResponseWithRolesAsync(int userId);
         
         /// <summary>

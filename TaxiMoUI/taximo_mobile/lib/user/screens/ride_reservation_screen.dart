@@ -175,16 +175,7 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                         _setSelection(LocationSelection.destination);
                       },
                     ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: const [
-                        _QuickChip(label: 'Home', icon: Icons.bookmark),
-                        _QuickChip(label: 'Office', icon: Icons.work_outline),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -298,21 +289,4 @@ class _LocationField extends StatelessWidget {
     );
   }
 }
-
-class _QuickChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _QuickChip({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      onPressed: () {},
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-    );
-  }
-}
-
 

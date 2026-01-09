@@ -246,6 +246,83 @@ namespace TaxiMo.Services.Services
                 .FirstOrDefaultAsync(d => d.Username == username);
         }
 
+        /// <summary>
+        /// Registers a new driver with password hashing and automatic "Driver" role assignment
+        /// </summary>
+        public async Task<DriverResponse> RegisterAsync(DriverRegisterDto dto)
+        {
+            // Validate email uniqueness
+            if (await EmailExistsAsync(dto.Email))
+                throw new UserException("Email already exists.");
+
+            // Validate username uniqueness
+            if (await _context.Drivers.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower()))
+                throw new UserException("Username already exists.");
+
+            // Hash password
+            PasswordHelper.CreatePasswordHash(dto.Password, out string hash, out string salt);
+
+            // Create driver
+            var driver = new Driver
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Username = dto.Username,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                PasswordHash = hash,
+                PasswordSalt = salt,
+                LicenseNumber = dto.LicenseNumber,
+                LicenseExpiry = DateTime.UtcNow.AddYears(1), // Default, should be updated later
+                Status = string.IsNullOrWhiteSpace(dto.Status) ? "active" : dto.Status, // Default to active
+                TotalRides = 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Drivers.Add(driver);
+            await _context.SaveChangesAsync();
+
+            // Assign "Driver" role (typically RoleId = 3)
+            var driverRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name.ToLower() == "driver" && r.IsActive);
+
+            if (driverRole == null)
+                throw new UserException("Driver role not found.");
+
+            _context.DriverRoles.Add(new DriverRole
+            {
+                DriverId = driver.DriverId,
+                RoleId = driverRole.RoleId,
+                DateAssigned = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            // Return DriverResponse with roles
+            var response = new DriverResponse
+            {
+                DriverId = driver.DriverId,
+                Username = driver.Username,
+                FirstName = driver.FirstName,
+                LastName = driver.LastName,
+                Email = driver.Email,
+                Phone = driver.Phone,
+                Status = driver.Status,
+                Roles = new List<RoleResponse>
+                {
+                    new RoleResponse
+                    {
+                        RoleId = driverRole.RoleId,
+                        Name = driverRole.Name,
+                        Description = driverRole.Description
+                    }
+                }
+            };
+
+            return response;
+        }
+
         public async Task<DriverResponse?> AuthenticateAsync(DriverLoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))

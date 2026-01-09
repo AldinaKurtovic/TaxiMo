@@ -296,6 +296,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // Create Account Button
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/register',
+                        arguments: {'isDriver': _isDriverLogin},
+                      );
+                    },
+                    child: Text(
+                      'Create account / Register',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.deepPurple,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

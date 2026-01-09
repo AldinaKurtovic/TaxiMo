@@ -371,6 +371,45 @@ namespace TaxiMo.Services.Services
         // ============================
         // ======== LOGIN =============
         // ============================
+        /// <summary>
+        /// Registers a new user with password hashing and automatic "User" role assignment
+        /// </summary>
+        public async Task<UserResponse> RegisterAsync(UserRegisterDto dto)
+        {
+            // Validate email uniqueness
+            if (await _context.Users.AnyAsync(x => x.Email.ToLower() == dto.Email.ToLower()))
+                throw new UserException("Email already exists.");
+
+            // Validate username uniqueness
+            if (await _context.Users.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower()))
+                throw new UserException("Username already exists.");
+
+            // Hash password
+            PasswordHelper.CreatePasswordHash(dto.Password, out string hash, out string salt);
+
+            // Create user
+            var user = new User
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Username = dto.Username,
+                Email = dto.Email,
+                PasswordHash = hash,
+                PasswordSalt = salt,
+                Status = "active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Assign "User" role (typically RoleId = 2)
+            await EnsureUserHasRoleAsync(user.UserId, "User");
+
+            return await GetUserResponseWithRolesAsync(user.UserId);
+        }
+
         public async Task<UserResponse?> AuthenticateAsync(UserLoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
