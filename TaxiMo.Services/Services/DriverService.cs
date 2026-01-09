@@ -111,6 +111,7 @@ namespace TaxiMo.Services.Services
             existingDriver.RatingAvg = driver.RatingAvg;
             existingDriver.TotalRides = driver.TotalRides;
             existingDriver.Status = driver.Status;
+            existingDriver.PhotoUrl = driver.PhotoUrl;
             existingDriver.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -169,6 +170,9 @@ namespace TaxiMo.Services.Services
 
             if (!string.IsNullOrWhiteSpace(dto.Status))
                 driver.Status = dto.Status;
+
+            if (dto.PhotoUrl != null)
+                driver.PhotoUrl = dto.PhotoUrl;
 
             // Password update
             if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
@@ -309,6 +313,7 @@ namespace TaxiMo.Services.Services
                 Email = driver.Email,
                 Phone = driver.Phone,
                 Status = driver.Status,
+                PhotoUrl = string.IsNullOrWhiteSpace(driver.PhotoUrl) ? "images/default-avatar.png" : driver.PhotoUrl,
                 Roles = new List<RoleResponse>
                 {
                     new RoleResponse
@@ -356,6 +361,7 @@ namespace TaxiMo.Services.Services
                 Email = driver.Email,
                 Phone = driver.Phone,
                 Status = driver.Status,
+                PhotoUrl = string.IsNullOrWhiteSpace(driver.PhotoUrl) ? "images/default-avatar.png" : driver.PhotoUrl,
                 Roles = driver.DriverRoles
                     .Where(dr => dr.Role != null && dr.Role.IsActive)
                     .Select(dr => new RoleResponse

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../layout/user_main_navigation.dart';
 import '../widgets/user_app_bar.dart';
+import '../widgets/driver_avatar.dart';
 import '../models/driver_dto.dart';
 import '../services/driver_service.dart';
 
@@ -474,18 +475,10 @@ class _RecommendedDriverCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.person,
-                    color: colorScheme.onPrimaryContainer,
-                    size: 24,
-                  ),
+                DriverAvatar(
+                  photoUrl: driver.photoUrl,
+                  firstName: driver.firstName,
+                  radius: 20,
                 ),
                 const Spacer(),
                 Container(

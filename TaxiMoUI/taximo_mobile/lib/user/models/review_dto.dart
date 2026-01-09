@@ -8,7 +8,11 @@ class ReviewDto {
   final DateTime createdAt;
   // Optional fields from ReviewResponse
   final String? userName;
+  final String? userPhotoUrl;
+  final String? userFirstName;
   final String? driverName;
+  final String? driverPhotoUrl;
+  final String? driverFirstName;
 
   ReviewDto({
     required this.reviewId,
@@ -19,7 +23,11 @@ class ReviewDto {
     this.comment,
     required this.createdAt,
     this.userName,
+    this.userPhotoUrl,
+    this.userFirstName,
     this.driverName,
+    this.driverPhotoUrl,
+    this.driverFirstName,
   });
 
  factory ReviewDto.fromJson(Map<String, dynamic> json) {
@@ -64,7 +72,11 @@ class ReviewDto {
             : DateTime.now())
         : DateTime.now(), // Default to now if missing
     userName: json['userName'] as String?,
+    userPhotoUrl: json['userPhotoUrl'] as String?,
+    userFirstName: json['userFirstName'] as String?,
     driverName: json['driverName'] as String?,
+    driverPhotoUrl: json['driverPhotoUrl'] as String?,
+    driverFirstName: json['driverFirstName'] as String?,
   );
 }
 }

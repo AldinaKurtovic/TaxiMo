@@ -691,6 +691,7 @@ namespace TaxiMo.Services.Services
                 RatingAvg = averageRating,
                 TotalRides = totalCompletedRides,
                 Status = driver.Status,
+                PhotoUrl = string.IsNullOrWhiteSpace(driver.PhotoUrl) ? "images/default-avatar.png" : driver.PhotoUrl,
                 CreatedAt = driver.CreatedAt,
                 UpdatedAt = driver.UpdatedAt,
                 Roles = new List<string>(), // Would need to load from DriverRoles if needed

@@ -11,6 +11,7 @@ class DriverModel {
   final DateTime updatedAt;
   final double? currentLatitude;
   final double? currentLongitude;
+  final String? photoUrl;
 
   DriverModel({
     required this.driverId,
@@ -25,6 +26,7 @@ class DriverModel {
     required this.updatedAt,
     this.currentLatitude,
     this.currentLongitude,
+    this.photoUrl,
   });
 
   String get fullName => '$firstName $lastName';
@@ -55,6 +57,7 @@ class DriverModel {
       currentLongitude: json['currentLongitude'] != null
           ? (json['currentLongitude'] as num).toDouble()
           : null,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 
@@ -70,6 +73,7 @@ class DriverModel {
       'status': status,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'photoUrl': photoUrl,
     };
   }
 }

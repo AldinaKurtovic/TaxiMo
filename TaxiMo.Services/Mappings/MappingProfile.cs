@@ -10,7 +10,16 @@ namespace TaxiMo.Services.Mappings
         public MappingProfile()
         {
             // User mappings
-            CreateMap<User, UserDto>();
+            CreateMap<User, UserDto>()
+                .ForMember(dest => dest.PhotoUrl, opt => opt.MapFrom(src => src.PhotoUrl ?? "images/default-avatar.png"))
+                .AfterMap((src, dest) =>
+                {
+                    // Ensure PhotoUrl is never null or empty
+                    if (string.IsNullOrEmpty(dest.PhotoUrl))
+                    {
+                        dest.PhotoUrl = "images/default-avatar.png";
+                    }
+                });
             CreateMap<UserCreateDto, User>()
                 .ForMember(dest => dest.UserId, opt => opt.Ignore())
                 .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
@@ -50,6 +59,12 @@ namespace TaxiMo.Services.Mappings
                         {
                             dest.VehicleId = firstVehicle.VehicleId;
                         }
+                    }
+                    
+                    // Set default avatar if PhotoUrl is null or empty
+                    if (string.IsNullOrWhiteSpace(dest.PhotoUrl))
+                    {
+                        dest.PhotoUrl = "images/default-avatar.png";
                     }
                 });
             CreateMap<DriverCreateDto, Driver>()
@@ -116,9 +131,23 @@ namespace TaxiMo.Services.Mappings
                 .ForMember(dest => dest.UserName,
                     opt => opt.MapFrom(src =>
                         src.Rider.FirstName + " " + src.Rider.LastName))
+                .ForMember(dest => dest.UserPhotoUrl,
+                    opt => opt.MapFrom(src => 
+                        string.IsNullOrWhiteSpace(src.Rider.PhotoUrl) 
+                            ? "images/default-avatar.png" 
+                            : src.Rider.PhotoUrl))
+                .ForMember(dest => dest.UserFirstName,
+                    opt => opt.MapFrom(src => src.Rider.FirstName))
                 .ForMember(dest => dest.DriverName,
                     opt => opt.MapFrom(src =>
                         src.Driver.FirstName + " " + src.Driver.LastName))
+                .ForMember(dest => dest.DriverPhotoUrl,
+                    opt => opt.MapFrom(src => 
+                        string.IsNullOrWhiteSpace(src.Driver.PhotoUrl) 
+                            ? "images/default-avatar.png" 
+                            : src.Driver.PhotoUrl))
+                .ForMember(dest => dest.DriverFirstName,
+                    opt => opt.MapFrom(src => src.Driver.FirstName))
                 .ForMember(dest => dest.Description,
                     opt => opt.MapFrom(src => src.Comment));
             CreateMap<ReviewCreateDto, Review>()

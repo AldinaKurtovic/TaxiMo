@@ -13,6 +13,7 @@ namespace TaxiMo.Services.DTOs
         public decimal? RatingAvg { get; set; }
         public int TotalRides { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string PhotoUrl { get; set; } = "images/default-avatar.png"; // Never null - defaults to avatar
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<string> Roles { get; set; } = new();

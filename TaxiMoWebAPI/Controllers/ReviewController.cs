@@ -89,25 +89,16 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/Review/by-driver/{driverId}
         [HttpGet("by-driver/{driverId}")]
-        public async Task<ActionResult<IEnumerable<object>>> GetByDriverId(int driverId)
+        public async Task<ActionResult<IEnumerable<ReviewResponse>>> GetByDriverId(int driverId)
         {
             try
             {
                 var entities = await _reviewService.GetByDriverIdAsync(driverId);
                 
-                // Map to DriverReviewDto format with rider name
-                var dtos = entities.Select(r => new
-                {
-                    reviewId = r.ReviewId,
-                    rideId = r.RideId,
-                    riderId = r.RiderId,
-                    riderName = r.Rider != null ? $"{r.Rider.FirstName} {r.Rider.LastName}".Trim() : "Unknown",
-                    rating = r.Rating,
-                    comment = r.Comment,
-                    createdAt = r.CreatedAt
-                }).ToList();
+                // Map to ReviewResponse format which includes user photo info
+                var responses = Mapper.Map<List<ReviewResponse>>(entities);
 
-                return Ok(dtos);
+                return Ok(responses);
             }
             catch (Exception ex)
             {

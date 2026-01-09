@@ -50,6 +50,9 @@ namespace TaxiMo.Services.Database.Entities
         [MaxLength(50)]
         public string Status { get; set; } = string.Empty;
 
+        [MaxLength(255)]
+        public string? PhotoUrl { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; }
 

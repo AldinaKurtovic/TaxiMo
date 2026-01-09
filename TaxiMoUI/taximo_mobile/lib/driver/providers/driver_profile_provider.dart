@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../services/driver_profile_service.dart';
 import '../models/driver_model.dart';
@@ -9,6 +10,7 @@ class DriverProfileProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isChangingPassword = false;
+  bool _isUploadingPhoto = false;
   String? _errorMessage;
   String? _successMessage;
   DriverModel? _driverProfile;
@@ -17,6 +19,7 @@ class DriverProfileProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   bool get isChangingPassword => _isChangingPassword;
+  bool get isUploadingPhoto => _isUploadingPhoto;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
   DriverModel? get driverProfile => _driverProfile;
@@ -161,6 +164,48 @@ class DriverProfileProvider with ChangeNotifier {
   void setDriverDto(DriverDto dto) {
     _driverDto = dto;
     notifyListeners();
+  }
+
+  /// Upload driver profile photo
+  Future<bool> uploadPhoto(File imageFile) async {
+    _isUploadingPhoto = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      // Get driverId from loaded profile or fetch it
+      int driverId;
+      if (_driverProfile != null) {
+        driverId = _driverProfile!.driverId;
+      } else {
+        final currentDriverData = await _profileService.getCurrentDriver();
+        driverId = currentDriverData['driverId'] as int;
+      }
+
+      // Upload photo
+      final data = await _profileService.uploadPhoto(driverId, imageFile);
+      
+      // Update driver profile with new photoUrl
+      if (data != null && data is Map<String, dynamic>) {
+        _driverProfile = DriverModel.fromJson(data);
+        _successMessage = 'Photo uploaded successfully';
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _successMessage = null;
+      notifyListeners();
+      debugPrint('Error uploading driver photo: $e');
+      return false;
+    } finally {
+      _isUploadingPhoto = false;
+      notifyListeners();
+    }
   }
 }
 

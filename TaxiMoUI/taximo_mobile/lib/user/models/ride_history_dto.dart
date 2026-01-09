@@ -107,12 +107,14 @@ class DriverInfo {
   final String firstName;
   final String lastName;
   final double? ratingAvg;
+  final String? photoUrl;
 
   DriverInfo({
     required this.driverId,
     required this.firstName,
     required this.lastName,
     this.ratingAvg,
+    this.photoUrl,
   });
 
   factory DriverInfo.fromJson(Map<String, dynamic> json) {
@@ -121,6 +123,7 @@ class DriverInfo {
       firstName: json['firstName'] as String,
       lastName: json['lastName'] as String,
       ratingAvg: (json['ratingAvg'] as num?)?.toDouble(),
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 

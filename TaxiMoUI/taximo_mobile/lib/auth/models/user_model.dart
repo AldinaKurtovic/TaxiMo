@@ -7,6 +7,7 @@ class UserModel {
   final String? phone;
   final String status;
   final List<RoleModel> roles;
+  final String? photoUrl;
 
   UserModel({
     required this.userId,
@@ -17,6 +18,7 @@ class UserModel {
     this.phone,
     required this.status,
     required this.roles,
+    this.photoUrl,
   });
 
   String get fullName => '$firstName $lastName';
@@ -45,6 +47,7 @@ class UserModel {
               .map((e) => RoleModel.fromJson(e as Map<String, dynamic>))
               .toList()
           : [],
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 
@@ -58,6 +61,7 @@ class UserModel {
       'phone': phone,
       'status': status,
       'roles': roles.map((e) => e.toJson()).toList(),
+      'photoUrl': photoUrl,
     };
   }
 }

@@ -9,6 +9,7 @@ namespace TaxiMo.Services.DTOs.Auth
         public string Email { get; set; } = string.Empty;
         public string? Phone { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string PhotoUrl { get; set; } = "images/default-avatar.png"; // Never null - defaults to avatar
         public List<RoleResponse> Roles { get; set; } = new List<RoleResponse>();
     }
 }

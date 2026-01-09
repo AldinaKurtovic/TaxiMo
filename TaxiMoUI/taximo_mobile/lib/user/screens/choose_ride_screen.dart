@@ -8,6 +8,7 @@ import '../models/promo_code_dto.dart';
 import '../models/ride_request_dto.dart';
 import '../services/driver_service.dart';
 import '../services/ride_service.dart';
+import '../widgets/driver_avatar.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 
 class ChooseRideScreen extends StatefulWidget {
@@ -714,6 +715,13 @@ class _DriverCard extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // Driver Avatar
+              DriverAvatar(
+                photoUrl: driver.photoUrl,
+                firstName: driver.firstName,
+                radius: 24,
+              ),
+              const SizedBox(width: 12),
               // Driver info
               Expanded(
                 child: Column(

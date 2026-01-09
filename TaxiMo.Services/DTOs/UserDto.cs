@@ -10,6 +10,7 @@ namespace TaxiMo.Services.DTOs
         public string? Phone { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string PhotoUrl { get; set; } = "images/default-avatar.png"; // Never null - defaults to avatar
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<string> Roles { get; set; } = new();

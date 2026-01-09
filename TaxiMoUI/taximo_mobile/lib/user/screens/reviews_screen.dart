@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/review_dto.dart';
 import '../services/review_service.dart';
+import '../widgets/driver_avatar.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../widgets/user_app_bar.dart';
 
@@ -141,18 +142,24 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Driver name
+            // Driver name and avatar
             if (review.driverName != null && review.driverName!.isNotEmpty) ...[
               Row(
                 children: [
-                  Icon(Icons.person, size: 16, color: Colors.deepPurple),
-                  const SizedBox(width: 8),
-                  Text(
+                  DriverAvatar(
+                    photoUrl: review.driverPhotoUrl,
+                    firstName: review.driverFirstName ?? review.driverName!.split(' ').first,
+                    radius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
                     review.driverName!,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],

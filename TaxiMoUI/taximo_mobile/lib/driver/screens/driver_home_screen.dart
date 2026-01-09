@@ -4,6 +4,7 @@ import '../providers/driver_provider.dart';
 import '../providers/driver_reviews_provider.dart';
 import '../providers/ride_requests_provider.dart';
 import '../layout/driver_main_navigation.dart';
+import '../widgets/driver_avatar.dart';
 import '../../auth/screens/login_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -157,18 +158,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Avatar
-            CircleAvatar(
+            DriverAvatar(
+              photoUrl: driver.photoUrl,
+              firstName: driver.firstName,
               radius: 28,
-              backgroundColor: colorScheme.primaryContainer,
-              foregroundColor: colorScheme.onPrimaryContainer,
-              child: Text(
-                driver.firstName.isNotEmpty
-                    ? driver.firstName[0].toUpperCase()
-                    : 'D',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
             ),
             const SizedBox(width: 20),
             // Name and Role

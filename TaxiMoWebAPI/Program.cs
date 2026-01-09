@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.OpenApi.Models;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Interfaces;
@@ -125,11 +126,92 @@ builder.Services.AddTransient<RideStateFactory>();
 
 var app = builder.Build();
 
-// Ensure database is created and seed roles/users
+// Ensure required directories exist
+var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+var driversPath = Path.Combine(wwwrootPath, "drivers");
+var usersPath = Path.Combine(wwwrootPath, "users");
+var imagesPath = Path.Combine(wwwrootPath, "images");
+
+if (!Directory.Exists(wwwrootPath))
+{
+    Directory.CreateDirectory(wwwrootPath);
+    Console.WriteLine($"Created wwwroot directory at {wwwrootPath}");
+}
+
+if (!Directory.Exists(driversPath))
+{
+    Directory.CreateDirectory(driversPath);
+    Console.WriteLine($"Created drivers directory at {driversPath}");
+}
+
+if (!Directory.Exists(usersPath))
+{
+    Directory.CreateDirectory(usersPath);
+    Console.WriteLine($"Created users directory at {usersPath}");
+}
+
+if (!Directory.Exists(imagesPath))
+{
+    Directory.CreateDirectory(imagesPath);
+    Console.WriteLine($"Created images directory at {imagesPath}");
+}
+
+// Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TaxiMoDbContext>();
-    db.Database.EnsureCreated();
+    
+    // Apply pending migrations (this will create the database if it doesn't exist)
+    try
+    {
+        await db.Database.MigrateAsync();
+        Console.WriteLine("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error applying migrations: {ex.Message}");
+        throw;
+    }
+
+    // Ensure PhotoUrl column exists in Drivers table (fix for databases created with EnsureCreated)
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.columns 
+                WHERE object_id = OBJECT_ID(N'[Drivers]') 
+                AND name = 'PhotoUrl'
+            )
+            BEGIN
+                ALTER TABLE [Drivers] ADD [PhotoUrl] nvarchar(255) NULL;
+            END");
+        Console.WriteLine("Verified PhotoUrl column exists in Drivers table.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not verify PhotoUrl column in Drivers table: {ex.Message}");
+        // Don't throw - this is a best-effort fix
+    }
+
+    // Ensure PhotoUrl column exists in Users table (fix for databases created with EnsureCreated)
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.columns 
+                WHERE object_id = OBJECT_ID(N'[Users]') 
+                AND name = 'PhotoUrl'
+            )
+            BEGIN
+                ALTER TABLE [Users] ADD [PhotoUrl] nvarchar(255) NULL;
+            END");
+        Console.WriteLine("Verified PhotoUrl column exists in Users table.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not verify PhotoUrl column in Users table: {ex.Message}");
+        // Don't throw - this is a best-effort fix
+    }
 
     // Seed data
     await DataSeed.SeedAsync(scope.ServiceProvider);
@@ -151,6 +233,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+
+// Enable static file serving for wwwroot
+app.UseStaticFiles();
 
 app.UseRouting();
 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/driver_reviews_provider.dart';
 import '../providers/driver_provider.dart';
 import '../../user/models/review_dto.dart';
+import '../../user/widgets/user_avatar.dart';
 
 class DriverReviewsScreen extends StatefulWidget {
   const DriverReviewsScreen({
@@ -147,18 +148,24 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Rider name
+            // User/Rider name and avatar
             if (review.userName != null && review.userName!.isNotEmpty) ...[
               Row(
                 children: [
-                  const Icon(Icons.person, size: 18, color: Colors.deepPurple),
-                  const SizedBox(width: 8),
-                  Text(
-                    review.userName!,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  UserAvatar(
+                    photoUrl: review.userPhotoUrl,
+                    firstName: review.userFirstName ?? review.userName!.split(' ').first,
+                    radius: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      review.userName!,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],

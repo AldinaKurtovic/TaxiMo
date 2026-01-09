@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/drivers_provider.dart';
 import '../../models/driver_model.dart';
+import '../../widgets/driver_avatar.dart';
 import 'widgets/add_driver_modal.dart';
 import 'widgets/edit_driver_modal.dart';
 
@@ -285,6 +286,21 @@ class _DriversScreenState extends State<DriversScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
+                                'Photo',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataColumn(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
                                 'Driver Name',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -381,6 +397,13 @@ class _DriversScreenState extends State<DriversScreen> {
                                     color: Color(0xFF424242),
                                   ),
                                 ),
+                              ),
+                            ),
+                            DataCell(
+                              DriverAvatar(
+                                photoUrl: driver.photoUrl,
+                                firstName: driver.firstName,
+                                radius: 20,
                               ),
                             ),
                             DataCell(

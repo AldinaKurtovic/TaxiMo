@@ -84,9 +84,9 @@ namespace TaxiMo.Services.Services
 
         public async Task<List<Review>> GetByDriverIdAsync(int driverId)
         {
-            var query = DbSet
+            // Use AddInclude to ensure Driver and Rider are included for photo mapping
+            var query = AddInclude(DbSet)
                 .Include(r => r.Ride)
-                .Include(r => r.Rider)
                 .Where(r => r.Ride.DriverId == driverId)
                 .OrderByDescending(r => r.CreatedAt);
             

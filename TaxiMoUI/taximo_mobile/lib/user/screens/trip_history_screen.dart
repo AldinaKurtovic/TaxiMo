@@ -7,6 +7,7 @@ import '../services/ride_service.dart';
 import '../services/review_service.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../widgets/user_app_bar.dart';
+import '../widgets/driver_avatar.dart';
 import 'rate_trip_screen.dart';
 
 enum TimeFilter {
@@ -424,6 +425,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                 // Driver info
                 Row(
                   children: [
+                    if (ride.driver != null)
+                      DriverAvatar(
+                        photoUrl: ride.driver!.photoUrl,
+                        firstName: ride.driver!.firstName,
+                        radius: 16,
+                      )
+                    else
                     CircleAvatar(
                       radius: 16,
                       backgroundColor: Colors.grey[300],

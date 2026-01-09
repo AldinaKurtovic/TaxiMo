@@ -145,5 +145,170 @@ namespace TaxiMoWebAPI.Controllers
                 usersFixed = fixedCount
             });
         }
+
+        /// <summary>
+        /// Upload user photo
+        /// Accepts multipart/form-data with a file parameter named "file"
+        /// Example cURL:
+        /// curl -X POST "https://localhost:5000/api/users/1/photo" \
+        ///   -H "Authorization: Basic base64encodedcredentials" \
+        ///   -F "file=@/path/to/user-photo.jpg"
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <param name="file">Image file (jpg, jpeg, png, gif, webp, max 5MB)</param>
+        /// <returns>Updated UserDto with PhotoUrl</returns>
+        // POST: api/users/{id}/photo
+        [HttpPost("{id:int}/photo")]
+        public async Task<ActionResult<UserDto>> UploadUserPhoto(int id, IFormFile file)
+        {
+            _logger.LogInformation("UploadUserPhoto request received. UserId: {UserId}", id);
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "No file uploaded." });
+            }
+
+            // Validate file type (images only)
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return BadRequest(new { message = "Invalid file type. Only image files (jpg, jpeg, png, gif, webp) are allowed." });
+            }
+
+            // Validate file size (max 5MB)
+            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+            if (file.Length > maxFileSize)
+            {
+                return BadRequest(new { message = "File size exceeds the maximum allowed size of 5MB." });
+            }
+
+            try
+            {
+                // Verify user exists
+                var user = await _userService.GetByIdAsync(id);
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found. UserId: {UserId}", id);
+                    return NotFound(new { message = $"User with ID {id} not found" });
+                }
+
+                // Ensure wwwroot/users directory exists
+                var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                var usersPath = Path.Combine(wwwrootPath, "users");
+                
+                if (!Directory.Exists(usersPath))
+                {
+                    Directory.CreateDirectory(usersPath);
+                    _logger.LogInformation("Created users directory at {UsersPath}", usersPath);
+                }
+
+                // Generate unique filename (Guid + extension)
+                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(usersPath, uniqueFileName);
+
+                // Delete old photo if exists
+                if (!string.IsNullOrEmpty(user.PhotoUrl))
+                {
+                    var oldFilePath = Path.Combine(wwwrootPath, user.PhotoUrl);
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                            _logger.LogInformation("Deleted old user photo: {OldPhotoPath}", oldFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete old user photo: {OldPhotoPath}", oldFilePath);
+                        }
+                    }
+                }
+
+                // Save the file
+                using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Update user's PhotoUrl (relative path: users/filename.ext)
+                user.PhotoUrl = $"users/{uniqueFileName}";
+                user.UpdatedAt = DateTime.UtcNow;
+
+                // Update user in database (using UpdateAsync(User) which handles PhotoUrl)
+                var updatedUser = await _userService.UpdateAsync(user);
+                
+                _logger.LogInformation("User photo uploaded successfully. UserId: {UserId}, PhotoUrl: {PhotoUrl}", 
+                    id, updatedUser.PhotoUrl);
+
+                return Ok(_mapper.Map<UserDto>(updatedUser));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading user photo. UserId: {UserId}", id);
+                return StatusCode(500, new { message = "An error occurred while uploading the photo" });
+            }
+        }
+
+        /// <summary>
+        /// Delete user photo
+        /// Removes the photo file from wwwroot/users and sets User.PhotoUrl to null
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <returns>Updated UserDto with PhotoUrl set to default avatar</returns>
+        // DELETE: api/users/{id}/photo
+        [HttpDelete("{id:int}/photo")]
+        public async Task<ActionResult<UserDto>> DeleteUserPhoto(int id)
+        {
+            _logger.LogInformation("DeleteUserPhoto request received. UserId: {UserId}", id);
+
+            try
+            {
+                // Verify user exists
+                var user = await _userService.GetByIdAsync(id);
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found. UserId: {UserId}", id);
+                    return NotFound(new { message = $"User with ID {id} not found" });
+                }
+
+                // Delete photo file if exists
+                if (!string.IsNullOrWhiteSpace(user.PhotoUrl))
+                {
+                    var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var filePath = Path.Combine(wwwrootPath, user.PhotoUrl);
+                    
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(filePath);
+                            _logger.LogInformation("Deleted user photo file: {FilePath}", filePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete user photo file: {FilePath}", filePath);
+                            // Continue even if file deletion fails
+                        }
+                    }
+                }
+
+                // Set PhotoUrl to null
+                user.PhotoUrl = null;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                // Update user in database
+                var updatedUser = await _userService.UpdateAsync(user);
+                
+                _logger.LogInformation("User photo deleted successfully. UserId: {UserId}", id);
+
+                return Ok(_mapper.Map<UserDto>(updatedUser));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user photo. UserId: {UserId}", id);
+                return StatusCode(500, new { message = "An error occurred while deleting the photo" });
+            }
+        }
     }
 }

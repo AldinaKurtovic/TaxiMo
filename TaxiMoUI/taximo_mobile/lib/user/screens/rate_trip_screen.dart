@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/ride_history_dto.dart';
 import '../models/review_dto.dart';
 import '../services/review_service.dart';
+import '../widgets/driver_avatar.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 
 class RateTripScreen extends StatefulWidget {
@@ -272,6 +273,19 @@ class _RateTripScreenState extends State<RateTripScreen> {
                     // Driver information
                     Row(
                       children: [
+                        if (_ride!.driver != null)
+                          DriverAvatar(
+                            photoUrl: _ride!.driver!.photoUrl,
+                            firstName: _ride!.driver!.firstName,
+                            radius: 30,
+                          )
+                        else
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Colors.grey[300],
+                            child: Icon(Icons.person, size: 30, color: Colors.grey[600]),
+                          ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

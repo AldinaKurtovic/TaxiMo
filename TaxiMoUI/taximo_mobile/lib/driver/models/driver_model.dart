@@ -7,6 +7,7 @@ class DriverModel {
   final String? phone;
   final String status;
   final List<RoleModel> roles;
+  final String? photoUrl;
 
   DriverModel({
     required this.driverId,
@@ -17,6 +18,7 @@ class DriverModel {
     this.phone,
     required this.status,
     required this.roles,
+    this.photoUrl,
   });
 
   String get fullName => '$firstName $lastName';
@@ -43,6 +45,7 @@ class DriverModel {
               .map((e) => RoleModel.fromJson(e as Map<String, dynamic>))
               .toList()
           : [],
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 
@@ -56,6 +59,7 @@ class DriverModel {
       'phone': phone,
       'status': status,
       'roles': roles.map((e) => e.toJson()).toList(),
+      'photoUrl': photoUrl,
     };
   }
 }

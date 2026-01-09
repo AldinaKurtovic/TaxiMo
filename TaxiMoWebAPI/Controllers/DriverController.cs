@@ -223,6 +223,175 @@ namespace TaxiMoWebAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Upload driver photo
+        /// 
+        /// Example cURL call:
+        /// curl -X POST "https://localhost:5000/api/drivers/1/photo" \
+        ///   -H "Authorization: Basic <base64_credentials>" \
+        ///   -F "file=@/path/to/driver-photo.jpg"
+        /// 
+        /// Form-data parameter name: "file"
+        /// Supported formats: jpg, jpeg, png, gif, webp
+        /// Max file size: 5MB
+        /// </summary>
+        /// <param name="id">Driver ID</param>
+        /// <param name="file">Image file (form-data parameter name: "file")</param>
+        /// <returns>Updated DriverDto with PhotoUrl</returns>
+        // POST: api/driver/{id}/photo
+        [HttpPost("{id:int}/photo")]
+        public async Task<ActionResult<DriverDto>> UploadDriverPhoto(int id, IFormFile file)
+        {
+            _logger.LogInformation("UploadDriverPhoto request received. DriverId: {DriverId}", id);
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "No file uploaded." });
+            }
+
+            // Validate file type (images only)
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return BadRequest(new { message = "Invalid file type. Only image files (jpg, jpeg, png, gif, webp) are allowed." });
+            }
+
+            // Validate file size (max 5MB)
+            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+            if (file.Length > maxFileSize)
+            {
+                return BadRequest(new { message = "File size exceeds the maximum allowed size of 5MB." });
+            }
+
+            try
+            {
+                // Verify driver exists
+                var driver = await _driverService.GetByIdAsync(id);
+                if (driver == null)
+                {
+                    _logger.LogWarning("Driver not found. DriverId: {DriverId}", id);
+                    return NotFound(new { message = $"Driver with ID {id} not found" });
+                }
+
+                // Ensure wwwroot/drivers directory exists
+                var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                var driversPath = Path.Combine(wwwrootPath, "drivers");
+                
+                if (!Directory.Exists(driversPath))
+                {
+                    Directory.CreateDirectory(driversPath);
+                    _logger.LogInformation("Created drivers directory at {DriversPath}", driversPath);
+                }
+
+                // Generate unique filename (Guid + extension)
+                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(driversPath, uniqueFileName);
+
+                // Delete old photo if exists
+                if (!string.IsNullOrEmpty(driver.PhotoUrl))
+                {
+                    var oldFilePath = Path.Combine(wwwrootPath, driver.PhotoUrl);
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                            _logger.LogInformation("Deleted old driver photo: {OldPhotoPath}", oldFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete old driver photo: {OldPhotoPath}", oldFilePath);
+                        }
+                    }
+                }
+
+                // Save the file
+                using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Update driver's PhotoUrl (relative path: drivers/filename.ext)
+                driver.PhotoUrl = $"drivers/{uniqueFileName}";
+                driver.UpdatedAt = DateTime.UtcNow;
+
+                // Update driver in database (using UpdateAsync(Driver) which handles PhotoUrl)
+                var updatedDriver = await _driverService.UpdateAsync(driver);
+                
+                _logger.LogInformation("Driver photo uploaded successfully. DriverId: {DriverId}, PhotoUrl: {PhotoUrl}", 
+                    id, updatedDriver.PhotoUrl);
+
+                return Ok(_mapper.Map<DriverDto>(updatedDriver));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading driver photo. DriverId: {DriverId}", id);
+                return StatusCode(500, new { message = "An error occurred while uploading the photo" });
+            }
+        }
+
+        /// <summary>
+        /// Delete driver photo
+        /// Removes the photo file from wwwroot/drivers and sets Driver.PhotoUrl to null
+        /// </summary>
+        /// <param name="id">Driver ID</param>
+        /// <returns>Updated DriverDto with PhotoUrl set to default avatar</returns>
+        // DELETE: api/driver/{id}/photo
+        [HttpDelete("{id:int}/photo")]
+        public async Task<ActionResult<DriverDto>> DeleteDriverPhoto(int id)
+        {
+            _logger.LogInformation("DeleteDriverPhoto request received. DriverId: {DriverId}", id);
+
+            try
+            {
+                // Verify driver exists
+                var driver = await _driverService.GetByIdAsync(id);
+                if (driver == null)
+                {
+                    _logger.LogWarning("Driver not found. DriverId: {DriverId}", id);
+                    return NotFound(new { message = $"Driver with ID {id} not found" });
+                }
+
+                // Delete photo file if exists
+                if (!string.IsNullOrWhiteSpace(driver.PhotoUrl))
+                {
+                    var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var filePath = Path.Combine(wwwrootPath, driver.PhotoUrl);
+                    
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(filePath);
+                            _logger.LogInformation("Deleted driver photo file: {FilePath}", filePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete driver photo file: {FilePath}", filePath);
+                            // Continue even if file deletion fails
+                        }
+                    }
+                }
+
+                // Set PhotoUrl to null
+                driver.PhotoUrl = null;
+                driver.UpdatedAt = DateTime.UtcNow;
+
+                // Update driver in database
+                var updatedDriver = await _driverService.UpdateAsync(driver);
+                
+                _logger.LogInformation("Driver photo deleted successfully. DriverId: {DriverId}", id);
+
+                return Ok(_mapper.Map<DriverDto>(updatedDriver));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting driver photo. DriverId: {DriverId}", id);
+                return StatusCode(500, new { message = "An error occurred while deleting the photo" });
+            }
+        }
+
         // POST: api/driver/{id}/assign-vehicle
         // Helper endpoint to assign a vehicle to a driver
         [HttpPost("{id:int}/assign-vehicle")]

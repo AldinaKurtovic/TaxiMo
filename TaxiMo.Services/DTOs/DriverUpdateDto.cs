@@ -35,6 +35,9 @@ namespace TaxiMo.Services.DTOs
         [MaxLength(50, ErrorMessage = "Status cannot exceed 50 characters.")]
         public string? Status { get; set; }
 
+        [MaxLength(255, ErrorMessage = "Photo URL cannot exceed 255 characters.")]
+        public string? PhotoUrl { get; set; }
+
         // Optional password change fields
         public bool ChangePassword { get; set; }
 

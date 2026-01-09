@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/user_profile_service.dart';
+import '../services/user_photo_service.dart';
 import '../../auth/models/user_model.dart';
 
 class UserProfileProvider with ChangeNotifier {
   final UserProfileService _profileService = UserProfileService();
+  final UserPhotoService _photoService = UserPhotoService();
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -153,6 +156,84 @@ class UserProfileProvider with ChangeNotifier {
   void updateUserFromAuth(UserModel user) {
     _userProfile = user;
     notifyListeners();
+  }
+
+  Future<bool> uploadPhoto(XFile imageFile) async {
+    _isSaving = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      // Get userId from loaded profile or fetch it
+      int userId;
+      if (_userProfile != null) {
+        userId = _userProfile!.userId;
+      } else {
+        final currentUserData = await _profileService.getCurrentUser();
+        userId = currentUserData['userId'] as int;
+      }
+
+      // Upload photo
+      final updatedUser = await _photoService.uploadPhoto(userId, imageFile);
+
+      // Update local profile
+      _userProfile = updatedUser;
+      _successMessage = 'Photo uploaded successfully';
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _successMessage = null;
+      notifyListeners();
+      debugPrint('Error uploading photo: $e');
+      return false;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deletePhoto() async {
+    _isSaving = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      // Get userId from loaded profile or fetch it
+      int userId;
+      if (_userProfile != null) {
+        userId = _userProfile!.userId;
+      } else {
+        final currentUserData = await _profileService.getCurrentUser();
+        userId = currentUserData['userId'] as int;
+      }
+
+      // Delete photo
+      final success = await _photoService.deletePhoto(userId);
+
+      if (success) {
+        // Reload profile to get updated data
+        await loadProfile();
+        _successMessage = 'Photo deleted successfully';
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        throw Exception('Failed to delete photo');
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _successMessage = null;
+      notifyListeners();
+      debugPrint('Error deleting photo: $e');
+      return false;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
   }
 }
 

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/user_profile_provider.dart';
 import '../../auth/providers/mobile_auth_provider.dart';
 import '../widgets/user_app_bar.dart';
+import '../widgets/user_avatar.dart';
+import '../services/user_photo_service.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
@@ -14,6 +17,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final UserPhotoService _photoService = UserPhotoService();
+  bool _isUploadingPhoto = false;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +34,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profileProvider.loadProfile();
       }
     });
+  }
+
+  Future<void> _handlePhotoUpload() async {
+    try {
+      // Show image source selection
+      final imageFile = await _photoService.pickImageWithSource(context);
+      if (imageFile == null) return; // User cancelled
+
+      setState(() {
+        _isUploadingPhoto = true;
+      });
+
+      final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+      final success = await profileProvider.uploadPhoto(imageFile);
+
+      if (!mounted) return;
+
+      if (success) {
+        // Update auth provider if it has current user
+        final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+        if (authProvider.currentUser != null && profileProvider.userProfile != null) {
+          authProvider.updateCurrentUser(profileProvider.userProfile!);
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo uploaded successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(profileProvider.errorMessage ?? 'Failed to upload photo'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingPhoto = false;
+        });
+      }
+    }
   }
 
   @override
@@ -68,19 +130,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             child: Column(
               children: [
-                // Profile Avatar
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
-                  child: Text(
-                    user.firstName.isNotEmpty
-                        ? user.firstName[0].toUpperCase()
-                        : 'U',
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                // Profile Avatar with upload functionality
+                Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: _isUploadingPhoto ? null : _handlePhotoUpload,
+                      child: UserAvatar(
+                        photoUrl: user.photoUrl,
+                        firstName: user.firstName,
+                        radius: 60,
+                      ),
                     ),
-                  ),
+                    // Edit icon overlay
+                    if (!_isUploadingPhoto)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    // Uploading indicator
+                    if (_isUploadingPhoto)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 20),
 

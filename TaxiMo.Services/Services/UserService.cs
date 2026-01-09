@@ -169,6 +169,7 @@ namespace TaxiMo.Services.Services
             db.Phone = user.Phone;
             db.Status = user.Status;
             db.DateOfBirth = user.DateOfBirth;
+            db.PhotoUrl = user.PhotoUrl;
             db.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -220,6 +221,9 @@ namespace TaxiMo.Services.Services
 
             if (dto.DateOfBirth.HasValue)
                 user.DateOfBirth = dto.DateOfBirth.Value;
+
+            if (dto.PhotoUrl != null)
+                user.PhotoUrl = dto.PhotoUrl;
 
             // Password update
             if (dto.ChangePassword && !string.IsNullOrWhiteSpace(dto.NewPassword))
@@ -460,6 +464,7 @@ namespace TaxiMo.Services.Services
                 Email = user.Email,
                 Phone = user.Phone,
                 Status = user.Status,
+                PhotoUrl = string.IsNullOrWhiteSpace(user.PhotoUrl) ? "images/default-avatar.png" : user.PhotoUrl,
                 Roles = user.UserRoles
                     .Where(ur => ur.Role != null && ur.Role.IsActive)
                     .Select(ur => new RoleResponse

@@ -246,21 +246,10 @@ class ReviewService {
         return [];
       }
       
-      // Map the response to ReviewDto
-      return reviewList.map((json) {
-        final reviewJson = json as Map<String, dynamic>;
-        // Map riderName to userName for ReviewDto
-        return ReviewDto(
-          reviewId: reviewJson['reviewId'] as int,
-          rideId: reviewJson['rideId'] as int,
-          riderId: reviewJson['riderId'] as int,
-          driverId: driverId,
-          rating: (reviewJson['rating'] as num).toDouble(),
-          comment: reviewJson['comment'] as String?,
-          createdAt: DateTime.parse(reviewJson['createdAt'] as String),
-          userName: reviewJson['riderName'] as String?,
-        );
-      }).toList();
+      // Map ReviewResponse format to ReviewDto (includes user photo info)
+      return reviewList
+          .map((json) => ReviewDto.fromJson(json as Map<String, dynamic>))
+          .toList();
     } else {
       throw Exception('Failed to fetch reviews by driver: ${response.statusCode} - ${response.body}');
     }
