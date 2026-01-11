@@ -54,6 +54,70 @@ namespace TaxiMo.Services.Services
             return await query.ToListAsync();
         }
 
+        public async Task<PagedResponse<Driver>> GetAllPagedAsync(int page = 1, int limit = 7, string? search = null, bool? isActive = null, string? licence = null)
+        {
+            // Validate parameters
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 7;
+
+            var query = _context.Drivers.AsQueryable();
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(d =>
+                    d.FirstName.Contains(search) ||
+                    d.LastName.Contains(search) ||
+                    d.Email.Contains(search) ||
+                    d.Status.Contains(search) ||
+                    d.LicenseNumber.Contains(search));
+            }
+
+            if (isActive.HasValue)
+            {
+                if (isActive.Value)
+                {
+                    query = query.Where(d => d.Status.ToLower() == "active");
+                }
+                else
+                {
+                    query = query.Where(d => d.Status.ToLower() != "active");
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(licence))
+            {
+                licence = licence.Trim();
+                query = query.Where(d => d.LicenseNumber.Contains(licence));
+            }
+
+            // Get total count BEFORE pagination
+            var totalItems = await query.CountAsync();
+
+            // Calculate pagination
+            var skip = (page - 1) * limit;
+            var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
+
+            // Apply pagination
+            var data = await query
+                .Skip(skip)
+                .Take(limit)
+                .ToListAsync();
+
+            return new PagedResponse<Driver>
+            {
+                Data = data,
+                Pagination = new PaginationInfo
+                {
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalItems = totalItems,
+                    Limit = limit
+                }
+            };
+        }
+
         public async Task<Driver?> GetByIdAsync(int id)
         {
             return await _context.Drivers

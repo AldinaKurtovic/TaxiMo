@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -30,21 +31,53 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
     return '${p.latitude.toStringAsFixed(5)}, ${p.longitude.toStringAsFixed(5)}';
   }
 
-  // Calculate distance in kilometers using Haversine formula
-  double _calculateDistanceKm(LatLng point1, LatLng point2) {
-    const double earthRadiusKm = 6371.0;
-    final double dLat = _toRadians(point2.latitude - point1.latitude);
-    final double dLon = _toRadians(point2.longitude - point1.longitude);
+  // Calculate distance in kilometers using optimized Haversine formula
+  // Defer calculation to avoid blocking UI during button press
+  Future<double> _calculateDistanceKmAsync(LatLng point1, LatLng point2) async {
+    // Use compute for heavy calculation to avoid blocking main thread
+    // Pass as List<double> for simple serialization
+    return compute(_calculateDistanceKmIsolate, [
+      point1.latitude,
+      point1.longitude,
+      point2.latitude,
+      point2.longitude,
+    ]);
+  }
+  
+  // Synchronous version for immediate UI updates (lightweight approximation)
+  double _calculateDistanceKmFast(LatLng point1, LatLng point2) {
+    // Fast approximation for UI display
+    final latDiff = (point2.latitude - point1.latitude).abs();
+    final lngDiff = (point2.longitude - point1.longitude).abs();
+    return (latDiff + lngDiff) * 111.0; // Rough but fast approximation
+  }
+  
+  // Helper class for passing data to isolate (must be top-level or in separate file)
+  // Using List<double> instead for simpler serialization
+  static double _calculateDistanceKmIsolate(List<double> params) {
+    // params: [lat1, lng1, lat2, lng2]
+    final lat1 = params[0];
+    final lng1 = params[1];
+    final lat2 = params[2];
+    final lng2 = params[3];
     
-    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(point1.latitude)) * math.cos(_toRadians(point2.latitude)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
+    const double earthRadiusKm = 6371.0;
+    const double piOver180 = math.pi / 180.0;
+    
+    final double dLat = (lat2 - lat1) * piOver180;
+    final double dLon = (lng2 - lng1) * piOver180;
+    final double lat1Rad = lat1 * piOver180;
+    final double lat2Rad = lat2 * piOver180;
+    
+    final double sinDlatHalf = math.sin(dLat / 2);
+    final double sinDlonHalf = math.sin(dLon / 2);
+    final double a = sinDlatHalf * sinDlatHalf +
+        math.cos(lat1Rad) * math.cos(lat2Rad) *
+        sinDlonHalf * sinDlonHalf;
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
     return earthRadiusKm * c;
   }
-
-  double _toRadians(double degrees) => degrees * (math.pi / 180.0);
 
   @override
   void dispose() {
@@ -180,10 +213,26 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                       width: double.infinity,
                       child: FilledButton(
                         onPressed: canProceed
-                            ? () {
-                                // Calculate distance and duration from coordinates
-                                final distanceKm = _calculateDistanceKm(_pickup!, _destination!);
-                                final distanceMeters = (distanceKm * 1000).round();
+                            ? () async {
+                                // Show loading indicator while calculating
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (context) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                                
+                                try {
+                                  // Calculate distance in isolate to avoid blocking UI
+                                  final distanceKm = await _calculateDistanceKmAsync(_pickup!, _destination!);
+                                  
+                                  if (!mounted) return;
+                                  
+                                  // Close loading indicator
+                                  Navigator.of(context).pop();
+                                  
+                                  final distanceMeters = (distanceKm * 1000).round();
                                 
                                 // Calculate duration based on distance (average city speed: 30 km/h)
                                 // Formula: durationSeconds = round((distanceKm / 30) * 3600)
@@ -193,6 +242,7 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                                 // Backend will recalculate fare, this is just for UI
                                 final fareEstimate = (distanceKm * 1.0);
                                 
+                                  if (mounted) {
                                 Navigator.pushNamed(
                                   context,
                                   '/choose-ride',
@@ -207,6 +257,18 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                                     durationMin: durationMin,
                                   ),
                                 );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    Navigator.of(context).pop(); // Close loading
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error calculating route: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
                               }
                             : null,
                         child: const Text('Next'),

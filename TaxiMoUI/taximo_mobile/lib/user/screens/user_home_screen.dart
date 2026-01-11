@@ -307,14 +307,28 @@ class _QuickAction extends StatelessWidget {
 }
 
 /// Recommended Drivers section widget that displays ML-based driver recommendations
-class _RecommendedDriversSection extends StatelessWidget {
+class _RecommendedDriversSection extends StatefulWidget {
   const _RecommendedDriversSection();
+
+  @override
+  State<_RecommendedDriversSection> createState() => _RecommendedDriversSectionState();
+}
+
+class _RecommendedDriversSectionState extends State<_RecommendedDriversSection> {
+  late final Future<List<DriverDto>> _driversFuture;
+  final DriverService _driverService = DriverService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Cache future to prevent re-fetching on rebuild
+    _driversFuture = _driverService.getRecommendedDrivers(topN: 5);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final driverService = DriverService();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,31 +351,22 @@ class _RecommendedDriversSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FutureBuilder<List<DriverDto>>(
-          future: driverService.getRecommendedDrivers(topN: 5),
+          future: _driversFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return SizedBox(
+              return const SizedBox(
                 height: 120,
                 child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               );
             }
 
-            if (snapshot.hasError) {
-              // Silently handle errors - just show empty state
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
               return _EmptyRecommendationsMessage(colorScheme: colorScheme, theme: theme);
             }
 
-            final drivers = snapshot.data ?? [];
-            
-            if (drivers.isEmpty) {
-              return _EmptyRecommendationsMessage(colorScheme: colorScheme, theme: theme);
-            }
-
+            final drivers = snapshot.data!;
             return SizedBox(
               height: 140,
               child: ListView.builder(

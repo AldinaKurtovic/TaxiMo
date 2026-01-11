@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,8 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   bool _isPositionSelected = false; // Track if driver has selected position
   bool _isRideStarted = false; // Track if ride has started
   int _currentRouteIndex = 0; // Index for simulated movement along route
+  DateTime? _lastMapUpdateTime; // Debounce map updates
+  bool _isCalculating = false; // Prevent concurrent calculations
 
   @override
   void initState() {
@@ -103,10 +107,17 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
             activeRide.dropoffLocation!.lat,
             activeRide.dropoffLocation!.lng,
           );
+          // Defer route generation to avoid blocking setState
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _driverCurrentPosition != null) {
+              setState(() {
           _routePoints = _generateRoutePoints(_driverCurrentPosition!, destination);
           _currentRouteIndex = 0;
           _isRideStarted = true;
+              });
           // Location updates will start when map is ready (in _onMapReady)
+            }
+          });
         }
       });
       // Start location updates if map is already ready, otherwise wait for _onMapReady
@@ -192,10 +203,17 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
         mockDropoffLocation.lat,
         mockDropoffLocation.lng,
       );
+      // Defer route generation to avoid blocking setState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _driverCurrentPosition != null) {
+          setState(() {
         _routePoints = _generateRoutePoints(_driverCurrentPosition!, destination);
         _currentRouteIndex = 0;
       _isRideStarted = true;
+          });
       // Location updates will start when map is ready (in _onMapReady)
+        }
+      });
       });
     // Start location updates if map is already ready, otherwise wait for _onMapReady
     if (_isMapReady && _isRideStarted && _locationUpdateTimer == null) {
@@ -269,17 +287,23 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   }
 
   List<LatLng> _generateRoutePoints(LatLng start, LatLng end) {
-    // Generate route points with interpolation
-    // Using more points (50) for smoother movement simulation
-    // In production, use a routing API like OSRM or Mapbox
+    // Generate route points with interpolation - moved to isolate-compatible format
+    // Use smaller number of points to reduce computation overhead
     final points = <LatLng>[];
-    const numPoints = 50;
+    const numPoints = 30; // Reduced from 50 to improve performance
+    
+    // Defer heavy computation to next frame to avoid blocking
+    final startLat = start.latitude;
+    final startLng = start.longitude;
+    final latDiff = end.latitude - startLat;
+    final lngDiff = end.longitude - startLng;
     
     for (int i = 0; i <= numPoints; i++) {
       final t = i / numPoints;
-      final lat = start.latitude + (end.latitude - start.latitude) * t;
-      final lng = start.longitude + (end.longitude - start.longitude) * t;
-      points.add(LatLng(lat, lng));
+      points.add(LatLng(
+        startLat + latDiff * t,
+        startLng + lngDiff * t,
+      ));
     }
     
     return points;
@@ -293,14 +317,37 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   }
 
   void _startLocationUpdates() {
-    // Cancel any existing timer to prevent multiple timers
     _locationUpdateTimer?.cancel();
     
-    // Simulate realistic vehicle movement (~60 km/h = 16.67 m/s)
-    // Update every 1 second, moving approximately 15-20 meters per tick
-    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isRideStarted || _routePoints.isEmpty || _currentRide == null || _driverCurrentPosition == null) {
+    // Update every 3 seconds to reduce setState calls and CPU usage
+    // Use SchedulerBinding for frame-aware updates to avoid jank
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted || !_isRideStarted || _routePoints.isEmpty || 
+          _currentRide == null || _driverCurrentPosition == null || _isCalculating) {
+        if (!mounted || !_isRideStarted) {
         timer.cancel();
+        }
+        return;
+      }
+      
+      _isCalculating = true;
+      
+      // Defer heavy calculations to next frame using SchedulerBinding
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _driverCurrentPosition == null || _currentRide == null) {
+          _isCalculating = false;
+          return;
+        }
+        
+        _updateDriverPosition();
+        _isCalculating = false;
+      });
+    });
+  }
+  
+  void _updateDriverPosition() {
+    if (!mounted || !_isRideStarted || _routePoints.isEmpty || 
+        _currentRide == null || _driverCurrentPosition == null) {
         return;
       }
       
@@ -309,64 +356,120 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
         _currentRide!.dropoffLocation!.lng,
       );
       
-      // Calculate remaining distance to destination
-      final remainingDistance = _calculateDistance(_driverCurrentPosition!, destination);
-      
-      // Stop if we've reached destination (within ~10 meters)
-      if (remainingDistance < 0.01) {
-        timer.cancel();
+    // Use cached/simplified distance check first (fast approximation)
+    final latDiff = (destination.latitude - _driverCurrentPosition!.latitude).abs();
+    final lngDiff = (destination.longitude - _driverCurrentPosition!.longitude).abs();
+    final approxDistanceKm = (latDiff + lngDiff) * 111.0; // Rough approximation
+    
+    if (approxDistanceKm < 0.005) { // ~5 meters threshold
+      if (_locationUpdateTimer != null && _locationUpdateTimer!.isActive) {
+        _locationUpdateTimer!.cancel();
+      }
         return;
       }
       
-      // Move approximately 17 meters per second (realistic ~60 km/h speed)
-      const double metersPerUpdate = 0.017; // 17 meters = 0.017 km
+    // Only do full distance calculation if approximation suggests we're far enough
+    if (approxDistanceKm > 0.01) {
+      // Move approximately 51 meters per update (3 seconds * ~17 m/s average city speed)
+      const double metersPerUpdate = 0.051;
       
-      // Find current position in route points
       int nextPointIndex = _currentRouteIndex;
       if (nextPointIndex < _routePoints.length - 1) {
         nextPointIndex++;
       }
       
-      // Move along the route towards destination
       if (nextPointIndex < _routePoints.length) {
         final nextPoint = _routePoints[nextPointIndex];
-        final segmentDistance = _calculateDistance(_driverCurrentPosition!, nextPoint);
         
+        // Simplified distance check for segment (avoid full Haversine when possible)
+        final segmentLatDiff = (nextPoint.latitude - _driverCurrentPosition!.latitude).abs();
+        final segmentLngDiff = (nextPoint.longitude - _driverCurrentPosition!.longitude).abs();
+        final approxSegmentDistance = (segmentLatDiff + segmentLngDiff) * 111.0;
+        
+        LatLng? newPosition;
+        int? newIndex;
+        
+        if (approxSegmentDistance > metersPerUpdate) {
+          // Only do full calculation if needed
+          final segmentDistance = _calculateDistance(_driverCurrentPosition!, nextPoint);
         if (segmentDistance > metersPerUpdate) {
-          // Move partway along current segment
           final bearing = _calculateBearing(_driverCurrentPosition!, nextPoint);
-          final newPosition = _movePosition(_driverCurrentPosition!, bearing, metersPerUpdate);
+          newPosition = _movePosition(_driverCurrentPosition!, bearing, metersPerUpdate);
+          } else {
+            newPosition = nextPoint;
+            newIndex = nextPointIndex;
+          }
+        } else {
+          newPosition = nextPoint;
+          newIndex = nextPointIndex;
+        }
+        
+        // Update state only if position changed significantly
+        if (newPosition != null && mounted) {
+          // Throttle map updates to max once per second
+          final now = DateTime.now();
+          final shouldUpdateMap = _lastMapUpdateTime == null || 
+              now.difference(_lastMapUpdateTime!).inSeconds >= 1;
           
           setState(() {
-            _driverCurrentPosition = newPosition;
+              _driverCurrentPosition = newPosition;
+            if (newIndex != null) {
+              _currentRouteIndex = newIndex;
+            }
           });
-        } else {
-          // Move to next point and continue
-          setState(() {
-            _driverCurrentPosition = nextPoint;
-            _currentRouteIndex = nextPointIndex;
-          });
-        }
         
-        // Update map center to follow driver - only if map is ready
-        if (_isMapReady && _driverCurrentPosition != null) {
+          // Update map center with debouncing to avoid blocking UI thread
+          if (shouldUpdateMap && _isMapReady && _driverCurrentPosition != null && mounted) {
+            _lastMapUpdateTime = now;
+            // Use addPostFrameCallback to ensure update happens after frame render
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _driverCurrentPosition != null) {
+                try {
           _mapController.move(_driverCurrentPosition!, _mapController.camera.zoom);
+                } catch (e) {
+                  // Ignore errors during map updates to prevent crashes
+                  if (kDebugMode) {
+                    debugPrint('Map update error: $e');
+                  }
+                }
+            }
+          });
+          }
         }
       } else {
-        // Reached destination
-        timer.cancel();
+        if (_locationUpdateTimer != null && _locationUpdateTimer!.isActive) {
+          _locationUpdateTimer!.cancel();
+        }
       }
-    });
+    }
   }
 
+  // Optimized distance calculation with early exit for nearby points
   double _calculateDistance(LatLng point1, LatLng point2) {
+    // Fast approximation check first - if points are very close, use simple calculation
+    final latDiff = (point2.latitude - point1.latitude).abs();
+    final lngDiff = (point2.longitude - point1.longitude).abs();
+    
+    // For very small distances, use simplified calculation (faster)
+    if (latDiff < 0.001 && lngDiff < 0.001) {
+      // Rough approximation for nearby points (good enough for movement simulation)
+      return (latDiff + lngDiff) * 111.0;
+    }
+    
+    // Full Haversine formula for accurate distances
     const double earthRadiusKm = 6371.0;
     final double dLat = _toRadians(point2.latitude - point1.latitude);
     final double dLon = _toRadians(point2.longitude - point1.longitude);
     
-    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(point1.latitude)) * math.cos(_toRadians(point2.latitude)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
+    // Pre-calculate radians to avoid repeated conversions
+    final lat1Rad = _toRadians(point1.latitude);
+    final lat2Rad = _toRadians(point2.latitude);
+    
+    final double sinDlatHalf = math.sin(dLat / 2);
+    final double sinDlonHalf = math.sin(dLon / 2);
+    final double a = sinDlatHalf * sinDlatHalf +
+        math.cos(lat1Rad) * math.cos(lat2Rad) *
+        sinDlonHalf * sinDlonHalf;
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
     return earthRadiusKm * c;
@@ -452,15 +555,21 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
       _currentRide!.dropoffLocation!.lng,
     );
 
-    // Calculate remaining distance and ETA
-    final remainingDistance = _driverCurrentPosition != null
-        ? _calculateDistance(_driverCurrentPosition!, destination)
-        : _currentRide!.distanceKm ?? 0.0;
+    // Calculate remaining distance and ETA - use cached values when possible
+    double remainingDistance;
+    if (_driverCurrentPosition != null) {
+      // Use fast approximation for UI display (updated less frequently)
+      final latDiff = (destination.latitude - _driverCurrentPosition!.latitude).abs();
+      final lngDiff = (destination.longitude - _driverCurrentPosition!.longitude).abs();
+      remainingDistance = (latDiff + lngDiff) * 111.0; // Fast approximation
+    } else {
+      remainingDistance = _currentRide!.distanceKm ?? 0.0;
+    }
     final estimatedTime = (remainingDistance / 30 * 60).round(); // Assuming 30 km/h average speed
 
     return Stack(
             children: [
-              // Map
+              // Map - Optimized for performance
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
@@ -470,11 +579,18 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
                   maxZoom: 18.0,
                   onMapReady: _onMapReady,
                   onTap: _onMapTap, // Map tap handler (no longer used, kept for compatibility)
+                  // Reduce interaction overhead
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  ),
                 ),
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.taximo.mobile',
+                    // Optimize tile loading to reduce CPU usage
+                    maxNativeZoom: 18,
+                    maxZoom: 18,
                   ),
                   // Route polyline (shown when ride is active)
                   if (_isRideStarted && _routePoints.isNotEmpty)

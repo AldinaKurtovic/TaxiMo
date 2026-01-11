@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/reviews_provider.dart';
-import '../../models/review_model.dart';
+import '../../providers/promo_provider.dart';
+import '../../models/promo_model.dart';
+import 'widgets/add_promo_modal.dart';
+import 'widgets/edit_promo_modal.dart';
 
-class ReviewsScreen extends StatefulWidget {
-  const ReviewsScreen({super.key});
+class PromoCodesScreen extends StatefulWidget {
+  const PromoCodesScreen({super.key});
 
   @override
-  State<ReviewsScreen> createState() => _ReviewsScreenState();
+  State<PromoCodesScreen> createState() => _PromoCodesScreenState();
 }
 
-class _ReviewsScreenState extends State<ReviewsScreen> {
+class _PromoCodesScreenState extends State<PromoCodesScreen> {
   final _searchController = TextEditingController();
-  String? _selectedDriverFilter;
+  String? _selectedStatusFilter; // null = All, true = Active, false = Inactive
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ReviewsProvider>(context, listen: false).fetchAll();
+      Provider.of<PromoProvider>(context, listen: false).fetchAll();
     });
   }
 
@@ -28,18 +30,56 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     super.dispose();
   }
 
-  Widget _buildStarRating(double rating) {
-    final ratingInt = rating.round().clamp(0, 5);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        return Icon(
-          index < ratingInt ? Icons.star : Icons.star_border,
-          size: 18,
-          color: index < ratingInt ? Colors.amber : Colors.grey[400],
-        );
-      }),
+  void _showDeleteDialog(BuildContext context, PromoModel promo) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Promo Code'),
+        content: Text('Are you sure you want to delete promo code "${promo.code}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Provider.of<PromoProvider>(context, listen: false)
+                  .delete(promo.promoId);
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
+  }
+
+  void _showEditDialog(BuildContext context, PromoModel promo) {
+    showDialog(
+      context: context,
+      builder: (context) => EditPromoModal(promo: promo),
+    );
+  }
+
+  void _showAddDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AddPromoModal(),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.red;
+      case 'expired':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -52,7 +92,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         children: [
           // Title
           const Text(
-            'Reviews',
+            'Promo Codes',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -60,11 +100,40 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 32),
-          // Search Bar
+          const SizedBox(height: 24),
+          // Header with Add Promo Code button and Search
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Left side: Add Promo Code Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  _showAddDialog(context);
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text(
+                  'ADD PROMO CODE',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[50],
+                  foregroundColor: Colors.purple[700],
+                  side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+              // Search Bar (right side)
               SizedBox(
                 width: 320,
                 child: TextField(
@@ -93,7 +162,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     fillColor: Colors.white,
                   ),
                   onChanged: (value) {
-                    Provider.of<ReviewsProvider>(context, listen: false)
+                    Provider.of<PromoProvider>(context, listen: false)
                         .search(value.isEmpty ? null : value);
                   },
                 ),
@@ -103,7 +172,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           const SizedBox(height: 24),
           // Data Table
           Expanded(
-            child: Consumer<ReviewsProvider>(
+            child: Consumer<PromoProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -121,7 +190,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Error loading reviews',
+                          'Error loading promo codes',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -170,12 +239,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                           headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
                           columnSpacing: 32,
                           horizontalMargin: 24,
-                        columns: [
+                              columns: [
                           DataColumn(
                             label: Padding(
                               padding: const EdgeInsets.only(left: 8.0),
                               child: Text(
-                                'User ID',
+                                'Promo ID',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
@@ -189,7 +258,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'User Name',
+                                  'Code',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
@@ -200,7 +269,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 IconButton(
                                   icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
                                   onPressed: () {
-                                    provider.sort('userName');
+                                    Provider.of<PromoProvider>(context, listen: false).sort('code');
                                   },
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -211,16 +280,62 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ],
                             ),
                           ),
+                          const DataColumn(
+                            label: Text(
+                              'Description',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Color(0xFF424242),
+                              ),
+                            ),
+                          ),
                           DataColumn(
-                            label: Consumer<ReviewsProvider>(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Discount',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                  onPressed: () {
+                                    Provider.of<PromoProvider>(context, listen: false).sort('discount');
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const DataColumn(
+                            label: Text(
+                              'Valid Period',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Color(0xFF424242),
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Consumer<PromoProvider>(
                               builder: (context, provider, _) {
-                                final driverNames = provider.availableDriverNames;
-                                final currentFilter = _selectedDriverFilter ?? 'All';
+                                final currentFilter = _selectedStatusFilter ?? 'All';
                                 return Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Driver Name',
+                                      'Status',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
@@ -254,20 +369,38 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                         minHeight: 24,
                                       ),
                                       onSelected: (value) {
-                                        setState(() {
-                                          _selectedDriverFilter = value;
-                                        });
-                                        provider.setDriverNameFilter(value);
+                                        bool? isActive;
+                                        if (value == 'All') {
+                                          setState(() {
+                                            _selectedStatusFilter = null;
+                                          });
+                                          isActive = null;
+                                        } else if (value == 'Active') {
+                                          setState(() {
+                                            _selectedStatusFilter = 'Active';
+                                          });
+                                          isActive = true;
+                                        } else {
+                                          setState(() {
+                                            _selectedStatusFilter = 'Inactive';
+                                          });
+                                          isActive = false;
+                                        }
+                                        provider.setStatusFilter(isActive);
                                       },
                                       itemBuilder: (context) => [
                                         const PopupMenuItem(
                                           value: 'All',
-                                          child: Text('All Drivers'),
+                                          child: Text('All'),
                                         ),
-                                        ...driverNames.map((driverName) => PopupMenuItem(
-                                          value: driverName,
-                                          child: Text(driverName),
-                                        )),
+                                        const PopupMenuItem(
+                                          value: 'Active',
+                                          child: Text('Active'),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'Inactive',
+                                          child: Text('Inactive'),
+                                        ),
                                       ],
                                     ),
                                   ],
@@ -275,48 +408,14 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               },
                             ),
                           ),
-                          DataColumn(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Description',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
-                                  onPressed: () {
-                                    provider.sort('description');
-                                  },
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 24,
-                                    minHeight: 24,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                           const DataColumn(
                             label: Padding(
                               padding: EdgeInsets.only(right: 8.0),
-                              child: Text(
-                                'Rating',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Color(0xFF424242),
-                                ),
-                              ),
+                              child: Text(''),
                             ),
                           ),
                         ],
-                        rows: provider.currentPageReviews.isEmpty
+                        rows: provider.currentPagePromoCodes.isEmpty
                             ? [
                                 DataRow(
                                   cells: [
@@ -329,13 +428,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Icon(
-                                                Icons.star_outline,
+                                                Icons.local_offer_outlined,
                                                 size: 32,
                                                 color: Colors.grey[400],
                                               ),
                                               const SizedBox(width: 12),
                                               Text(
-                                                'No reviews found',
+                                                'No promo codes found',
                                                 style: TextStyle(
                                                   fontSize: 16,
                                                   color: Colors.grey[600],
@@ -350,17 +449,19 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
+                                    const DataCell(SizedBox.shrink()),
+                                    const DataCell(SizedBox.shrink()),
                                   ],
                                 ),
                               ]
-                            : provider.currentPageReviews.map((review) {
+                            : provider.currentPagePromoCodes.map((promo) {
                           return DataRow(
                             cells: [
                               DataCell(
                                 Padding(
                                   padding: const EdgeInsets.only(left: 8.0),
                                   child: Text(
-                                    review.userId.toString(),
+                                    promo.promoId.toString(),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF424242),
@@ -370,7 +471,17 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  review.userName,
+                                  promo.code,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF424242),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  promo.description ?? '-',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -379,7 +490,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  review.driverName,
+                                  promo.discountDisplay,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -388,17 +499,69 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  review.description ?? 'No description',
+                                  promo.periodDisplay,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
                                   ),
+                                ),
+                              ),
+                              DataCell(
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _getStatusColor(promo.status),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      promo.status,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF424242),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               DataCell(
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8.0),
-                                  child: _buildStarRating(review.rating),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        color: Colors.blue[700],
+                                        padding: const EdgeInsets.all(8),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 40,
+                                          minHeight: 40,
+                                        ),
+                                        onPressed: () {
+                                          _showEditDialog(context, promo);
+                                        },
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, size: 20),
+                                        color: Colors.red[700],
+                                        padding: const EdgeInsets.all(8),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 40,
+                                          minHeight: 40,
+                                        ),
+                                        onPressed: () {
+                                          _showDeleteDialog(context, promo);
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -415,7 +578,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           const SizedBox(height: 16),
           // Pagination
           Center(
-            child: Consumer<ReviewsProvider>(
+            child: Consumer<PromoProvider>(
               builder: (context, provider, _) {
                 if (provider.totalPages <= 1) {
                   return const SizedBox.shrink();
@@ -429,6 +592,16 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       onPressed: provider.currentPage > 1
                           ? () => provider.previousPage()
                           : null,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'Page ${provider.currentPage} of ${provider.totalPages}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF424242),
+                        ),
+                      ),
                     ),
                     ...List.generate(
                       provider.totalPages > 4 ? 4 : provider.totalPages,

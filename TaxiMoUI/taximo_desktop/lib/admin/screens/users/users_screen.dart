@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/drivers_provider.dart';
-import '../../models/driver_model.dart';
-import '../../widgets/driver_avatar.dart';
-import 'widgets/add_driver_modal.dart';
-import 'widgets/edit_driver_modal.dart';
+import '../../providers/users_provider.dart';
+import '../../models/user_model.dart';
+import 'widgets/add_user_modal.dart';
+import 'widgets/edit_user_modal.dart';
 
-class DriversScreen extends StatefulWidget {
-  const DriversScreen({super.key});
+class UsersScreen extends StatefulWidget {
+  const UsersScreen({super.key});
 
   @override
-  State<DriversScreen> createState() => _DriversScreenState();
+  State<UsersScreen> createState() => _UsersScreenState();
 }
 
-class _DriversScreenState extends State<DriversScreen> {
+class _UsersScreenState extends State<UsersScreen> {
   final _searchController = TextEditingController();
+  String? _selectedStatusFilter; // null = All, true = Active, false = Inactive
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DriversProvider>(context, listen: false).loadDrivers();
+      Provider.of<UsersProvider>(context, listen: false).loadUsers();
     });
   }
 
@@ -30,12 +30,20 @@ class _DriversScreenState extends State<DriversScreen> {
     super.dispose();
   }
 
-  void _showDeleteDialog(BuildContext context, DriverModel driver) {
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$month/$day/$year';
+  }
+
+  void _showDeleteDialog(BuildContext context, UserModel user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Driver'),
-        content: Text('Are you sure you want to delete ${driver.fullName}?'),
+        title: const Text('Delete User'),
+        content: Text('Are you sure you want to delete ${user.fullName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -43,22 +51,22 @@ class _DriversScreenState extends State<DriversScreen> {
           ),
           TextButton(
             onPressed: () async {
-              print('Delete button clicked for driver ID: ${driver.driverId}'); // Debug log
+              print('Delete button clicked for user ID: ${user.userId}'); // Debug log
               try {
-                if (driver.driverId <= 0) {
-                  throw Exception('Invalid driver ID: ${driver.driverId}');
+                if (user.userId <= 0) {
+                  throw Exception('Invalid user ID: ${user.userId}');
                 }
                 
-                await Provider.of<DriversProvider>(context, listen: false)
-                    .deleteDriver(driver.driverId);
+                await Provider.of<UsersProvider>(context, listen: false)
+                    .deleteUser(user.userId);
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Driver deleted successfully')),
+                    const SnackBar(content: Text('User deleted successfully')),
                   );
                 }
               } catch (e) {
-                print('Delete driver error: $e'); // Debug log
+                print('Delete user error: $e'); // Debug log
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -75,19 +83,20 @@ class _DriversScreenState extends State<DriversScreen> {
     );
   }
 
-  void _showAddDriverModal(BuildContext context) {
+  void _showAddUserModal(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const AddDriverModal(),
+      builder: (context) => const AddUserModal(),
     );
   }
 
-  void _showEditDriverModal(BuildContext context, DriverModel driver) {
+  void _showEditUserModal(BuildContext context, UserModel user) {
     showDialog(
       context: context,
-      builder: (context) => EditDriverModal(driver: driver),
+      builder: (context) => EditUserModal(user: user),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +108,7 @@ class _DriversScreenState extends State<DriversScreen> {
         children: [
           // Title
           const Text(
-            'Drivers',
+            'Users',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -108,16 +117,16 @@ class _DriversScreenState extends State<DriversScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Header with Add Driver button and Search
+          // Header with Add User button and Search
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left side: Add Driver Button
+              // Left side: Add User Button
               ElevatedButton.icon(
-                onPressed: () => _showAddDriverModal(context),
+                onPressed: () => _showAddUserModal(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text(
-                  'ADD DRIVERS',
+                  'ADD USER',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -167,7 +176,7 @@ class _DriversScreenState extends State<DriversScreen> {
                     fillColor: Colors.white,
                   ),
                   onChanged: (value) {
-                    Provider.of<DriversProvider>(context, listen: false)
+                    Provider.of<UsersProvider>(context, listen: false)
                         .setSearchQuery(value.isEmpty ? null : value);
                   },
                 ),
@@ -177,7 +186,7 @@ class _DriversScreenState extends State<DriversScreen> {
           const SizedBox(height: 24),
           // Data Table
           Expanded(
-            child: Consumer<DriversProvider>(
+            child: Consumer<UsersProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -195,7 +204,7 @@ class _DriversScreenState extends State<DriversScreen> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Error loading drivers',
+                          'Error loading users',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -213,7 +222,7 @@ class _DriversScreenState extends State<DriversScreen> {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: () => provider.loadDrivers(),
+                          onPressed: () => provider.loadUsers(),
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retry'),
                           style: ElevatedButton.styleFrom(
@@ -221,29 +230,6 @@ class _DriversScreenState extends State<DriversScreen> {
                               horizontal: 24,
                               vertical: 12,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (provider.currentPageDrivers.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.drive_eta_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No drivers found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
                           ),
                         ),
                       ],
@@ -272,7 +258,7 @@ class _DriversScreenState extends State<DriversScreen> {
                           label: Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: Text(
-                              'Driver ID',
+                              'User ID',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -286,22 +272,7 @@ class _DriversScreenState extends State<DriversScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Photo',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        DataColumn(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Driver Name',
+                                'User Name',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
@@ -310,7 +281,7 @@ class _DriversScreenState extends State<DriversScreen> {
                               ),
                               const SizedBox(width: 4),
                               IconButton(
-                                icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                icon: Icon(Icons.sort, size: 16, color: Colors.grey[600]),
                                 onPressed: () {
                                   provider.sort('name');
                                 },
@@ -323,14 +294,85 @@ class _DriversScreenState extends State<DriversScreen> {
                             ],
                           ),
                         ),
-                        const DataColumn(
-                          label: Text(
-                            'License Number',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: Color(0xFF424242),
-                            ),
+                        DataColumn(
+                          label: Consumer<UsersProvider>(
+                            builder: (context, provider, _) {
+                              final currentFilter = _selectedStatusFilter ?? 'All';
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Status',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  PopupMenuButton<String>(
+                                    icon: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Icon(Icons.filter_alt, size: 16, color: currentFilter != 'All' ? Colors.blue : Colors.grey[600]),
+                                        if (currentFilter != 'All')
+                                          Positioned(
+                                            right: -4,
+                                            top: -4,
+                                            child: Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.blue,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 24,
+                                      minHeight: 24,
+                                    ),
+                                    onSelected: (value) {
+                                      bool? isActive;
+                                      if (value == 'All') {
+                                        setState(() {
+                                          _selectedStatusFilter = null;
+                                        });
+                                        isActive = null;
+                                      } else if (value == 'Active') {
+                                        setState(() {
+                                          _selectedStatusFilter = 'Active';
+                                        });
+                                        isActive = true;
+                                      } else {
+                                        setState(() {
+                                          _selectedStatusFilter = 'Inactive';
+                                        });
+                                        isActive = false;
+                                      }
+                                      provider.setStatusFilter(isActive);
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'All',
+                                        child: Text('All'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Active',
+                                        child: Text('Active'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Inactive',
+                                        child: Text('Inactive'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         DataColumn(
@@ -347,7 +389,7 @@ class _DriversScreenState extends State<DriversScreen> {
                               ),
                               const SizedBox(width: 4),
                               IconButton(
-                                icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                icon: Icon(Icons.sort, size: 16, color: Colors.grey[600]),
                                 onPressed: () {
                                   provider.sort('email');
                                 },
@@ -362,7 +404,7 @@ class _DriversScreenState extends State<DriversScreen> {
                         ),
                         const DataColumn(
                           label: Text(
-                            'Phone',
+                            'Date of Birth',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
@@ -384,14 +426,51 @@ class _DriversScreenState extends State<DriversScreen> {
                           ),
                         ),
                       ],
-                      rows: provider.currentPageDrivers.map((driver) {
+                      rows: provider.currentPageUsers.isEmpty
+                          ? [
+                              DataRow(
+                                cells: [
+                                  DataCell(Container()),
+                                  DataCell(
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 32.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.people_outline,
+                                              size: 32,
+                                              color: Colors.grey[400],
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              'No users found',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                  DataCell(Container()),
+                                ],
+                              ),
+                            ]
+                          : provider.currentPageUsers.map((user) {
                         return DataRow(
                           cells: [
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.only(left: 8.0),
                                 child: Text(
-                                  driver.driverId.toString(),
+                                  user.userId.toString(),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -400,15 +479,42 @@ class _DriversScreenState extends State<DriversScreen> {
                               ),
                             ),
                             DataCell(
-                              DriverAvatar(
-                                photoUrl: driver.photoUrl,
-                                firstName: driver.firstName,
-                                radius: 20,
+                              Text(
+                                user.fullName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: user.isActive
+                                          ? Colors.green
+                                          : Colors.red,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    user.status,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF424242),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             DataCell(
                               Text(
-                                driver.fullName,
+                                user.email,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF424242),
@@ -417,25 +523,7 @@ class _DriversScreenState extends State<DriversScreen> {
                             ),
                             DataCell(
                               Text(
-                                driver.licenseNumber,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF424242),
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                driver.email,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF424242),
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                driver.phone ?? '',
+                                _formatDate(user.dateOfBirth),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF424242),
@@ -457,7 +545,7 @@ class _DriversScreenState extends State<DriversScreen> {
                                         minHeight: 40,
                                       ),
                                       onPressed: () {
-                                        _showEditDriverModal(context, driver);
+                                        _showEditUserModal(context, user);
                                       },
                                     ),
                                     const SizedBox(width: 4),
@@ -470,7 +558,7 @@ class _DriversScreenState extends State<DriversScreen> {
                                         minHeight: 40,
                                       ),
                                       onPressed: () {
-                                        _showDeleteDialog(context, driver);
+                                        _showDeleteDialog(context, user);
                                       },
                                     ),
                                   ],
@@ -491,7 +579,7 @@ class _DriversScreenState extends State<DriversScreen> {
           const SizedBox(height: 16),
           // Pagination
           Center(
-            child: Consumer<DriversProvider>(
+            child: Consumer<UsersProvider>(
               builder: (context, provider, _) {
                 if (provider.totalPages <= 1) {
                   return const SizedBox.shrink();
@@ -505,6 +593,16 @@ class _DriversScreenState extends State<DriversScreen> {
                       onPressed: provider.currentPage > 1
                           ? () => provider.previousPage()
                           : null,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'Page ${provider.currentPage} of ${provider.totalPages}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF424242),
+                        ),
+                      ),
                     ),
                     ...List.generate(
                       provider.totalPages > 4 ? 4 : provider.totalPages,

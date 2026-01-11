@@ -28,10 +28,26 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET ALL USERS
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] string? search = null, [FromQuery] bool? isActive = null)
+        public async Task<ActionResult<object>> GetUsers(
+            [FromQuery] int page = 1, 
+            [FromQuery] int limit = 7, 
+            [FromQuery] string? search = null, 
+            [FromQuery] bool? isActive = null)
         {
-            var users = await _userService.GetAllAsync(search, isActive);
-            return Ok(_mapper.Map<List<UserDto>>(users));
+            var pagedResult = await _userService.GetAllPagedAsync(page, limit, search, isActive);
+            var userDtos = _mapper.Map<List<UserDto>>(pagedResult.Data);
+            
+            return Ok(new
+            {
+                data = userDtos,
+                pagination = new
+                {
+                    currentPage = pagedResult.Pagination.CurrentPage,
+                    totalPages = pagedResult.Pagination.TotalPages,
+                    totalItems = pagedResult.Pagination.TotalItems,
+                    limit = pagedResult.Pagination.Limit
+                }
+            });
         }
 
         // GET USER BY ID

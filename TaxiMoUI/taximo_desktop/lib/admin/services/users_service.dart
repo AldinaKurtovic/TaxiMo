@@ -15,8 +15,16 @@ class UsersService {
     };
   }
 
-  Future<List<dynamic>> getUsers({String? search, bool? isActive}) async {
-    final queryParams = <String, String>{};
+  Future<Map<String, dynamic>> getUsers({
+    int page = 1,
+    int limit = 7,
+    String? search,
+    bool? isActive,
+  }) async {
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
     if (search != null && search.isNotEmpty) {
       queryParams['search'] = search;
     }
@@ -28,7 +36,7 @@ class UsersService {
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
+      return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to load users: ${response.statusCode}');
     }

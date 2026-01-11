@@ -36,9 +36,42 @@ namespace TaxiMoWebAPI.Controllers
         {
             try
             {
-                var entities = await _reviewService.GetAllAsync();
-                var responses = Mapper.Map<List<ReviewResponse>>(entities);
-                return Ok(responses);
+                // Parse pagination parameters from query string
+                int page = 1;
+                int limit = 7;
+                if (Request.Query.ContainsKey("page") && int.TryParse(Request.Query["page"].ToString(), out int pageValue))
+                {
+                    page = pageValue;
+                }
+                if (Request.Query.ContainsKey("limit") && int.TryParse(Request.Query["limit"].ToString(), out int limitValue))
+                {
+                    limit = limitValue;
+                }
+
+                // Parse minRating from query if provided
+                decimal? minRating = null;
+                if (Request.Query.ContainsKey("minRating"))
+                {
+                    if (decimal.TryParse(Request.Query["minRating"].ToString(), out decimal minRatingValue))
+                    {
+                        minRating = minRatingValue;
+                    }
+                }
+
+                var pagedResult = await _reviewService.GetAllPagedAsync(page, limit, search, minRating);
+                var responses = Mapper.Map<List<ReviewResponse>>(pagedResult.Data);
+                
+                return Ok(new
+                {
+                    data = responses,
+                    pagination = new
+                    {
+                        currentPage = pagedResult.Pagination.CurrentPage,
+                        totalPages = pagedResult.Pagination.TotalPages,
+                        totalItems = pagedResult.Pagination.TotalItems,
+                        limit = pagedResult.Pagination.Limit
+                    }
+                });
             }
             catch (Exception ex)
             {

@@ -22,43 +22,67 @@ class UserProfileService {
       throw Exception('No authenticated user found');
     }
 
-    // Get all users and find the one matching the authenticated email or username
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/Users'),
-      headers: _headers(),
-    );
+    // Search through users page by page to find the matching user
+    // Use search parameter if backend supports it, otherwise iterate through pages
+    int page = 1;
+    const int limit = 50; // Use larger limit to reduce API calls
+    bool hasMorePages = true;
+    
+    while (hasMorePages) {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'search': authIdentifier, // Try using search parameter
+      };
+      
+      final uri = Uri.parse('$baseUrl/api/Users').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: _headers());
 
-    if (response.statusCode == 200) {
-      final decodedBody = jsonDecode(response.body);
-      if (decodedBody is! List) {
-        throw Exception('Invalid response format: expected list of users');
-      }
-      
-      final users = decodedBody as List<dynamic>;
-      
-      // Try to find user by email first, then by username
-      Map<String, dynamic>? foundUser;
-      for (var user in users) {
-        if (user is! Map<String, dynamic>) continue;
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
         
-        final userMap = user as Map<String, dynamic>;
-        final userEmail = userMap['email']?.toString();
-        final userUsername = userMap['username']?.toString();
+        // Handle paginated response format
+        final data = decodedBody['data'] as List<dynamic>?;
+        final pagination = decodedBody['pagination'] as Map<String, dynamic>?;
         
-        if (userEmail == authIdentifier || userUsername == authIdentifier) {
-          foundUser = userMap;
-          break;
+        if (data == null) {
+          throw Exception('Invalid response format: missing data field');
         }
-      }
+        
+        // Try to find user by email or username
+        Map<String, dynamic>? foundUser;
+        for (var user in data) {
+          if (user is! Map<String, dynamic>) continue;
+          
+          final userMap = user as Map<String, dynamic>;
+          final userEmail = userMap['email']?.toString();
+          final userUsername = userMap['username']?.toString();
+          
+          if (userEmail == authIdentifier || userUsername == authIdentifier) {
+            foundUser = userMap;
+            break;
+          }
+        }
 
-      if (foundUser == null) {
-        throw Exception('User not found. Please check your authentication credentials.');
-      }
+        if (foundUser != null) {
+          return foundUser;
+        }
 
-      return foundUser;
-    } else {
-      throw Exception('Failed to load user profile: ${response.statusCode}');
+        // Check if there are more pages
+        if (pagination != null) {
+          final currentPage = pagination['currentPage'] as int? ?? page;
+          final totalPages = pagination['totalPages'] as int? ?? 1;
+          hasMorePages = currentPage < totalPages;
+          page = currentPage + 1;
+        } else {
+          hasMorePages = false;
+        }
+      } else {
+        throw Exception('Failed to load user profile: ${response.statusCode}');
+      }
     }
+
+    throw Exception('User not found. Please check your authentication credentials.');
   }
 
   /// Update user profile

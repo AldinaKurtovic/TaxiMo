@@ -24,12 +24,22 @@ namespace TaxiMoWebAPI.Controllers
         // Override GetAll to use custom service method with search, isActive, and sorting parameters
         // Accept base class signature but also support additional query parameters
         [HttpGet]
-        public override async Task<ActionResult<IEnumerable<PromoCodeDto>>> GetAll(
-            [FromQuery] string? search = null, 
-            [FromQuery] string? status = null)
+        public override async Task<ActionResult<IEnumerable<PromoCodeDto>>> GetAll([FromQuery] string? search = null, [FromQuery] string? status = null)
         {
             try
             {
+                // Parse pagination parameters from query string
+                int page = 1;
+                int limit = 7;
+                if (Request.Query.ContainsKey("page") && int.TryParse(Request.Query["page"].ToString(), out int pageValue))
+                {
+                    page = pageValue;
+                }
+                if (Request.Query.ContainsKey("limit") && int.TryParse(Request.Query["limit"].ToString(), out int limitValue))
+                {
+                    limit = limitValue;
+                }
+
                 // Convert status string to bool? for service method
                 bool? isActive = null;
                 if (!string.IsNullOrWhiteSpace(status))
@@ -59,9 +69,20 @@ namespace TaxiMoWebAPI.Controllers
                 string? sortBy = Request.Query.ContainsKey("sortBy") ? Request.Query["sortBy"].ToString() : null;
                 string? sortOrder = Request.Query.ContainsKey("sortOrder") ? Request.Query["sortOrder"].ToString() : null;
 
-                var entities = await _promoCodeService.GetAllAsync(search, isActive, sortBy, sortOrder);
-                var dtos = Mapper.Map<List<PromoCodeDto>>(entities);
-                return Ok(dtos);
+                var pagedResult = await _promoCodeService.GetAllPagedAsync(page, limit, search, isActive, sortBy, sortOrder);
+                var dtos = Mapper.Map<List<PromoCodeDto>>(pagedResult.Data);
+                
+                return Ok(new
+                {
+                    data = dtos,
+                    pagination = new
+                    {
+                        currentPage = pagedResult.Pagination.CurrentPage,
+                        totalPages = pagedResult.Pagination.TotalPages,
+                        totalItems = pagedResult.Pagination.TotalItems,
+                        limit = pagedResult.Pagination.Limit
+                    }
+                });
             }
             catch (Exception ex)
             {

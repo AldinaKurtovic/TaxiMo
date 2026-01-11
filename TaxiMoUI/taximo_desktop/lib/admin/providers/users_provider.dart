@@ -5,24 +5,14 @@ import '../models/user_model.dart';
 class UsersProvider extends ChangeNotifier {
   final UsersService _usersService = UsersService();
   List<UserModel> _users = [];
-  List<UserModel> _filteredUsers = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Pagination
+  // Pagination (backend-driven)
   int _currentPage = 1;
-  final int _itemsPerPage = 10;
-  int get totalPages => (_filteredUsers.length / _itemsPerPage).ceil();
-  int get currentPage => _currentPage;
-  List<UserModel> get currentPageUsers {
-    if (_filteredUsers.isEmpty) return [];
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _filteredUsers.sublist(
-      startIndex,
-      endIndex > _filteredUsers.length ? _filteredUsers.length : endIndex,
-    );
-  }
+  final int _itemsPerPage = 7;
+  int _totalPages = 1;
+  int _totalItems = 0;
 
   // Sorting
   String? _sortColumn;
@@ -33,35 +23,54 @@ class UsersProvider extends ChangeNotifier {
   bool? _statusFilter;
 
   List<UserModel> get users => _users;
-  List<UserModel> get filteredUsers => _filteredUsers;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  int get totalUsers => _filteredUsers.length;
+  int get totalUsers => _totalItems;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  List<UserModel> get currentPageUsers => _users; // Backend returns only current page data
 
-  Future<void> loadUsers({String? search, bool? isActive}) async {
+  Future<void> loadUsers({
+    int? page,
+    String? search,
+    bool? isActive,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Use backend filtering with search and status
-      final usersList = await _usersService.getUsers(
+      // Use page parameter or current page, reset to 1 if filters change
+      final pageToLoad = page ?? _currentPage;
+      
+      // Get paginated data from backend
+      final response = await _usersService.getUsers(
+        page: pageToLoad,
+        limit: _itemsPerPage,
         search: search ?? _searchQuery,
         isActive: isActive ?? _statusFilter,
       );
-      _users = usersList
+      
+      // Extract data and pagination info
+      final data = response['data'] as List<dynamic>;
+      final pagination = response['pagination'] as Map<String, dynamic>;
+      
+      _users = data
           .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
           .toList();
+      
+      // Update pagination info
+      _currentPage = pagination['currentPage'] as int;
+      _totalPages = pagination['totalPages'] as int;
+      _totalItems = pagination['totalItems'] as int;
       
       // Store current filter values
       if (search != null) _searchQuery = search;
       if (isActive != null) _statusFilter = isActive;
       
-      // Apply only client-side sorting (backend handles search and status)
-      _filteredUsers = List<UserModel>.from(_users);
-      
+      // Apply client-side sorting if needed
       if (_sortColumn != null) {
-        _filteredUsers.sort((a, b) {
+        _users.sort((a, b) {
           int comparison = 0;
           switch (_sortColumn) {
             case 'name':
@@ -80,17 +89,12 @@ class UsersProvider extends ChangeNotifier {
         });
       }
 
-      // Reset to first page if current page is out of bounds
-      if (_currentPage > totalPages && totalPages > 0) {
-        _currentPage = 1;
-      }
-      
-      _currentPage = 1;
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
       _users = [];
-      _filteredUsers = [];
+      _totalPages = 1;
+      _totalItems = 0;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -99,14 +103,14 @@ class UsersProvider extends ChangeNotifier {
 
   void setSearchQuery(String? query) {
     _searchQuery = query;
-    // Reload from backend with new search
-    loadUsers(search: query, isActive: _statusFilter);
+    // Reset to page 1 when search changes
+    loadUsers(search: query, isActive: _statusFilter, page: 1);
   }
 
   void setStatusFilter(bool? isActive) {
     _statusFilter = isActive;
-    // Reload from backend with new status filter
-    loadUsers(search: _searchQuery, isActive: isActive);
+    // Reset to page 1 when filter changes
+    loadUsers(search: _searchQuery, isActive: isActive, page: 1);
   }
 
   void sort(String column) {
@@ -120,9 +124,9 @@ class UsersProvider extends ChangeNotifier {
       _sortAscending = true;
     }
     
-    // Apply client-side sorting only
+    // Apply client-side sorting only (backend data is already paginated)
     if (_sortColumn != null) {
-      _filteredUsers.sort((a, b) {
+      _users.sort((a, b) {
         int comparison = 0;
         switch (_sortColumn) {
           case 'name':
@@ -145,23 +149,20 @@ class UsersProvider extends ChangeNotifier {
   }
 
   void goToPage(int page) {
-    if (page >= 1 && page <= totalPages) {
-      _currentPage = page;
-      notifyListeners();
+    if (page >= 1 && page <= _totalPages) {
+      loadUsers(page: page, search: _searchQuery, isActive: _statusFilter);
     }
   }
 
   void nextPage() {
-    if (_currentPage < totalPages) {
-      _currentPage++;
-      notifyListeners();
+    if (_currentPage < _totalPages) {
+      loadUsers(page: _currentPage + 1, search: _searchQuery, isActive: _statusFilter);
     }
   }
 
   void previousPage() {
     if (_currentPage > 1) {
-      _currentPage--;
-      notifyListeners();
+      loadUsers(page: _currentPage - 1, search: _searchQuery, isActive: _statusFilter);
     }
   }
 
@@ -172,7 +173,8 @@ class UsersProvider extends ChangeNotifier {
 
     try {
       await _usersService.createUser(userData);
-      await loadUsers(search: _searchQuery, isActive: _statusFilter);
+      // Reload current page after create
+      await loadUsers(page: _currentPage, search: _searchQuery, isActive: _statusFilter);
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -188,7 +190,8 @@ class UsersProvider extends ChangeNotifier {
 
     try {
       await _usersService.updateUser(id, userData);
-      await loadUsers(search: _searchQuery, isActive: _statusFilter);
+      // Reload current page after update
+      await loadUsers(page: _currentPage, search: _searchQuery, isActive: _statusFilter);
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -204,7 +207,12 @@ class UsersProvider extends ChangeNotifier {
 
     try {
       await _usersService.deleteUser(id);
-      await loadUsers(search: _searchQuery, isActive: _statusFilter);
+      // Reload current page after delete, or go to previous page if current page is empty
+      var pageToLoad = _currentPage;
+      if (_users.length <= 1 && _currentPage > 1) {
+        pageToLoad = _currentPage - 1;
+      }
+      await loadUsers(page: pageToLoad, search: _searchQuery, isActive: _statusFilter);
     } catch (e) {
       _errorMessage = e.toString();
     } finally {

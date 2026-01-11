@@ -7,6 +7,7 @@ namespace TaxiMo.Services.Interfaces
     public interface IUserService
     {
         Task<List<User>> GetAllAsync(string? search = null, bool? isActive = null);
+        Task<PagedResponse<User>> GetAllPagedAsync(int page = 1, int limit = 7, string? search = null, bool? isActive = null);
         Task<User?> GetByIdAsync(int id);
         Task<User> CreateAsync(User user);
         Task<UserResponse> CreateAsync(UserCreateDto dto);

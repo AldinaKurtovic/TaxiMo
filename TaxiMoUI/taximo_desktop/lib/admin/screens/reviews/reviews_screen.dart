@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/promo_provider.dart';
-import '../../models/promo_model.dart';
-import 'widgets/add_promo_modal.dart';
-import 'widgets/edit_promo_modal.dart';
+import '../../providers/reviews_provider.dart';
+import '../../models/review_model.dart';
 
-class PromoCodesScreen extends StatefulWidget {
-  const PromoCodesScreen({super.key});
+class ReviewsScreen extends StatefulWidget {
+  const ReviewsScreen({super.key});
 
   @override
-  State<PromoCodesScreen> createState() => _PromoCodesScreenState();
+  State<ReviewsScreen> createState() => _ReviewsScreenState();
 }
 
-class _PromoCodesScreenState extends State<PromoCodesScreen> {
+class _ReviewsScreenState extends State<ReviewsScreen> {
   final _searchController = TextEditingController();
-  String? _selectedStatusFilter; // null = All, true = Active, false = Inactive
+  String? _selectedDriverFilter;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<PromoProvider>(context, listen: false).fetchAll();
+      Provider.of<ReviewsProvider>(context, listen: false).fetchAll();
     });
   }
 
@@ -30,56 +28,18 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
     super.dispose();
   }
 
-  void _showDeleteDialog(BuildContext context, PromoModel promo) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Promo Code'),
-        content: Text('Are you sure you want to delete promo code "${promo.code}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Provider.of<PromoProvider>(context, listen: false)
-                  .delete(promo.promoId);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  Widget _buildStarRating(double rating) {
+    final ratingInt = rating.round().clamp(0, 5);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        return Icon(
+          index < ratingInt ? Icons.star : Icons.star_border,
+          size: 18,
+          color: index < ratingInt ? Colors.amber : Colors.grey[400],
+        );
+      }),
     );
-  }
-
-  void _showEditDialog(BuildContext context, PromoModel promo) {
-    showDialog(
-      context: context,
-      builder: (context) => EditPromoModal(promo: promo),
-    );
-  }
-
-  void _showAddDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const AddPromoModal(),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return Colors.green;
-      case 'inactive':
-        return Colors.red;
-      case 'expired':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
   }
 
   @override
@@ -92,7 +52,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
         children: [
           // Title
           const Text(
-            'Promo Codes',
+            'Reviews',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -100,40 +60,11 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 24),
-          // Header with Add Promo Code button and Search
+          const SizedBox(height: 32),
+          // Search Bar
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Left side: Add Promo Code Button
-              ElevatedButton.icon(
-                onPressed: () {
-                  _showAddDialog(context);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text(
-                  'ADD PROMO CODE',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple[50],
-                  foregroundColor: Colors.purple[700],
-                  side: BorderSide(color: Colors.purple.shade300!, width: 1.5),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-              // Search Bar (right side)
               SizedBox(
                 width: 320,
                 child: TextField(
@@ -162,7 +93,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                     fillColor: Colors.white,
                   ),
                   onChanged: (value) {
-                    Provider.of<PromoProvider>(context, listen: false)
+                    Provider.of<ReviewsProvider>(context, listen: false)
                         .search(value.isEmpty ? null : value);
                   },
                 ),
@@ -172,7 +103,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
           const SizedBox(height: 24),
           // Data Table
           Expanded(
-            child: Consumer<PromoProvider>(
+            child: Consumer<ReviewsProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -190,7 +121,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Error loading promo codes',
+                          'Error loading reviews',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -239,12 +170,12 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                           headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
                           columnSpacing: 32,
                           horizontalMargin: 24,
-                              columns: [
+                        columns: [
                           DataColumn(
                             label: Padding(
                               padding: const EdgeInsets.only(left: 8.0),
                               child: Text(
-                                'Promo ID',
+                                'User ID',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
@@ -258,7 +189,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Code',
+                                  'User Name',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
@@ -269,7 +200,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                 IconButton(
                                   icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
                                   onPressed: () {
-                                    Provider.of<PromoProvider>(context, listen: false).sort('code');
+                                    provider.sort('userName');
                                   },
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -280,62 +211,16 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ],
                             ),
                           ),
-                          const DataColumn(
-                            label: Text(
-                              'Description',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Color(0xFF424242),
-                              ),
-                            ),
-                          ),
                           DataColumn(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Discount',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
-                                  onPressed: () {
-                                    Provider.of<PromoProvider>(context, listen: false).sort('discount');
-                                  },
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 24,
-                                    minHeight: 24,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const DataColumn(
-                            label: Text(
-                              'Valid Period',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Color(0xFF424242),
-                              ),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Consumer<PromoProvider>(
+                            label: Consumer<ReviewsProvider>(
                               builder: (context, provider, _) {
-                                final currentFilter = _selectedStatusFilter ?? 'All';
+                                final driverNames = provider.availableDriverNames;
+                                final currentFilter = _selectedDriverFilter ?? 'All';
                                 return Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Status',
+                                      'Driver Name',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
@@ -369,38 +254,20 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                         minHeight: 24,
                                       ),
                                       onSelected: (value) {
-                                        bool? isActive;
-                                        if (value == 'All') {
-                                          setState(() {
-                                            _selectedStatusFilter = null;
-                                          });
-                                          isActive = null;
-                                        } else if (value == 'Active') {
-                                          setState(() {
-                                            _selectedStatusFilter = 'Active';
-                                          });
-                                          isActive = true;
-                                        } else {
-                                          setState(() {
-                                            _selectedStatusFilter = 'Inactive';
-                                          });
-                                          isActive = false;
-                                        }
-                                        provider.setStatusFilter(isActive);
+                                        setState(() {
+                                          _selectedDriverFilter = value;
+                                        });
+                                        provider.setDriverNameFilter(value);
                                       },
                                       itemBuilder: (context) => [
                                         const PopupMenuItem(
                                           value: 'All',
-                                          child: Text('All'),
+                                          child: Text('All Drivers'),
                                         ),
-                                        const PopupMenuItem(
-                                          value: 'Active',
-                                          child: Text('Active'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Inactive',
-                                          child: Text('Inactive'),
-                                        ),
+                                        ...driverNames.map((driverName) => PopupMenuItem(
+                                          value: driverName,
+                                          child: Text(driverName),
+                                        )),
                                       ],
                                     ),
                                   ],
@@ -408,14 +275,48 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               },
                             ),
                           ),
+                          DataColumn(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Description',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                                  onPressed: () {
+                                    provider.sort('description');
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const DataColumn(
                             label: Padding(
                               padding: EdgeInsets.only(right: 8.0),
-                              child: Text(''),
+                              child: Text(
+                                'Rating',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
                             ),
                           ),
                         ],
-                        rows: provider.currentPagePromoCodes.isEmpty
+                        rows: provider.currentPageReviews.isEmpty
                             ? [
                                 DataRow(
                                   cells: [
@@ -428,13 +329,13 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Icon(
-                                                Icons.local_offer_outlined,
+                                                Icons.star_outline,
                                                 size: 32,
                                                 color: Colors.grey[400],
                                               ),
                                               const SizedBox(width: 12),
                                               Text(
-                                                'No promo codes found',
+                                                'No reviews found',
                                                 style: TextStyle(
                                                   fontSize: 16,
                                                   color: Colors.grey[600],
@@ -449,19 +350,17 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
                                   ],
                                 ),
                               ]
-                            : provider.currentPagePromoCodes.map((promo) {
+                            : provider.currentPageReviews.map((review) {
                           return DataRow(
                             cells: [
                               DataCell(
                                 Padding(
                                   padding: const EdgeInsets.only(left: 8.0),
                                   child: Text(
-                                    promo.promoId.toString(),
+                                    review.userId.toString(),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF424242),
@@ -471,17 +370,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  promo.code,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF424242),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  promo.description ?? '-',
+                                  review.userName,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -490,7 +379,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  promo.discountDisplay,
+                                  review.driverName,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
@@ -499,69 +388,17 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                               ),
                               DataCell(
                                 Text(
-                                  promo.periodDisplay,
+                                  review.description ?? 'No description',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Color(0xFF424242),
                                   ),
-                                ),
-                              ),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _getStatusColor(promo.status),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      promo.status,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF424242),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ),
                               DataCell(
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8.0),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        color: Colors.blue[700],
-                                        padding: const EdgeInsets.all(8),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                          minHeight: 40,
-                                        ),
-                                        onPressed: () {
-                                          _showEditDialog(context, promo);
-                                        },
-                                      ),
-                                      const SizedBox(width: 4),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 20),
-                                        color: Colors.red[700],
-                                        padding: const EdgeInsets.all(8),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                          minHeight: 40,
-                                        ),
-                                        onPressed: () {
-                                          _showDeleteDialog(context, promo);
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                                  child: _buildStarRating(review.rating),
                                 ),
                               ),
                             ],
@@ -578,7 +415,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
           const SizedBox(height: 16),
           // Pagination
           Center(
-            child: Consumer<PromoProvider>(
+            child: Consumer<ReviewsProvider>(
               builder: (context, provider, _) {
                 if (provider.totalPages <= 1) {
                   return const SizedBox.shrink();
@@ -592,6 +429,16 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                       onPressed: provider.currentPage > 1
                           ? () => provider.previousPage()
                           : null,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'Page ${provider.currentPage} of ${provider.totalPages}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF424242),
+                        ),
+                      ),
                     ),
                     ...List.generate(
                       provider.totalPages > 4 ? 4 : provider.totalPages,

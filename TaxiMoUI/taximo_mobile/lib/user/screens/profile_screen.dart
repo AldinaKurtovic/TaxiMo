@@ -23,14 +23,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Load profile data when screen opens
+    // Load profile data only if not already loaded to prevent unnecessary API calls
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
-      // Use current user from auth provider if available, otherwise load
       final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+      
+      // Use cached user from auth provider if available, only load if profile is empty
       if (authProvider.currentUser != null) {
         profileProvider.updateUserFromAuth(authProvider.currentUser!);
-      } else {
+      } else if (profileProvider.userProfile == null) {
         profileProvider.loadProfile();
       }
     });

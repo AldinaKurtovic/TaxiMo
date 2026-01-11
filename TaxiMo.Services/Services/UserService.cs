@@ -49,6 +49,64 @@ namespace TaxiMo.Services.Services
         }
 
         // =========================
+        // ======== GET ALL PAGED ==
+        // =========================
+        public async Task<PagedResponse<User>> GetAllPagedAsync(int page = 1, int limit = 7, string? search = null, bool? isActive = null)
+        {
+            // Validate parameters
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 7;
+
+            var query = _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .AsQueryable();
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+                query = query.Where(u =>
+                    u.FirstName.Contains(search) ||
+                    u.LastName.Contains(search) ||
+                    u.Email.Contains(search) ||
+                    u.Username.Contains(search));
+            }
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(u =>
+                    isActive.Value ? u.Status.ToLower() == "active"
+                                   : u.Status.ToLower() != "active");
+            }
+
+            // Get total count BEFORE pagination
+            var totalItems = await query.CountAsync();
+
+            // Calculate pagination
+            var skip = (page - 1) * limit;
+            var totalPages = (int)Math.Ceiling(totalItems / (double)limit);
+
+            // Apply pagination
+            var data = await query
+                .Skip(skip)
+                .Take(limit)
+                .ToListAsync();
+
+            return new PagedResponse<User>
+            {
+                Data = data,
+                Pagination = new PaginationInfo
+                {
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalItems = totalItems,
+                    Limit = limit
+                }
+            };
+        }
+
+        // =========================
         // ======== GET BY ID ======
         // =========================
         public async Task<User?> GetByIdAsync(int id)

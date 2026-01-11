@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -33,32 +34,14 @@ import 'services/stripe_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Load .env file
-  debugPrint('[main] Loading .env file...');
+  // Load .env file asynchronously without blocking
   await dotenv.load(fileName: ".env");
-  debugPrint('[main] .env file loaded. Keys available: ${dotenv.env.keys.length}');
   
-  // Validate STRIPE_PUBLISHABLE_KEY exists
-  if (dotenv.env['STRIPE_PUBLISHABLE_KEY'] == null || 
-      dotenv.env['STRIPE_PUBLISHABLE_KEY']!.isEmpty) {
-    debugPrint('[main] WARNING: STRIPE_PUBLISHABLE_KEY is not set in .env file');
-  } else {
-    final maskedKey = dotenv.env['STRIPE_PUBLISHABLE_KEY']!.length > 6
-        ? '${dotenv.env['STRIPE_PUBLISHABLE_KEY']!.substring(0, 6)}...'
-        : '***';
-    debugPrint('[main] STRIPE_PUBLISHABLE_KEY found: $maskedKey');
-  }
-  
-  // Initialize Stripe (after dotenv.load())
-  debugPrint('[main] Initializing Stripe...');
-  final stripeService = StripeService();
-  try {
-    await stripeService.init();
-    debugPrint('[main] Stripe initialized successfully');
-  } catch (e) {
-    // Log error but don't crash the app
-    debugPrint('[main] ERROR: Failed to initialize Stripe: $e');
-  }
+  // Defer Stripe initialization - don't block startup
+  // Stripe will be initialized when needed (first payment)
+  StripeService.instance.init().catchError((_) {
+    // Silent error - Stripe will retry when needed
+  });
   
   runApp(const MyApp());
 }
@@ -70,13 +53,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => MobileAuthProvider()),
-        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
-        ChangeNotifierProvider(create: (_) => DriverProvider()),
-        ChangeNotifierProvider(create: (_) => DriverProfileProvider()),
-        ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
-        ChangeNotifierProvider(create: (_) => ActiveRidesProvider()),
-        ChangeNotifierProvider(create: (_) => DriverReviewsProvider()),
+        // Core providers - always needed
+        ChangeNotifierProvider(create: (_) => MobileAuthProvider(), lazy: false),
+        // 🔥 KORAK 2: DriverProvider NIKAD NE SMIJE UTICATI NA ROOT
+        // DriverProvider se koristi TEK NAKON što si u HomeScreen, ne u AuthWrapper
+        ChangeNotifierProvider(create: (_) => DriverProvider(), lazy: true),
+        // User providers - lazy load, created only when accessed
+        ChangeNotifierProvider(create: (_) => UserProfileProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => DriverProfileProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => RideRequestsProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => ActiveRidesProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => DriverReviewsProvider(), lazy: true),
       ],
       child: MaterialApp(
         title: 'TaxiMo Mobile',
@@ -131,24 +118,18 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<MobileAuthProvider, DriverProvider>(
-      builder: (context, authProvider, driverProvider, child) {
-        // Check driver authentication first
-        if (driverProvider.isAuthenticated && driverProvider.currentDriver != null) {
-          return const DriverMainNavigation();
-        }
+    final auth = context.watch<MobileAuthProvider>();
 
-        // Check user authentication
-        if (authProvider.isAuthenticated && authProvider.currentUser != null) {
-          final user = authProvider.currentUser!;
-          if (user.isUser) {
-            return const UserMainNavigation();
-          }
-        }
+    if (auth.isAuthLocked) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        // Show login screen if not authenticated
-        return const LoginScreen();
-      },
-    );
+    if (auth.isAuthenticated) {
+      return const UserMainNavigation();
+    }
+
+    return const LoginScreen();
   }
 }

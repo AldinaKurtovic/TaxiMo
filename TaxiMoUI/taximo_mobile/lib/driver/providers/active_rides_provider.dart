@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint, kDebugMode;
 import '../services/driver_ride_service.dart';
 import '../models/ride_request_model.dart';
 
@@ -24,6 +24,8 @@ class ActiveRidesProvider extends ChangeNotifier {
 
   /// Load active/accepted rides for the current driver
   Future<void> loadActiveRides(int driverId) async {
+    if (_isLoading) return;
+    
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -34,7 +36,9 @@ class ActiveRidesProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _activeRides = [];
+      if (kDebugMode) {
       debugPrint('Error loading active rides: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -43,22 +47,20 @@ class ActiveRidesProvider extends ChangeNotifier {
 
   /// Start a ride (changes from Accepted to Active)
   Future<bool> startRide(int rideId) async {
+    if (_isLoading) return false;
+    
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final updatedRide = await _rideService.startRide(rideId);
-      
-      // Update the ride in the list
       final index = _activeRides.indexWhere((r) => r.rideId == rideId);
       if (index != -1) {
         _activeRides[index] = updatedRide;
       } else {
-        // If not found, add it (shouldn't happen, but handle it)
         _activeRides.add(updatedRide);
       }
-      
       _errorMessage = null;
       _isLoading = false;
       notifyListeners();
@@ -67,23 +69,24 @@ class ActiveRidesProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
+      if (kDebugMode) {
       debugPrint('Error starting ride: $e');
+      }
       return false;
     }
   }
 
   /// Complete a ride (changes from Active to Completed)
   Future<bool> completeRide(int rideId) async {
+    if (_isLoading) return false;
+    
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final updatedRide = await _rideService.completeRide(rideId);
-      
-      // Remove the completed ride from the list
+      await _rideService.completeRide(rideId);
       _activeRides.removeWhere((ride) => ride.rideId == rideId);
-      
       _errorMessage = null;
       _isLoading = false;
       notifyListeners();
@@ -92,7 +95,9 @@ class ActiveRidesProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
+      if (kDebugMode) {
       debugPrint('Error completing ride: $e');
+      }
       return false;
     }
   }

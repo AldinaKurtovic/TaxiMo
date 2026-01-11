@@ -372,11 +372,15 @@ class _RateTripScreenState extends State<RateTripScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Feedback text field
+                    // Feedback text field - Optimized to reduce IME animation issues
                     TextField(
                       controller: _feedbackController,
                       enabled: _existingReview == null,
                       maxLines: 4,
+                      enableSuggestions: true,
+                      autocorrect: true,
+                      enableInteractiveSelection: true,
+                      textInputAction: TextInputAction.newline,
                       decoration: InputDecoration(
                         hintText: 'Write your feedback',
                         hintStyle: TextStyle(color: Colors.grey[400]),

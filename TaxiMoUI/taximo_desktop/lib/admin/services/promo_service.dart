@@ -15,13 +15,18 @@ class PromoService {
     };
   }
 
-  Future<List<dynamic>> getAll({
+  Future<Map<String, dynamic>> getAll({
+    int page = 1,
+    int limit = 7,
     String? search,
     bool? isActive,
     String? sortBy,
     String? sortOrder,
   }) async {
-    final queryParams = <String, String>{};
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
     if (search != null && search.isNotEmpty) {
       queryParams['search'] = search;
     }
@@ -39,7 +44,7 @@ class PromoService {
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
+      return jsonDecode(response.body) as Map<String, dynamic>;
     } else if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception('Unauthorized: Please check your credentials');
     } else {

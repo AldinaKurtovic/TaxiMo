@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint, kDebugMode;
 import 'package:image_picker/image_picker.dart';
 import '../services/user_profile_service.dart';
 import '../services/user_photo_service.dart';
@@ -23,6 +23,9 @@ class UserProfileProvider with ChangeNotifier {
   UserModel? get userProfile => _userProfile;
 
   Future<void> loadProfile() async {
+    // Skip if already loading to prevent duplicate calls
+    if (_isLoading) return;
+    
     _isLoading = true;
     _errorMessage = null;
     _successMessage = null;
@@ -35,7 +38,9 @@ class UserProfileProvider with ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _userProfile = null;
+      if (kDebugMode) {
       debugPrint('Error loading profile: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -47,13 +52,14 @@ class UserProfileProvider with ChangeNotifier {
     required String lastName,
     String? phone,
   }) async {
+    if (_isSaving) return false;
+    
     _isSaving = true;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
 
     try {
-      // Get userId from loaded profile or fetch it
       int userId;
       if (_userProfile != null) {
         userId = _userProfile!.userId;
@@ -62,25 +68,23 @@ class UserProfileProvider with ChangeNotifier {
         userId = currentUserData['userId'] as int;
       }
 
-      // Build update data with userId and fields to update
       final updateData = <String, dynamic>{
         'userId': userId,
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
       };
       
-      // Only include phone if it's not null and not empty
       if (phone != null && phone.trim().isNotEmpty) {
         updateData['phone'] = phone.trim();
       }
 
       final data = await _profileService.updateProfile(userId, updateData);
       
-      // Safely parse the response
       if (data != null && data is Map<String, dynamic>) {
         _userProfile = UserModel.fromJson(data);
         _successMessage = 'Profile updated successfully';
         _errorMessage = null;
+        _isSaving = false;
         notifyListeners();
         return true;
       } else {
@@ -89,12 +93,12 @@ class UserProfileProvider with ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _successMessage = null;
-      notifyListeners();
-      debugPrint('Error updating profile: $e');
-      return false;
-    } finally {
       _isSaving = false;
       notifyListeners();
+      if (kDebugMode) {
+        debugPrint('Error updating profile: $e');
+      }
+      return false;
     }
   }
 
@@ -103,13 +107,14 @@ class UserProfileProvider with ChangeNotifier {
     required String newPassword,
     required String confirmPassword,
   }) async {
+    if (_isChangingPassword) return false;
+    
     _isChangingPassword = true;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
 
     try {
-      // Get userId from loaded profile or fetch it
       int userId;
       if (_userProfile != null) {
         userId = _userProfile!.userId;
@@ -125,6 +130,7 @@ class UserProfileProvider with ChangeNotifier {
         confirmPassword,
       );
 
+      _isChangingPassword = false;
       if (success) {
         _successMessage = 'Password changed successfully';
         _errorMessage = null;
@@ -136,14 +142,14 @@ class UserProfileProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      _isChangingPassword = false;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _successMessage = null;
       notifyListeners();
+      if (kDebugMode) {
       debugPrint('Error changing password: $e');
+      }
       return false;
-    } finally {
-      _isChangingPassword = false;
-      notifyListeners();
     }
   }
 
@@ -159,13 +165,14 @@ class UserProfileProvider with ChangeNotifier {
   }
 
   Future<bool> uploadPhoto(XFile imageFile) async {
+    if (_isSaving) return false;
+    
     _isSaving = true;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
 
     try {
-      // Get userId from loaded profile or fetch it
       int userId;
       if (_userProfile != null) {
         userId = _userProfile!.userId;
@@ -174,35 +181,34 @@ class UserProfileProvider with ChangeNotifier {
         userId = currentUserData['userId'] as int;
       }
 
-      // Upload photo
       final updatedUser = await _photoService.uploadPhoto(userId, imageFile);
-
-      // Update local profile
       _userProfile = updatedUser;
       _successMessage = 'Photo uploaded successfully';
       _errorMessage = null;
+      _isSaving = false;
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _successMessage = null;
-      notifyListeners();
-      debugPrint('Error uploading photo: $e');
-      return false;
-    } finally {
       _isSaving = false;
       notifyListeners();
+      if (kDebugMode) {
+        debugPrint('Error uploading photo: $e');
+      }
+      return false;
     }
   }
 
   Future<bool> deletePhoto() async {
+    if (_isSaving) return false;
+    
     _isSaving = true;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
 
     try {
-      // Get userId from loaded profile or fetch it
       int userId;
       if (_userProfile != null) {
         userId = _userProfile!.userId;
@@ -211,28 +217,26 @@ class UserProfileProvider with ChangeNotifier {
         userId = currentUserData['userId'] as int;
       }
 
-      // Delete photo
       final success = await _photoService.deletePhoto(userId);
 
       if (success) {
-        // Reload profile to get updated data
         await loadProfile();
         _successMessage = 'Photo deleted successfully';
         _errorMessage = null;
-        notifyListeners();
+        // loadProfile already updates _isSaving and calls notifyListeners
         return true;
       } else {
         throw Exception('Failed to delete photo');
       }
     } catch (e) {
+      _isSaving = false;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _successMessage = null;
       notifyListeners();
+      if (kDebugMode) {
       debugPrint('Error deleting photo: $e');
+      }
       return false;
-    } finally {
-      _isSaving = false;
-      notifyListeners();
     }
   }
 }

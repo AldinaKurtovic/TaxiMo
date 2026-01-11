@@ -1,10 +1,12 @@
 using TaxiMo.Services.Database.Entities;
+using TaxiMo.Services.DTOs;
 
 namespace TaxiMo.Services.Interfaces
 {
     public interface IReviewService : IBaseCRUDService<Review>
     {
         Task<List<Review>> GetAllAsync(string? search = null, decimal? minRating = null);
+        Task<PagedResponse<Review>> GetAllPagedAsync(int page = 1, int limit = 7, string? search = null, decimal? minRating = null);
         Task<List<Review>> GetByRiderIdAsync(int riderId);
         Task<List<Review>> GetByDriverIdAsync(int driverId);
         Task<Review?> GetByRideIdAsync(int rideId);

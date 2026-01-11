@@ -21,7 +21,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _isProcessingPayment = false;
   bool _hasNavigated = false; // Prevent multiple navigations
   final RideService _rideService = RideService();
-  final StripeService _stripeService = StripeService();
+  final StripeService _stripeService = StripeService.instance;
   
   // Cached payment arguments
   Map<String, dynamic>? _paymentArgs;
@@ -60,6 +60,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     if (!mounted) return;
+    
+    // RJEŠENJE 3: Lock auth tokom payment procesa - sprečava AuthWrapper rebuild loop
+    authProvider.lockAuth();
+    
     setState(() {
       _isCreatingRide = true;
     });
@@ -112,8 +116,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         );
 
-        // Navigate to home screen (single atomic operation)
-        await Future.delayed(Duration.zero);
+        // Navigate to home screen
         if (!mounted || _hasNavigated) return;
         _hasNavigated = true;
         Navigator.pushNamedAndRemoveUntil(
@@ -136,6 +139,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       );
     } finally {
+      // RJEŠENJE 3: Unlock auth nakon payment procesa (u finally bloku - uvijek se izvršava)
+      authProvider.unlockAuth();
+      
       if (mounted) {
         setState(() {
           _isCreatingRide = false;
@@ -146,14 +152,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _processStripePayment(RideBookingResponse response) async {
     if (!mounted) return;
+    
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    // RJEŠENJE 3: Lock auth tokom Stripe payment procesa
+    authProvider.lockAuth();
+    
     setState(() {
       _isProcessingPayment = true;
     });
 
     try {
-      // Yield UI thread to prevent blocking
-      await Future.delayed(Duration.zero);
-      
       if (!mounted) return;
       
       // Use EUR for Stripe (backend returns KM, but Stripe needs EUR)
@@ -180,8 +188,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           );
 
-          // Navigate to home screen (single atomic operation)
-          await Future.delayed(Duration.zero);
+          // Navigate to home screen
           if (!mounted || _hasNavigated) return;
           _hasNavigated = true;
           Navigator.pushNamedAndRemoveUntil(
@@ -224,7 +231,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       );
     } finally {
+      // RJEŠENJE 3: Unlock auth nakon Stripe payment procesa (u finally bloku - uvijek se izvršava)
       if (mounted) {
+        final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+        authProvider.unlockAuth();
+        
         setState(() {
           _isProcessingPayment = false;
         });

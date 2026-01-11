@@ -35,13 +35,27 @@ namespace TaxiMoWebAPI.Controllers
 
         // GET: api/driver
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DriverDto>>> GetDrivers(
+        public async Task<ActionResult<object>> GetDrivers(
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 7,
             [FromQuery] string? search = null,
             [FromQuery] bool? isActive = null,
             [FromQuery] string? licence = null)
         {
-            var drivers = await _driverService.GetAllAsync(search, isActive, licence);
-            return Ok(_mapper.Map<List<DriverDto>>(drivers));
+            var pagedResult = await _driverService.GetAllPagedAsync(page, limit, search, isActive, licence);
+            var driverDtos = _mapper.Map<List<DriverDto>>(pagedResult.Data);
+            
+            return Ok(new
+            {
+                data = driverDtos,
+                pagination = new
+                {
+                    currentPage = pagedResult.Pagination.CurrentPage,
+                    totalPages = pagedResult.Pagination.TotalPages,
+                    totalItems = pagedResult.Pagination.TotalItems,
+                    limit = pagedResult.Pagination.Limit
+                }
+            });
         }
 
         // GET: api/driver/{id}

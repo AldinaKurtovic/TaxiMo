@@ -7,6 +7,7 @@ namespace TaxiMo.Services.Interfaces
     public interface IDriverService
     {
         Task<List<Driver>> GetAllAsync(string? search = null, bool? isActive = null, string? licence = null);
+        Task<PagedResponse<Driver>> GetAllPagedAsync(int page = 1, int limit = 7, string? search = null, bool? isActive = null, string? licence = null);
         Task<Driver?> GetByIdAsync(int id);
         Task<Driver> CreateAsync(Driver driver);
         Task<Driver> CreateAsync(Driver driver,int roleId);
