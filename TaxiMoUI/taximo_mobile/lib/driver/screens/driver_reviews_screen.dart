@@ -5,6 +5,7 @@ import '../providers/driver_reviews_provider.dart';
 import '../providers/driver_provider.dart';
 import '../../user/models/review_dto.dart';
 import '../../user/widgets/user_avatar.dart';
+import '../widgets/driver_app_bar.dart';
 
 class DriverReviewsScreen extends StatefulWidget {
   const DriverReviewsScreen({
@@ -39,11 +40,7 @@ class _DriverReviewsScreenState extends State<DriverReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reviews'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-      ),
+      appBar: DriverAppBar(title: 'Reviews'),
       body: Consumer2<DriverReviewsProvider, DriverProvider>(
         builder: (context, reviewsProvider, driverProvider, child) {
           final driver = driverProvider.currentDriver;

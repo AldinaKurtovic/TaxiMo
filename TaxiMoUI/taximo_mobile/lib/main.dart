@@ -9,6 +9,7 @@ import 'driver/providers/driver_provider.dart';
 import 'user/screens/user_home_screen.dart';
 import 'user/layout/user_main_navigation.dart';
 import 'user/providers/user_profile_provider.dart';
+import 'user/providers/notification_provider.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
 import 'user/screens/voucher_screen.dart';
@@ -18,13 +19,16 @@ import 'user/screens/rate_trip_screen.dart';
 import 'user/screens/reviews_screen.dart';
 import 'user/screens/promo_codes_screen.dart';
 import 'user/screens/trip_history_screen.dart';
+import 'user/screens/notifications_screen.dart';
 import 'driver/layout/driver_main_navigation.dart';
 import 'driver/providers/driver_provider.dart';
 import 'driver/providers/driver_profile_provider.dart';
 import 'driver/providers/ride_requests_provider.dart';
 import 'driver/providers/active_rides_provider.dart';
 import 'driver/providers/driver_reviews_provider.dart';
+import 'driver/providers/notification_provider.dart';
 import 'driver/screens/ride_requests_screen.dart';
+import 'driver/screens/notifications_screen.dart';
 import 'driver/screens/active_ride_screen.dart';
 import 'driver/screens/active_ride_driver_screen.dart';
 import 'driver/screens/driver_reviews_screen.dart';
@@ -60,10 +64,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DriverProvider(), lazy: true),
         // User providers - lazy load, created only when accessed
         ChangeNotifierProvider(create: (_) => UserProfileProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => NotificationProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => DriverProfileProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => ActiveRidesProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => DriverReviewsProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => DriverNotificationProvider(), lazy: true),
       ],
       child: MaterialApp(
         title: 'TaxiMo Mobile',
@@ -106,6 +112,12 @@ class MyApp extends StatelessWidget {
           },
           '/driver-statistics': (context) {
             return const DriverStatisticsScreen();
+          },
+          '/notifications': (context) {
+            return const NotificationsScreen();
+          },
+          '/driver-notifications': (context) {
+            return const DriverNotificationsScreen();
           },
         },
       ),

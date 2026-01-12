@@ -67,8 +67,9 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
   void didUpdateWidget(AdminMapWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Rebuild polylines if rides changed
-    if (widget.activeRides != oldWidget.activeRides) {
+    // Rebuild polylines if rides changed or selected ride changed
+    if (widget.activeRides != oldWidget.activeRides || 
+        widget.selectedRide != oldWidget.selectedRide) {
       _initializeRoutePolylines();
       _initializeSimulationStartTimes();
     }
@@ -80,6 +81,10 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
     // Center on selected driver when it changes
     else if (widget.selectedDriver != oldWidget.selectedDriver && widget.selectedDriver != null) {
       _centerOnDriver(widget.selectedDriver!);
+    }
+    // If selected ride is cleared, center back on Mostar
+    else if (oldWidget.selectedRide != null && widget.selectedRide == null) {
+      _centerOnMostar();
     }
   }
 
@@ -105,25 +110,15 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
   void _initializeRoutePolylines() {
     _routePolylines.clear();
     
-    // Get all rides to display (activeRides + selectedRide if not already included)
-    final ridesToDisplay = List<RideModel>.from(widget.activeRides);
-    if (widget.selectedRide != null) {
-      final isAlreadyIncluded = ridesToDisplay.any((r) => r.rideId == widget.selectedRide!.rideId);
-      if (!isAlreadyIncluded) {
-        final statusLower = widget.selectedRide!.status.toLowerCase();
-        // Only add selected ride if it's active/accepted/requested
-        if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested') {
-          ridesToDisplay.add(widget.selectedRide!);
-        }
-      }
-    }
+    // Get rides to display (only selected ride if selected, otherwise all active rides)
+    final ridesToDisplay = _getRidesToDisplay();
     
     // Generate route polylines for all rides that need them
     for (final ride in ridesToDisplay) {
       final statusLower = ride.status.toLowerCase();
       
-      // Only generate polylines for active, accepted, or requested rides
-      if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested') {
+      // Generate polylines for active, accepted, requested, or completed rides
+      if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested' || statusLower == 'completed') {
         if (ride.pickupLocationLat != null && 
             ride.pickupLocationLng != null &&
             ride.dropoffLocationLat != null &&
@@ -146,7 +141,14 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
   void _initializeSimulationStartTimes() {
     final now = DateTime.now();
     
-    for (final ride in widget.activeRides) {
+    // Get rides to display (only selected ride if selected, otherwise all active rides)
+    final ridesToDisplay = _getRidesToDisplay();
+    
+    // Remove start times for rides that are no longer displayed
+    final displayedRideIds = ridesToDisplay.map((r) => r.rideId).toSet();
+    _simulationStartTimes.removeWhere((rideId, _) => !displayedRideIds.contains(rideId));
+    
+    for (final ride in ridesToDisplay) {
       final statusLower = ride.status.toLowerCase();
       
       // Only initialize start time for ACTIVE rides
@@ -217,9 +219,6 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
         .floor()
         .clamp(0, polyline.length - 1);
     
-    // Debug: Verify elapsedSeconds and index are increasing
-    debugPrint('AdminMap: Ride ${ride.rideId} - elapsedSeconds: $elapsedSeconds, progress: ${progress.toStringAsFixed(2)}, index: $index/${polyline.length - 1}');
-    
     return polyline[index];
   }
 
@@ -272,20 +271,21 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
     _centerOnMostar();
   }
 
-  /// Get all rides to display (activeRides + selectedRide if applicable)
+  /// Get all rides to display
+  /// If a ride is selected, show ONLY that ride (regardless of status)
+  /// Otherwise, show only ACTIVE rides (for simulation)
   List<RideModel> _getRidesToDisplay() {
-    final ridesToDisplay = List<RideModel>.from(widget.activeRides);
+    // If a ride is selected, show ONLY that ride (not all active rides)
+    // Show selected ride regardless of status (active, accepted, requested, or completed)
     if (widget.selectedRide != null) {
-      final isAlreadyIncluded = ridesToDisplay.any((r) => r.rideId == widget.selectedRide!.rideId);
-      if (!isAlreadyIncluded) {
-        final statusLower = widget.selectedRide!.status.toLowerCase();
-        // Only add selected ride if it's active/accepted/requested
-        if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested') {
-          ridesToDisplay.add(widget.selectedRide!);
-        }
-      }
+      return [widget.selectedRide!];
     }
-    return ridesToDisplay;
+    
+    // If no ride is selected, show only ACTIVE rides (for simulation)
+    // Filter to show only rides with status "active" (not accepted or requested)
+    return widget.activeRides
+        .where((ride) => ride.status.toLowerCase() == 'active')
+        .toList();
   }
 
   /// Build polylines for rides that should show routes
@@ -296,16 +296,18 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
     for (final ride in ridesToDisplay) {
       final statusLower = ride.status.toLowerCase();
       
-      // Show polyline for active, accepted, or requested rides
-      if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested') {
+      // Show polyline for active, accepted, requested, or completed rides
+      if (statusLower == 'active' || statusLower == 'accepted' || statusLower == 'requested' || statusLower == 'completed') {
         final polyline = _routePolylines[ride.rideId];
         if (polyline != null && polyline.isNotEmpty) {
           final isSelected = widget.selectedRide?.rideId == ride.rideId;
+          // Use different color for completed rides
+          final color = statusLower == 'completed' ? Colors.grey : Colors.blue;
           polylines.add(
             Polyline(
               points: polyline,
               strokeWidth: isSelected ? 5 : 4,
-              color: Colors.blue,
+              color: color,
             ),
           );
         }
@@ -426,10 +428,52 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
         }
       }
       
-      // COMPLETED / CANCELLED: Show NOTHING (do not add markers)
+      // COMPLETED: Show pickup + destination markers (grey), NO taxi
+      else if (statusLower == 'completed') {
+        // Pickup location marker (grey)
+        if (ride.pickupLocationLat != null && ride.pickupLocationLng != null) {
+          markers.add(
+            Marker(
+              point: LatLng(ride.pickupLocationLat!, ride.pickupLocationLng!),
+              width: isSelected ? 50 : 40,
+              height: isSelected ? 50 : 40,
+              child: GestureDetector(
+                onTap: () => widget.onRideSelected?.call(ride),
+                child: Icon(
+                  Icons.radio_button_checked,
+                  color: Colors.grey,
+                  size: isSelected ? 50 : 40,
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Dropoff location marker (grey)
+        if (ride.dropoffLocationLat != null && ride.dropoffLocationLng != null) {
+          markers.add(
+            Marker(
+              point: LatLng(ride.dropoffLocationLat!, ride.dropoffLocationLng!),
+              width: isSelected ? 50 : 40,
+              height: isSelected ? 50 : 40,
+              child: GestureDetector(
+                onTap: () => widget.onRideSelected?.call(ride),
+                child: Icon(
+                  Icons.location_on,
+                  color: Colors.grey,
+                  size: isSelected ? 50 : 40,
+                ),
+              ),
+            ),
+          );
+        }
+      }
+      
+      // CANCELLED: Show NOTHING (do not add markers)
     }
 
-    // Add markers for free drivers (blue taxi icons)
+    // Add markers for free drivers (blue taxi icons) - only show when no ride is selected
+    if (widget.selectedRide == null) {
     for (final driver in widget.freeDrivers) {
       if (driver.currentLatitude != null && driver.currentLongitude != null) {
         final isSelected = widget.selectedDriver?.driverId == driver.driverId;
@@ -450,6 +494,7 @@ class _AdminMapWidgetState extends State<AdminMapWidget> {
             ),
           ),
         );
+        }
       }
     }
 

@@ -380,7 +380,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 final value = touchedSpot.y;
                 final month = _getMonthName(touchedSpot.x.toInt());
                 return LineTooltipItem(
-                  '$month: ${value.toInt()} KM',
+                  '$month: ${value.toInt()} EUR',
                   const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

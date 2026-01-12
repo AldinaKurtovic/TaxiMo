@@ -108,7 +108,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Current password is required';
+                        return 'Trenutna lozinka je obavezna';
                       }
                       return null;
                     },
@@ -145,10 +145,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'New password is required';
+                        return 'Nova lozinka je obavezna';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (value.length < 8) {
+                        return 'Lozinka mora imati najmanje 8 karaktera';
                       }
                       return null;
                     },
@@ -185,10 +185,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please confirm your new password';
+                        return 'Potvrda lozinke je obavezna';
                       }
                       if (value != _newPasswordController.text) {
-                        return 'Passwords do not match';
+                        return 'Lozinke se ne poklapaju';
                       }
                       return null;
                     },

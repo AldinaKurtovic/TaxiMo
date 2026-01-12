@@ -14,17 +14,20 @@ namespace TaxiMoWebAPI.Controllers
         private readonly ILogger<StripeController> _logger;
         private readonly TaxiMoDbContext _context;
         private readonly IStripeService _stripeService;
+        private readonly IUserNotificationService _userNotificationService;
 
         public StripeController(
             IConfiguration configuration,
             ILogger<StripeController> logger,
             TaxiMoDbContext context,
-            IStripeService stripeService)
+            IStripeService stripeService,
+            IUserNotificationService userNotificationService)
         {
             _configuration = configuration;
             _logger = logger;
             _context = context;
             _stripeService = stripeService;
+            _userNotificationService = userNotificationService;
         }
 
         // ======================================================
@@ -109,6 +112,24 @@ namespace TaxiMoWebAPI.Controllers
                     _logger.LogInformation(
                         "Payment COMPLETED - PaymentId: {PaymentId}, PaymentIntentId: {PaymentIntentId}",
                         payment.PaymentId, request.PaymentIntentId);
+
+                    // Create notification for user - payment completed
+                    try
+                    {
+                        var amountInfo = payment.Amount > 0 
+                            ? $"Amount: {payment.Amount:F2} {payment.Currency}" 
+                            : "";
+                        await _userNotificationService.CreateNotificationAsync(
+                            payment.UserId,
+                            "Payment Completed",
+                            $"Your payment has been processed successfully. Payment ID: {payment.PaymentId}. {amountInfo}",
+                            "payment");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error but don't fail the payment confirmation
+                        _logger.LogWarning(ex, "Failed to create notification for payment completion - PaymentId: {PaymentId}", payment.PaymentId);
+                    }
 
                     return Ok(new { message = "Payment confirmed successfully", completed = true });
                 }

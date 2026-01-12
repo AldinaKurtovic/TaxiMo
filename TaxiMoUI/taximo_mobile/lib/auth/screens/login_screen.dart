@@ -285,13 +285,13 @@ class _LoginFormState extends State<LoginForm> {
                       const SizedBox(height: 24),
                       TextFormField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
                     enableSuggestions: false,
                     autocorrect: false,
                     enableInteractiveSelection: true,
                     decoration: InputDecoration(
-                      labelText: 'Username or Email',
+                      labelText: 'Username',
                       prefixIcon: const Icon(Icons.person),
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -302,7 +302,7 @@ class _LoginFormState extends State<LoginForm> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your username or email';
+                        return 'Please enter your username';
                       }
                       return null;
                     },

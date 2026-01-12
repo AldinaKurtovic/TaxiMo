@@ -9,6 +9,7 @@ import '../screens/promo_codes/promo_codes_screen.dart';
 import '../screens/reviews/reviews_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/rides/rides_screen.dart';
+import '../screens/payments/payments_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
 class MasterScreen extends StatefulWidget {
@@ -49,6 +50,9 @@ class _MasterScreenState extends State<MasterScreen> {
         break;
       case '/rides':
         screen = const RidesScreen();
+        break;
+      case '/payments':
+        screen = const PaymentsScreen();
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,6 +147,12 @@ class _MasterScreenState extends State<MasterScreen> {
                         title: 'STATISTICS',
                         route: '/statistics',
                         isSelected: widget.currentRoute == '/statistics',
+                      ),
+                      _buildNavItem(
+                        icon: Icons.payment_outlined,
+                        title: 'PAYMENTS',
+                        route: '/payments',
+                        isSelected: widget.currentRoute == '/payments',
                       ),
                       _buildNavItem(
                         icon: Icons.percent_outlined,

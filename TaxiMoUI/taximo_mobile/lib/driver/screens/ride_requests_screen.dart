@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/ride_requests_provider.dart';
 import '../providers/driver_provider.dart';
 import '../models/ride_request_model.dart';
+import '../widgets/driver_app_bar.dart';
 
 class RideRequestsScreen extends StatefulWidget {
   const RideRequestsScreen({super.key});
@@ -36,10 +37,8 @@ class _RideRequestsScreenState extends State<RideRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ride Requests'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+      appBar: DriverAppBar(
+        title: 'Ride Requests',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -357,7 +356,7 @@ class _RideRequestCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          ride.pickupAddress,
+                          ride.pickupCoordinates,
                           style: const TextStyle(fontSize: 14),
                         ),
                       ],
@@ -386,7 +385,7 @@ class _RideRequestCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          ride.dropoffAddress,
+                          ride.dropoffCoordinates,
                           style: const TextStyle(fontSize: 14),
                         ),
                       ],
@@ -514,14 +513,14 @@ class _RideRequestCard extends StatelessWidget {
                 _DetailRow(
                   icon: Icons.location_on,
                   label: 'Pickup',
-                  value: ride.pickupAddress,
+                  value: ride.pickupCoordinates,
                   iconColor: Colors.green,
                 ),
                 const SizedBox(height: 16),
                 _DetailRow(
                   icon: Icons.location_on,
                   label: 'Dropoff',
-                  value: ride.dropoffAddress,
+                  value: ride.dropoffCoordinates,
                   iconColor: Colors.red,
                 ),
                 const SizedBox(height: 16),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 
@@ -76,23 +77,18 @@ class DriversService {
       throw Exception('Invalid driver ID: $id');
     }
     
-    print('Updating driver $id with data: $driverData'); // Debug log
-    
     final response = await http.put(
       Uri.parse('$baseUrl/api/Driver/$id'),
       headers: _headers(),
       body: jsonEncode(driverData),
     );
 
-    print('Update driver response status: ${response.statusCode}'); // Debug log
-    print('Update driver response body: ${response.body}'); // Debug log
-
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
       return responseData['data'] as Map<String, dynamic>? ?? responseData;
     } else {
       final errorBody = response.body;
-      print('Update driver error body: $errorBody'); // Debug log
+      debugPrint('Update driver error - Status: ${response.statusCode}, Body: $errorBody');
       try {
         final errorData = jsonDecode(errorBody) as Map<String, dynamic>;
         String message = 'Failed to update driver';
@@ -129,27 +125,19 @@ class DriversService {
       throw Exception('Invalid driver ID: $id');
     }
     
-    print('Deleting driver with ID: $id'); // Debug log
     final url = '$baseUrl/api/Driver/$id';
-    print('Delete driver URL: $url'); // Debug log
-    
     final headers = _headers();
-    print('Delete driver headers: ${headers.keys}'); // Debug log
     
     final response = await http.delete(
       Uri.parse(url),
       headers: headers,
     );
 
-    print('Delete driver response status: ${response.statusCode}'); // Debug log
-    print('Delete driver response body: ${response.body}'); // Debug log
-
     if (response.statusCode == 204 || response.statusCode == 200) {
-      print('Driver deleted successfully'); // Debug log
       return true;
     } else {
       final errorBody = response.body;
-      print('Delete driver error - Status: ${response.statusCode}, Body: $errorBody'); // Debug log
+      debugPrint('Delete driver error - Status: ${response.statusCode}, Body: $errorBody');
       try {
         if (errorBody.isNotEmpty) {
           final errorData = jsonDecode(errorBody) as Map<String, dynamic>;

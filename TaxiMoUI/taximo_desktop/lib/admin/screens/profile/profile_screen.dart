@@ -124,20 +124,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'Lozinka je obavezna';
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return 'Lozinka mora imati najmanje 8 karaktera';
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
+      return 'Potvrda lozinke je obavezna';
     }
     if (value != _newPasswordController.text) {
-      return 'Passwords do not match';
+      return 'Lozinke se ne poklapaju';
     }
     return null;
   }
@@ -289,11 +289,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Email is required';
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Email je obavezan';
                             }
-                            if (!value.contains('@')) {
-                              return 'Please enter a valid email';
+                            // Proper email regex validation
+                            final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                            if (!emailRegex.hasMatch(value.trim())) {
+                              return 'Unesite validan email format (npr. korisnik@domena.com)';
                             }
                             return null;
                           },
@@ -328,6 +330,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fillColor: Colors.grey[50],
                           ),
                           keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value != null && value.trim().isNotEmpty) {
+                              // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
+                              final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
+                              if (!phoneRegex.hasMatch(value.trim())) {
+                                return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                              }
+                              // Check minimum length (at least 6 digits)
+                              final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+                              if (digitsOnly.length < 6) {
+                                return 'Broj telefona mora imati najmanje 6 cifara';
+                              }
+                              if (digitsOnly.length > 15) {
+                                return 'Broj telefona ne može imati više od 15 cifara';
+                              }
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
@@ -423,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           obscureText: _obscureOldPassword,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Current password is required';
+                              return 'Trenutna lozinka je obavezna';
                             }
                             return null;
                           },

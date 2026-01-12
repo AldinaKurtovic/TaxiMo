@@ -6,9 +6,29 @@ import '../widgets/user_app_bar.dart';
 import '../widgets/driver_avatar.dart';
 import '../models/driver_dto.dart';
 import '../services/driver_service.dart';
+import '../providers/notification_provider.dart';
 
-class UserHomeScreen extends StatelessWidget {
+class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
+
+  @override
+  State<UserHomeScreen> createState() => _UserHomeScreenState();
+}
+
+class _UserHomeScreenState extends State<UserHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load unread count when home screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+      final currentUser = authProvider.currentUser;
+      if (currentUser != null) {
+        final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+        notificationProvider.loadUnreadCount(currentUser.userId);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -96,29 +96,34 @@ class _EditPromoModalState extends State<EditPromoModal> {
     return '$month/$day/$year';
   }
 
+  String? _validateValidFrom() {
+    if (_selectedValidFrom == null) {
+      return 'Datum početka važenja je obavezan';
+    }
+    return null;
+  }
+
+  String? _validateValidUntil() {
+    if (_selectedValidUntil == null) {
+      return 'Datum završetka važenja je obavezan';
+    }
+    if (_selectedValidFrom != null && _selectedValidUntil!.isBefore(_selectedValidFrom!)) {
+      return 'Datum završetka mora biti nakon datuma početka';
+    }
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (_selectedValidFrom == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valid From date is required')),
-      );
-      return;
-    }
-
-    if (_selectedValidUntil == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valid Until date is required')),
-      );
-      return;
-    }
-
-    if (_selectedValidUntil!.isBefore(_selectedValidFrom!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valid Until must be after Valid From')),
-      );
+    // Validate dates
+    final validFromError = _validateValidFrom();
+    final validUntilError = _validateValidUntil();
+    
+    if (validFromError != null || validUntilError != null) {
+      setState(() {}); // Trigger rebuild to show errors
       return;
     }
 
@@ -140,13 +145,19 @@ class _EditPromoModalState extends State<EditPromoModal> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Promo code updated successfully')),
+          const SnackBar(
+            content: Text('Promo kod je uspješno ažuriran'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Greška pri ažuriranju promo koda: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -170,13 +181,25 @@ class _EditPromoModalState extends State<EditPromoModal> {
               // Header (fixed)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: const Text(
-                  'Edit Promo Code',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D3F),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Promo Code',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
               // Scrollable content
@@ -196,11 +219,11 @@ class _EditPromoModalState extends State<EditPromoModal> {
                         ),
                         textCapitalization: TextCapitalization.characters,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Code is required';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Kod je obavezan';
                           }
-                          if (value.length > 50) {
-                            return 'Code must be 50 characters or less';
+                          if (value.trim().length > 50) {
+                            return 'Kod ne može imati više od 50 karaktera';
                           }
                           return null;
                         },
@@ -254,18 +277,18 @@ class _EditPromoModalState extends State<EditPromoModal> {
                         ),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Discount value is required';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Vrijednost popusta je obavezna';
                           }
-                          final numValue = double.tryParse(value);
+                          final numValue = double.tryParse(value.trim());
                           if (numValue == null) {
-                            return 'Invalid number';
+                            return 'Unesite validan broj';
                           }
                           if (_selectedDiscountType == 'Percentage' && (numValue < 0 || numValue > 100)) {
-                            return 'Percentage must be between 0 and 100';
+                            return 'Postotak mora biti između 0 i 100';
                           }
                           if (_selectedDiscountType == 'Fixed' && numValue < 0) {
-                            return 'Discount value must be positive';
+                            return 'Vrijednost popusta mora biti pozitivna';
                           }
                           return null;
                         },
@@ -281,10 +304,10 @@ class _EditPromoModalState extends State<EditPromoModal> {
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
-                          if (value != null && value.isNotEmpty) {
-                            final intValue = int.tryParse(value);
+                          if (value != null && value.trim().isNotEmpty) {
+                            final intValue = int.tryParse(value.trim());
                             if (intValue == null || intValue < 1) {
-                              return 'Usage limit must be a positive integer';
+                              return 'Limit korištenja mora biti pozitivan cijeli broj';
                             }
                           }
                           return null;
@@ -295,10 +318,12 @@ class _EditPromoModalState extends State<EditPromoModal> {
                       InkWell(
                         onTap: () => _selectValidFrom(context),
                         child: InputDecorator(
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Valid From',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_today),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: const Icon(Icons.calendar_today),
+                            helperText: 'Datum početka važenja promo koda',
+                            errorText: _validateValidFrom(),
                           ),
                           child: Text(_formatDate(_selectedValidFrom)),
                         ),
@@ -308,10 +333,12 @@ class _EditPromoModalState extends State<EditPromoModal> {
                       InkWell(
                         onTap: () => _selectValidUntil(context),
                         child: InputDecorator(
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Valid Until',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_today),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: const Icon(Icons.calendar_today),
+                            helperText: 'Datum završetka važenja promo koda',
+                            errorText: _validateValidUntil(),
                           ),
                           child: Text(_formatDate(_selectedValidUntil)),
                         ),

@@ -34,16 +34,49 @@ class _DriversScreenState extends State<DriversScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Driver'),
-        content: Text('Are you sure you want to delete ${driver.fullName}?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red,
+          size: 48,
+        ),
+        title: const Text(
+          'Warning',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D2D3F),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This action is irreversible!',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Are you sure you want to delete driver "${driver.fullName}"?',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF424242),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
-              print('Delete button clicked for driver ID: ${driver.driverId}'); // Debug log
               try {
                 if (driver.driverId <= 0) {
                   throw Exception('Invalid driver ID: ${driver.driverId}');
@@ -54,20 +87,33 @@ class _DriversScreenState extends State<DriversScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Driver deleted successfully')),
+                    const SnackBar(
+                      content: Text('Driver successfully deleted'),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                 }
               } catch (e) {
-                print('Delete driver error: $e'); // Debug log
                 if (context.mounted) {
                   Navigator.pop(context);
+                  final errorMessage = e.toString();
+                  final bool hasRides = errorMessage.toLowerCase().contains('rides exist') || 
+                                       errorMessage.toLowerCase().contains('rides');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
+                    SnackBar(
+                      content: Text(hasRides 
+                        ? 'Cannot delete driver because rides exist. Please handle or delete rides first.'
+                        : 'Error deleting driver: $errorMessage'),
+                      backgroundColor: hasRides ? Colors.orange : Colors.red,
+                    ),
                   );
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -269,19 +315,6 @@ class _DriversScreenState extends State<DriversScreen> {
                           horizontalMargin: 24,
                         columns: [
                         DataColumn(
-                          label: Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Text(
-                              'Driver ID',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
                           label: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -384,21 +417,9 @@ class _DriversScreenState extends State<DriversScreen> {
                           ),
                         ),
                       ],
-                      rows: provider.currentPageDrivers.map((driver) {
+                      rows                          : provider.currentPageDrivers.map((driver) {
                         return DataRow(
                           cells: [
-                            DataCell(
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Text(
-                                  driver.driverId.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF424242),
-                                  ),
-                                ),
-                              ),
-                            ),
                             DataCell(
                               DriverAvatar(
                                 photoUrl: driver.photoUrl,

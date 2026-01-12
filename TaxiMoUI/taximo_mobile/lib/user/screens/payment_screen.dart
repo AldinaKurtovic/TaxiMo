@@ -164,7 +164,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       if (!mounted) return;
       
-      // Use EUR for Stripe (backend returns KM, but Stripe needs EUR)
+      // Use EUR for Stripe
       final stripeCurrency = 'eur';
       
       // Create payment intent and present payment sheet

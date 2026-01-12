@@ -234,12 +234,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                         const Divider(height: 32),
                         _InfoRow(
-                          icon: Icons.badge_outlined,
-                          label: 'User ID',
-                          value: user.userId.toString(),
-                        ),
-                        const Divider(height: 32),
-                        _InfoRow(
                           icon: Icons.account_circle_outlined,
                           label: 'Role',
                           value: user.roles.isNotEmpty

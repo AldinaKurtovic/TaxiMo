@@ -7,6 +7,7 @@ import 'admin/providers/promo_provider.dart';
 import 'admin/providers/reviews_provider.dart';
 import 'admin/providers/statistics_provider.dart';
 import 'admin/providers/rides_provider.dart';
+import 'admin/providers/payments_provider.dart';
 import 'admin/providers/admin_profile_provider.dart';
 // Note: File still named admin_profile_provider.dart but class is UserProfileProvider
 import 'admin/screens/admin_login_screen.dart';
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReviewsProvider()),
         ChangeNotifierProvider(create: (_) => StatisticsProvider()),
         ChangeNotifierProvider(create: (_) => RidesProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentsProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: MaterialApp(

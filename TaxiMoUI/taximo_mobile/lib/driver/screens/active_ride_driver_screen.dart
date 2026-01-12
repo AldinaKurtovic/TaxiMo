@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -32,8 +31,6 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   bool _isPositionSelected = false; // Track if driver has selected position
   bool _isRideStarted = false; // Track if ride has started
   int _currentRouteIndex = 0; // Index for simulated movement along route
-  DateTime? _lastMapUpdateTime; // Debounce map updates
-  bool _isCalculating = false; // Prevent concurrent calculations
 
   @override
   void initState() {
@@ -319,126 +316,69 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
   void _startLocationUpdates() {
     _locationUpdateTimer?.cancel();
     
-    // Update every 3 seconds to reduce setState calls and CPU usage
-    // Use SchedulerBinding for frame-aware updates to avoid jank
-    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    // Update every 7 seconds to move the vehicle along the route
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
       if (!mounted || !_isRideStarted || _routePoints.isEmpty || 
-          _currentRide == null || _driverCurrentPosition == null || _isCalculating) {
+          _currentRide == null || _driverCurrentPosition == null) {
         if (!mounted || !_isRideStarted) {
-        timer.cancel();
+          timer.cancel();
         }
         return;
       }
       
-      _isCalculating = true;
-      
-      // Defer heavy calculations to next frame using SchedulerBinding
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _driverCurrentPosition == null || _currentRide == null) {
-          _isCalculating = false;
-          return;
-        }
-        
-        _updateDriverPosition();
-        _isCalculating = false;
-      });
+      // Directly update position without deferring
+      _updateDriverPosition();
     });
   }
   
   void _updateDriverPosition() {
     if (!mounted || !_isRideStarted || _routePoints.isEmpty || 
         _currentRide == null || _driverCurrentPosition == null) {
-        return;
-      }
-      
-      final destination = LatLng(
-        _currentRide!.dropoffLocation!.lat,
-        _currentRide!.dropoffLocation!.lng,
-      );
-      
-    // Use cached/simplified distance check first (fast approximation)
+      return;
+    }
+    
+    final destination = LatLng(
+      _currentRide!.dropoffLocation!.lat,
+      _currentRide!.dropoffLocation!.lng,
+    );
+    
+    // Check if we've reached the destination (within 5 meters)
     final latDiff = (destination.latitude - _driverCurrentPosition!.latitude).abs();
     final lngDiff = (destination.longitude - _driverCurrentPosition!.longitude).abs();
-    final approxDistanceKm = (latDiff + lngDiff) * 111.0; // Rough approximation
+    final approxDistanceKm = (latDiff + lngDiff) * 111.0;
     
-    if (approxDistanceKm < 0.005) { // ~5 meters threshold
-      if (_locationUpdateTimer != null && _locationUpdateTimer!.isActive) {
-        _locationUpdateTimer!.cancel();
-      }
-        return;
-      }
+    if (approxDistanceKm < 0.005) { // ~5 meters threshold - reached destination
+      _locationUpdateTimer?.cancel();
+      return;
+    }
+    
+    // Move to the next point in the route
+    // Calculate how many points to advance (approximately 1 point per update for smooth movement)
+    // With 30 points total and 7 second intervals, this provides good movement
+    int nextIndex = _currentRouteIndex + 1;
+    
+    if (nextIndex >= _routePoints.length) {
+      // Reached the end of the route, move to destination
+      nextIndex = _routePoints.length - 1;
+    }
+    
+    final newPosition = _routePoints[nextIndex];
+    
+    // Update state
+    if (mounted) {
+      setState(() {
+        _driverCurrentPosition = newPosition;
+        _currentRouteIndex = nextIndex;
+      });
       
-    // Only do full distance calculation if approximation suggests we're far enough
-    if (approxDistanceKm > 0.01) {
-      // Move approximately 51 meters per update (3 seconds * ~17 m/s average city speed)
-      const double metersPerUpdate = 0.051;
-      
-      int nextPointIndex = _currentRouteIndex;
-      if (nextPointIndex < _routePoints.length - 1) {
-        nextPointIndex++;
-      }
-      
-      if (nextPointIndex < _routePoints.length) {
-        final nextPoint = _routePoints[nextPointIndex];
-        
-        // Simplified distance check for segment (avoid full Haversine when possible)
-        final segmentLatDiff = (nextPoint.latitude - _driverCurrentPosition!.latitude).abs();
-        final segmentLngDiff = (nextPoint.longitude - _driverCurrentPosition!.longitude).abs();
-        final approxSegmentDistance = (segmentLatDiff + segmentLngDiff) * 111.0;
-        
-        LatLng? newPosition;
-        int? newIndex;
-        
-        if (approxSegmentDistance > metersPerUpdate) {
-          // Only do full calculation if needed
-          final segmentDistance = _calculateDistance(_driverCurrentPosition!, nextPoint);
-        if (segmentDistance > metersPerUpdate) {
-          final bearing = _calculateBearing(_driverCurrentPosition!, nextPoint);
-          newPosition = _movePosition(_driverCurrentPosition!, bearing, metersPerUpdate);
-          } else {
-            newPosition = nextPoint;
-            newIndex = nextPointIndex;
-          }
-        } else {
-          newPosition = nextPoint;
-          newIndex = nextPointIndex;
-        }
-        
-        // Update state only if position changed significantly
-        if (newPosition != null && mounted) {
-          // Throttle map updates to max once per second
-          final now = DateTime.now();
-          final shouldUpdateMap = _lastMapUpdateTime == null || 
-              now.difference(_lastMapUpdateTime!).inSeconds >= 1;
-          
-          setState(() {
-              _driverCurrentPosition = newPosition;
-            if (newIndex != null) {
-              _currentRouteIndex = newIndex;
-            }
-          });
-        
-          // Update map center with debouncing to avoid blocking UI thread
-          if (shouldUpdateMap && _isMapReady && _driverCurrentPosition != null && mounted) {
-            _lastMapUpdateTime = now;
-            // Use addPostFrameCallback to ensure update happens after frame render
-            SchedulerBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _driverCurrentPosition != null) {
-                try {
+      // Update map center to follow the vehicle
+      if (_isMapReady && _driverCurrentPosition != null) {
+        try {
           _mapController.move(_driverCurrentPosition!, _mapController.camera.zoom);
-                } catch (e) {
-                  // Ignore errors during map updates to prevent crashes
-                  if (kDebugMode) {
-                    debugPrint('Map update error: $e');
-                  }
-                }
-            }
-          });
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('Map update error: $e');
           }
-        }
-      } else {
-        if (_locationUpdateTimer != null && _locationUpdateTimer!.isActive) {
-          _locationUpdateTimer!.cancel();
         }
       }
     }
@@ -760,7 +700,7 @@ class _ActiveRideDriverScreenState extends State<ActiveRideDriverScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Finish Ride'),
-        content: Text('Complete the ride for ${_currentRide!.passengerName}?'),
+        content: const Text('Are you sure you want to finish the ride?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

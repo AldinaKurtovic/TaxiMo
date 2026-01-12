@@ -210,9 +210,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     validator: (value) {
                       if (value != null && value.trim().isNotEmpty) {
-                        // Basic phone validation
-                        if (!RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value.trim())) {
-                          return 'Please enter a valid phone number';
+                        // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
+                        final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
+                        if (!phoneRegex.hasMatch(value.trim())) {
+                          return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                        }
+                        // Check minimum length (at least 6 digits)
+                        final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+                        if (digitsOnly.length < 6) {
+                          return 'Broj telefona mora imati najmanje 6 cifara';
+                        }
+                        if (digitsOnly.length > 15) {
+                          return 'Broj telefona ne može imati više od 15 cifara';
                         }
                       }
                       return null;

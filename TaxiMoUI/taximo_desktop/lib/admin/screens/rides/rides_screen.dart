@@ -69,8 +69,13 @@ class _RidesScreenState extends State<RidesScreen> {
     return InkWell(
       onTap: () {
         setState(() {
+          // If clicking on already selected ride, deselect it
+          if (isSelected) {
+            _selectedRide = null;
+          } else {
           _selectedRide = ride;
           _selectedDriver = null;
+          }
         });
       },
       child: Container(

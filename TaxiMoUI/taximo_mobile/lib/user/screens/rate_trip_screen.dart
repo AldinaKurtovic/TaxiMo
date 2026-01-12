@@ -502,7 +502,7 @@ class _RateTripScreenState extends State<RateTripScreen> {
                           ),
                         ),
                         Text(
-                          '${tripExpense.toStringAsFixed(2)} KM',
+                          '${tripExpense.toStringAsFixed(2)} EUR',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -526,7 +526,7 @@ class _RateTripScreenState extends State<RateTripScreen> {
                           ),
                         ),
                         Text(
-                          '${total.toStringAsFixed(2)} KM',
+                          '${total.toStringAsFixed(2)} EUR',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

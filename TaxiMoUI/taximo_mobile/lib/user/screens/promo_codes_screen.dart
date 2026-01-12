@@ -293,7 +293,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                   Text(
                     promo.isPercentage
                         ? '${promo.discountValue.toStringAsFixed(0)}% OFF'
-                        : '${promo.discountValue.toStringAsFixed(2)} KM OFF',
+                        : '${promo.discountValue.toStringAsFixed(2)} EUR OFF',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

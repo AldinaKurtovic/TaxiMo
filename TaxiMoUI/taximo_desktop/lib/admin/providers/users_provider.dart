@@ -214,7 +214,11 @@ class UsersProvider extends ChangeNotifier {
       }
       await loadUsers(page: pageToLoad, search: _searchQuery, isActive: _statusFilter);
     } catch (e) {
-      _errorMessage = e.toString();
+      // Don't set errorMessage - error will be shown via SnackBar in the dialog
+      // Always reload users list to display all users even if delete failed
+      await loadUsers(page: _currentPage, search: _searchQuery, isActive: _statusFilter);
+      // Re-throw exception so it can be caught in the dialog and shown as SnackBar
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();

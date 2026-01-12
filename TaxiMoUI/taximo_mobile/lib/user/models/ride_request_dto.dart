@@ -71,7 +71,7 @@ class RideBookingResponse {
       rideId: json['rideId'] as int? ?? 0,
       paymentId: json['paymentId'] as int? ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'KM',
+      currency: json['currency'] as String? ?? 'EUR',
       message: json['message'] as String? ?? 'Ride booked successfully',
     );
   }

@@ -29,7 +29,7 @@ class _DriverStatisticsScreenState extends State<DriverStatisticsScreen> {
   }
 
   String _formatCurrency(double amount) {
-    return NumberFormat.currency(symbol: 'KM', decimalDigits: 2).format(amount);
+    return NumberFormat.currency(symbol: 'EUR', decimalDigits: 2).format(amount);
   }
 
   @override
@@ -148,24 +148,28 @@ class _DriverStatisticsScreenState extends State<DriverStatisticsScreen> {
                   const SizedBox(height: 40),
 
                   // Stats Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Trips',
-                          reviewsProvider.totalCompletedRides.toString(),
-                          Icons.directions_car,
+                  Center(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildStatCard(
+                            'Total Trips',
+                            reviewsProvider.totalCompletedRides.toString(),
+                            Icons.directions_car,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Earnings',
-                          _formatCurrency(reviewsProvider.totalEarnings),
-                          Icons.attach_money,
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildStatCard(
+                            'Total Earnings',
+                            _formatCurrency(reviewsProvider.totalEarnings),
+                            Icons.attach_money,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

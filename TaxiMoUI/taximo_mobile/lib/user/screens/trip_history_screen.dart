@@ -467,7 +467,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                 ),
                 // Price
                 Text(
-                  '${ride.displayPrice.toStringAsFixed(2)} KM',
+                  '${ride.displayPrice.toStringAsFixed(2)} EUR',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

@@ -102,15 +102,34 @@ class _AddDriverModalState extends State<AddDriverModal> {
     try {
       await Provider.of<DriversProvider>(context, listen: false).createDriver(driverData);
       if (mounted) {
+        // Clear form fields after successful creation
+        _firstNameController.clear();
+        _lastNameController.clear();
+        _usernameController.clear();
+        _phoneController.clear();
+        _emailController.clear();
+        _licenseNumberController.clear();
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        _selectedLicenseExpiry = null;
+        _selectedStatus = 'Active';
+        _formKey.currentState?.reset();
+        
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver created successfully')),
+          const SnackBar(
+            content: Text('Vozač je uspješno kreiran'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Greška pri kreiranju vozača: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -134,13 +153,25 @@ class _AddDriverModalState extends State<AddDriverModal> {
               // Header (fixed)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: const Text(
-                  'Add Driver',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D3F),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add Driver',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
               // Scrollable content
@@ -217,16 +248,25 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 decoration: const InputDecoration(
                   labelText: 'Phone',
                   border: OutlineInputBorder(),
+                  helperText: 'Format: +387 61 123 456 ili 061 123 456',
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Phone is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Telefon je obavezan';
                   }
-                  // Basic phone validation (allows digits only)
-                  final phoneRegex = RegExp(r'^\d+$');
-                  if (!phoneRegex.hasMatch(value)) {
-                    return 'Phone number may contain digits only';
+                  // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
+                  final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
+                  if (!phoneRegex.hasMatch(value.trim())) {
+                    return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                  }
+                  // Check minimum length (at least 6 digits)
+                  final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+                  if (digitsOnly.length < 6) {
+                    return 'Broj telefona mora imati najmanje 6 cifara';
+                  }
+                  if (digitsOnly.length > 15) {
+                    return 'Broj telefona ne može imati više od 15 cifara';
                   }
                   return null;
                 },
@@ -238,14 +278,17 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
+                  helperText: 'Format: example@domain.com',
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Email je obavezan';
                   }
-                  if (!value.contains('@')) {
-                    return 'Invalid email format';
+                  // Proper email regex validation
+                  final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                  if (!emailRegex.hasMatch(value.trim())) {
+                    return 'Unesite validan email format (npr. korisnik@domena.com)';
                   }
                   return null;
                 },
@@ -320,10 +363,10 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Password is required';
+                    return 'Lozinka je obavezna';
                   }
                   if (value.length < 8) {
-                    return 'Password must be at least 8 characters';
+                    return 'Lozinka mora imati najmanje 8 karaktera';
                   }
                   return null;
                 },
@@ -339,10 +382,10 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please confirm password';
+                    return 'Potvrda lozinke je obavezna';
                   }
                   if (value != _passwordController.text) {
-                    return 'Passwords do not match';
+                    return 'Lozinke se ne poklapaju';
                   }
                   return null;
                 },

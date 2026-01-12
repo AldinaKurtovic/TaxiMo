@@ -78,7 +78,6 @@ class _EditUserModalState extends State<EditUserModal> {
       // Only send dateOfBirth if it's not null
       if (_selectedDateOfBirth != null) 'dateOfBirth': _selectedDateOfBirth!.toIso8601String(),
       'status': _selectedStatus.toLowerCase(), // Backend expects lowercase: "active" or "inactive"
-      'changePassword': false,
     };
 
     try {
@@ -86,13 +85,19 @@ class _EditUserModalState extends State<EditUserModal> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User updated successfully')),
+          const SnackBar(
+            content: Text('User successfully updated'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error updating user: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -104,124 +109,172 @@ class _EditUserModalState extends State<EditUserModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 500,
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Edit User',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D2D3F),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // First Name
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'First Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'First name is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Last Name
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Last Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Last name is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Invalid email format';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Date of Birth
-              InkWell(
-                onTap: () => _selectDateOfBirth(context),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date of Birth',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(_formatDate(_selectedDateOfBirth)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Status Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
-                ),
-                items: ['Active', 'Inactive'].map((status) {
-                  return DropdownMenuItem(
-                    value: status,
-                    child: Text(status),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedStatus = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 24),
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
+              // Header (fixed)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit User',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                      ),
                     ),
-                    child: const Text('Save Changes'),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              // Scrollable content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // First Name
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'First Name',
+                          border: OutlineInputBorder(),
+                          helperText: 'Only letters, spaces, hyphens and apostrophes',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'First name is required';
+                          }
+                          final nameRegex = RegExp(r"^[a-zA-Z\s\-']+$");
+                          if (!nameRegex.hasMatch(value.trim())) {
+                            return 'First name can only contain letters, spaces, hyphens and apostrophes';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Last Name
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Last Name',
+                          border: OutlineInputBorder(),
+                          helperText: 'Only letters, spaces, hyphens and apostrophes',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Last name is required';
+                          }
+                          final nameRegex = RegExp(r"^[a-zA-Z\s\-']+$");
+                          if (!nameRegex.hasMatch(value.trim())) {
+                            return 'Last name can only contain letters, spaces, hyphens and apostrophes';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Email
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                          helperText: 'Format: example@domain.com',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          // Proper email regex validation
+                          final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                          if (!emailRegex.hasMatch(value.trim())) {
+                            return 'Please enter a valid email format (e.g. user@domain.com)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Date of Birth
+                      InkWell(
+                        onTap: () => _selectDateOfBirth(context),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Date of Birth',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.calendar_today_outlined),
+                            suffixIcon: Icon(Icons.arrow_drop_down),
+                          ),
+                          child: Text(_formatDate(_selectedDateOfBirth)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Status Dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedStatus,
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['Active', 'Inactive'].map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(status),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedStatus = value;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                ],
+                ),
+              ),
+              // Footer with buttons (fixed at bottom)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Save Changes'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

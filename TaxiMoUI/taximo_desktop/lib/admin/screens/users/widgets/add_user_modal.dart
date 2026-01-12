@@ -96,15 +96,33 @@ class _AddUserModalState extends State<AddUserModal> {
     try {
       await Provider.of<UsersProvider>(context, listen: false).createUser(userData);
       if (mounted) {
+        // Clear form fields after successful creation
+        _firstNameController.clear();
+        _lastNameController.clear();
+        _usernameController.clear();
+        _phoneController.clear();
+        _emailController.clear();
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        _selectedDateOfBirth = null;
+        _selectedStatus = 'Active';
+        _formKey.currentState?.reset();
+        
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User created successfully')),
+          const SnackBar(
+            content: Text('Korisnik je uspješno kreiran'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Greška pri kreiranju korisnika: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -128,13 +146,25 @@ class _AddUserModalState extends State<AddUserModal> {
               // Header (fixed)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: const Text(
-                  'Add User',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D3F),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add User',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
               // Scrollable content
@@ -144,44 +174,57 @@ class _AddUserModalState extends State<AddUserModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-              // First Name
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'First Name',
-                  border: OutlineInputBorder(),
-                ),
+                      // First Name
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'First Name',
+                          border: OutlineInputBorder(),
+                          helperText: 'Samo slova, razmaci, crtice i apostrofi',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'First name is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ime je obavezno';
+                  }
+                  final nameRegex = RegExp(r"^[a-zA-Z\s\-']+$");
+                  if (!nameRegex.hasMatch(value.trim())) {
+                    return 'Ime može sadržavati samo slova, razmake, crtice i apostrofe';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              // Last Name
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Last Name',
-                  border: OutlineInputBorder(),
-                ),
+                      // Last Name
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Last Name',
+                          border: OutlineInputBorder(),
+                          helperText: 'Samo slova, razmaci, crtice i apostrofi',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Last name is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Prezime je obavezno';
+                  }
+                  final nameRegex = RegExp(r"^[a-zA-Z\s\-']+$");
+                  if (!nameRegex.hasMatch(value.trim())) {
+                    return 'Prezime može sadržavati samo slova, razmake, crtice i apostrofe';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              // Username
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                  helperText: 'Only letters, spaces, hyphens, and apostrophes allowed',
-                ),
+                      // Username
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Username',
+                          border: OutlineInputBorder(),
+                          helperText: 'Only letters, spaces, hyphens, and apostrophes allowed',
+                          prefixIcon: Icon(Icons.account_circle_outlined),
+                        ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Username is required';
@@ -195,41 +238,55 @@ class _AddUserModalState extends State<AddUserModal> {
                 },
               ),
               const SizedBox(height: 16),
-              // Phone
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  border: OutlineInputBorder(),
-                ),
+                      // Phone
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone',
+                          border: OutlineInputBorder(),
+                          helperText: 'Format: +387 61 123 456 ili 061 123 456',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Phone is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Telefon je obavezan';
                   }
-                  // Basic phone validation (allows digits, spaces, hyphens, parentheses, plus)
+                  // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
                   final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
-                  if (!phoneRegex.hasMatch(value)) {
-                    return 'Invalid phone format';
+                  if (!phoneRegex.hasMatch(value.trim())) {
+                    return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                  }
+                  // Check minimum length (at least 6 digits)
+                  final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+                  if (digitsOnly.length < 6) {
+                    return 'Broj telefona mora imati najmanje 6 cifara';
+                  }
+                  if (digitsOnly.length > 15) {
+                    return 'Broj telefona ne može imati više od 15 cifara';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              // Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
+                      // Email
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                          helperText: 'Format: example@domain.com',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Email je obavezan';
                   }
-                  if (!value.contains('@')) {
-                    return 'Invalid email format';
+                  // Proper email regex validation
+                  final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                  if (!emailRegex.hasMatch(value.trim())) {
+                    return 'Unesite validan email format (npr. korisnik@domena.com)';
                   }
                   return null;
                 },
@@ -257,26 +314,29 @@ class _AddUserModalState extends State<AddUserModal> {
                 },
               ),
               const SizedBox(height: 16),
-              // Date of Birth
-              InkWell(
-                onTap: () => _selectDateOfBirth(context),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date of Birth',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
+                      // Date of Birth
+                      InkWell(
+                        onTap: () => _selectDateOfBirth(context),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Date of Birth',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.calendar_today_outlined),
+                            suffixIcon: Icon(Icons.arrow_drop_down),
+                          ),
                   child: Text(_formatDate(_selectedDateOfBirth)),
                 ),
               ),
               const SizedBox(height: 16),
-              // Password
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
+                      // Password
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: const OutlineInputBorder(),
+                          helperText: 'Lozinka mora imati najmanje 8 karaktera',
+                          prefixIcon: const Icon(Icons.lock_outlined),
+                          suffixIcon: IconButton(
                     icon: const Icon(Icons.autorenew),
                     onPressed: () {
                       final password = _generatePassword();
@@ -289,29 +349,31 @@ class _AddUserModalState extends State<AddUserModal> {
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Password is required';
+                    return 'Lozinka je obavezna';
                   }
                   if (value.length < 8) {
-                    return 'Password must be at least 8 characters';
+                    return 'Lozinka mora imati najmanje 8 karaktera';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              // Confirm Password
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
+                      // Confirm Password
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(),
+                          helperText: 'Potvrdite lozinku',
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please confirm password';
+                    return 'Potvrda lozinke je obavezna';
                   }
                   if (value != _passwordController.text) {
-                    return 'Passwords do not match';
+                    return 'Lozinke se ne poklapaju';
                   }
                   return null;
                 },

@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import '../providers/driver_provider.dart';
 import '../providers/driver_reviews_provider.dart';
 import '../providers/ride_requests_provider.dart';
+import '../providers/active_rides_provider.dart';
+import '../providers/notification_provider.dart';
 import '../layout/driver_main_navigation.dart';
 import '../widgets/driver_avatar.dart';
+import '../widgets/driver_app_bar.dart';
 import '../../auth/screens/login_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -38,6 +41,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           // Load ride requests
           final rideRequestsProvider = context.read<RideRequestsProvider>();
           rideRequestsProvider.loadRideRequests(driverId);
+          
+          // Load active rides
+          final activeRidesProvider = context.read<ActiveRidesProvider>();
+          activeRidesProvider.loadActiveRides(driverId);
+          
+          // Load notification unread count
+          final notificationProvider = context.read<DriverNotificationProvider>();
+          notificationProvider.loadNotifications(driverId);
         }
       }
     });
@@ -49,23 +60,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () {
-              final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-              driverProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          ),
-        ],
-      ),
+      appBar: DriverAppBar(title: 'Home'),
       body: Consumer<DriverProvider>(
         builder: (context, driverProvider, child) {
           final driver = driverProvider.currentDriver;
@@ -125,6 +120,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 
                 const SizedBox(height: 32),
                 
+                // Active Ride Card
+                _buildActiveRideCard(context, driverProvider),
+                
+                const SizedBox(height: 32),
+                
                 // Reviews Card (moved to bottom)
                 _buildReviewsCard(context),
               ],
@@ -142,7 +142,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isOnline = profile?.isOnline ?? false;
+    // Only show status if profile is loaded and has isOnline property
+    final isOnline = profile?.isOnline;
+    final showStatus = isOnline != null;
 
     return Card(
       elevation: 0,
@@ -186,44 +188,45 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ],
               ),
             ),
-            // Status Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: isOnline 
-                    ? Colors.green.withValues(alpha: 0.15)
-                    : Colors.grey.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
+            // Status Badge (only show if profile is loaded)
+            if (showStatus)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
                   color: isOnline 
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.3),
-                  width: 1,
+                      ? Colors.green.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isOnline 
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.grey.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isOnline ? Colors.green : Colors.grey[600],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        color: isOnline ? Colors.green[700] : Colors.grey[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isOnline ? Colors.green : Colors.grey[600],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isOnline ? 'Online' : 'Offline',
-                    style: TextStyle(
-                      color: isOnline ? Colors.green[700] : Colors.grey[700],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -332,6 +335,125 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         ),
                       ),
                     ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActiveRideCard(
+    BuildContext context,
+    DriverProvider driverProvider,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final driverProfile = driverProvider.driverProfile;
+    final driverId = driverProfile?.driverId ?? driverProvider.currentDriver?.driverId ?? 0;
+
+    return Consumer<ActiveRidesProvider>(
+      builder: (context, activeRidesProvider, child) {
+        final activeRide = activeRidesProvider.currentActiveRide;
+        final hasActiveRide = activeRide != null;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: colorScheme.outline.withValues(alpha: 0.12),
+            ),
+          ),
+          child: InkWell(
+            onTap: hasActiveRide
+                ? () {
+                    Navigator.pushNamed(
+                      context,
+                      '/active-ride',
+                      arguments: activeRide.rideId,
+                    );
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: hasActiveRide
+                    ? Colors.green.withValues(alpha: 0.95)
+                    : Colors.grey.withValues(alpha: 0.1),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: hasActiveRide
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.grey.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.local_taxi,
+                      color: hasActiveRide ? Colors.white : Colors.grey[600],
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Active Ride',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: hasActiveRide ? Colors.white : colorScheme.onSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (hasActiveRide) ...[
+                          Text(
+                            activeRide.passengerName,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                'View Ride',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontWeight: FontWeight.w400,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.white.withValues(alpha: 0.85),
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Text(
+                            'No active ride',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

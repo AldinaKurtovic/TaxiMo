@@ -231,7 +231,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                           icon: Icons.location_on,
                           iconColor: Colors.green,
                           label: 'Pickup',
-                          address: ride.pickupAddress,
+                          address: ride.pickupCoordinates,
                         ),
                         const SizedBox(height: 20),
 
@@ -244,7 +244,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                           icon: Icons.location_on,
                           iconColor: Colors.red,
                           label: 'Dropoff',
-                          address: ride.dropoffAddress,
+                          address: ride.dropoffCoordinates,
                         ),
                         const SizedBox(height: 24),
 
@@ -439,7 +439,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Complete Ride'),
-        content: Text('Complete the ride for ${ride.passengerName}?'),
+        content: const Text('Are you sure you want to complete the ride?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

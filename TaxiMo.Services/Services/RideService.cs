@@ -15,18 +15,24 @@ namespace TaxiMo.Services.Services
         private readonly RideStateFactory _stateFactory;
         private readonly IMapper _mapper;
         private readonly IDriverService _driverService;
+        private readonly IUserNotificationService _userNotificationService;
+        private readonly IDriverNotificationService _driverNotificationService;
 
         public RideService(
             TaxiMoDbContext context, 
             IRidePriceCalculator priceCalculator,
             RideStateFactory stateFactory,
             IMapper mapper,
-            IDriverService driverService) : base(context)
+            IDriverService driverService,
+            IUserNotificationService userNotificationService,
+            IDriverNotificationService driverNotificationService) : base(context)
         {
             _priceCalculator = priceCalculator;
             _stateFactory = stateFactory;
             _mapper = mapper;
             _driverService = driverService;
+            _userNotificationService = userNotificationService;
+            _driverNotificationService = driverNotificationService;
         }
 
         public async Task<List<Ride>> GetAllAsync(string? search = null, string? status = null)
@@ -85,7 +91,7 @@ namespace TaxiMo.Services.Services
                 RideId = ride.RideId,
                 UserId = ride.RiderId,
                 Amount = ride.FareEstimate ?? 0,
-                Currency = "KM",
+                Currency = "EUR",
                 Method = paymentMethod ?? "cash",
                 Status = "pending",
                 TransactionRef = null,
@@ -97,6 +103,29 @@ namespace TaxiMo.Services.Services
 
             // Publish RabbitMQ message after successful save
             await PublishRideCreatedMessageAsync(ride);
+
+            // Create notification for driver - new ride request (if driver is assigned)
+            if (ride.DriverId > 0)
+            {
+                try
+                {
+                    var pickupLocation = await Context.Locations.FindAsync(ride.PickupLocationId);
+                    var pickupLocationString = pickupLocation != null 
+                        ? $"{pickupLocation.Name}" + (!string.IsNullOrWhiteSpace(pickupLocation.City) ? $", {pickupLocation.City}" : "")
+                        : "Unknown location";
+                    
+                    await _driverNotificationService.CreateNotificationAsync(
+                        ride.DriverId,
+                        "New Ride Request",
+                        $"You have received a new ride request. Pickup: {pickupLocationString}. Ride ID: {ride.RideId}",
+                        "ride_request");
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the ride creation
+                    Console.WriteLine($"Failed to create driver notification for ride request: {ex.Message}");
+                }
+            }
 
             return (ride, payment);
         }
@@ -193,6 +222,22 @@ namespace TaxiMo.Services.Services
             var state = _stateFactory.GetState(ride.Status);
             var updatedRide = await state.AcceptAsync(rideId, driverId);
             await Context.SaveChangesAsync();
+
+            // Create notification for user - ride accepted
+            try
+            {
+                await _userNotificationService.CreateNotificationAsync(
+                    updatedRide.RiderId,
+                    "Ride Accepted",
+                    $"Your driver has accepted your ride. Ride ID: {updatedRide.RideId}",
+                    "ride_accepted");
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the ride acceptance
+                Console.WriteLine($"Failed to create notification for ride acceptance: {ex.Message}");
+            }
+
             return updatedRide;
         }
 
@@ -221,6 +266,22 @@ namespace TaxiMo.Services.Services
             var state = _stateFactory.GetState(ride.Status);
             var updatedRide = await state.StartAsync(rideId);
             await Context.SaveChangesAsync();
+
+            // Create notification for user - ride started
+            try
+            {
+                await _userNotificationService.CreateNotificationAsync(
+                    updatedRide.RiderId,
+                    "Ride Started",
+                    $"Your driver has started the ride. Ride ID: {updatedRide.RideId}",
+                    "ride_started");
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the ride start
+                Console.WriteLine($"Failed to create notification for ride start: {ex.Message}");
+            }
+
             return updatedRide;
         }
 
@@ -235,6 +296,25 @@ namespace TaxiMo.Services.Services
             var state = _stateFactory.GetState(ride.Status);
             var updatedRide = await state.CompleteAsync(rideId);
             await Context.SaveChangesAsync();
+
+            // Create notification for user - ride completed
+            try
+            {
+                var fareInfo = updatedRide.FareFinal.HasValue 
+                    ? $"Final price: {updatedRide.FareFinal.Value:F2} EUR" 
+                    : "";
+                await _userNotificationService.CreateNotificationAsync(
+                    updatedRide.RiderId,
+                    "Ride Completed",
+                    $"Your ride has been completed successfully. Ride ID: {updatedRide.RideId}. {fareInfo}",
+                    "ride_completed");
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the ride completion
+                Console.WriteLine($"Failed to create notification for ride completion: {ex.Message}");
+            }
+
             return updatedRide;
         }
 
@@ -323,6 +403,26 @@ namespace TaxiMo.Services.Services
             // Status will transition to "active" only when driver accepts the ride
 
             await Context.SaveChangesAsync();
+
+            // Create notification for driver - ride assigned
+            try
+            {
+                var pickupLocation = await Context.Locations.FindAsync(ride.PickupLocationId);
+                var pickupLocationString = pickupLocation != null 
+                    ? $"{pickupLocation.Name}" + (!string.IsNullOrWhiteSpace(pickupLocation.City) ? $", {pickupLocation.City}" : "")
+                    : "Unknown location";
+                
+                await _driverNotificationService.CreateNotificationAsync(
+                    driverId,
+                    "Ride Assigned",
+                    $"A ride has been assigned to you. Pickup: {pickupLocationString}. Ride ID: {ride.RideId}",
+                    "ride_request");
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the driver assignment
+                Console.WriteLine($"Failed to create driver notification for ride assignment: {ex.Message}");
+            }
 
             // Reload the ride with all related entities for the response
             var updatedRide = await Context.Rides

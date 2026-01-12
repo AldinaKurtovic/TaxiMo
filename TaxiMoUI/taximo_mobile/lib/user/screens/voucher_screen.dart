@@ -70,7 +70,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
     if (promo.isPercentage) {
       return '${promo.discountValue.toStringAsFixed(0)}% off';
     } else {
-      return '${promo.discountValue.toStringAsFixed(2)} KM off';
+      return '${promo.discountValue.toStringAsFixed(2)} EUR off';
     }
   }
 

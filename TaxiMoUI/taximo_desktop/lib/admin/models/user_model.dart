@@ -7,6 +7,7 @@ class UserModel {
   final String? phone;
   final DateTime? dateOfBirth;
   final String status;
+  final String? photoUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String> roles;
@@ -20,6 +21,7 @@ class UserModel {
     this.phone,
     this.dateOfBirth,
     required this.status,
+    this.photoUrl,
     required this.createdAt,
     required this.updatedAt,
     required this.roles,
@@ -41,6 +43,7 @@ class UserModel {
           ? DateTime.tryParse(json['dateOfBirth'] as String)
           : null,
       status: (json['status'] as String?)?.trim() ?? 'Inactive',
+      photoUrl: (json['photoUrl'] as String?)?.trim(),
       createdAt: json['createdAt'] != null && json['createdAt'] is String
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),

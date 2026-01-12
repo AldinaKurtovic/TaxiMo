@@ -34,21 +34,78 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Promo Code'),
-        content: Text('Are you sure you want to delete promo code "${promo.code}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red,
+          size: 48,
+        ),
+        title: const Text(
+          'Upozorenje',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D2D3F),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ova akcija je nepovratna!',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Da li ste sigurni da želite obrisati promo kod "${promo.code}"?',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF424242),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Otkaži'),
           ),
-          TextButton(
-            onPressed: () {
-              Provider.of<PromoProvider>(context, listen: false)
-                  .delete(promo.promoId);
-              Navigator.pop(context);
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await Provider.of<PromoProvider>(context, listen: false)
+                    .delete(promo.promoId);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Promo kod je uspješno obrisan'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Greška pri brisanju promo koda: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Obriši'),
           ),
         ],
       ),
@@ -240,19 +297,6 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                           columnSpacing: 32,
                           horizontalMargin: 24,
                               columns: [
-                          DataColumn(
-                            label: Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: Text(
-                                'Promo ID',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ),
-                          ),
                           DataColumn(
                             label: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -454,21 +498,9 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                   ],
                                 ),
                               ]
-                            : provider.currentPagePromoCodes.map((promo) {
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: Text(
-                                    promo.promoId.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF424242),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                          : provider.currentPagePromoCodes.map((promo) {
+                        return DataRow(
+                          cells: [
                               DataCell(
                                 Text(
                                   promo.code,

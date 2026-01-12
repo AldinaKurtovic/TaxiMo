@@ -75,12 +75,14 @@ class _EditDriverModalState extends State<EditDriverModal> {
     }
 
     final driverId = widget.driver.driverId;
-    print('Edit driver - Driver ID: $driverId'); // Debug log
     
     if (driverId <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Invalid driver ID')),
+          const SnackBar(
+            content: Text('Error: Invalid driver ID'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return;
@@ -98,25 +100,27 @@ class _EditDriverModalState extends State<EditDriverModal> {
       // Only send licenseExpiry if it's not null
       if (_selectedLicenseExpiry != null) 'licenseExpiry': _selectedLicenseExpiry!.toIso8601String(),
       'status': _selectedStatus.toLowerCase(), // Backend expects lowercase: "active" or "inactive"
-      'changePassword': false,
       'roleId': _driverRoleId, // Required by DriverUpdateDto (3 = Driver role)
     };
-
-    print('Edit driver - Sending data: $driverData'); // Debug log
 
     try {
       await Provider.of<DriversProvider>(context, listen: false).updateDriver(driverId, driverData);
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver updated successfully')),
+          const SnackBar(
+            content: Text('Driver successfully updated'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
-      print('Edit driver error: $e'); // Debug log
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error updating driver: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -128,22 +132,46 @@ class _EditDriverModalState extends State<EditDriverModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: 500,
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Edit Driver',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D2D3F),
+              // Header (fixed)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Driver',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
+              // Scrollable content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               // First Name
               TextFormField(
                 controller: _firstNameController,
@@ -184,24 +212,27 @@ class _EditDriverModalState extends State<EditDriverModal> {
                 },
               ),
               const SizedBox(height: 16),
-              // Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Invalid email format';
-                  }
-                  return null;
-                },
-              ),
+                      // Email
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                          helperText: 'Format: example@domain.com',
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          // Proper email regex validation
+                          final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                          if (!emailRegex.hasMatch(value.trim())) {
+                            return 'Please enter a valid email format (e.g. user@domain.com)';
+                          }
+                          return null;
+                        },
+                      ),
               const SizedBox(height: 16),
               // License Number
               TextFormField(
@@ -230,47 +261,54 @@ class _EditDriverModalState extends State<EditDriverModal> {
                   child: Text(_formatDate(_selectedLicenseExpiry)),
                 ),
               ),
-              const SizedBox(height: 16),
-              // Status Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
+                      const SizedBox(height: 16),
+                      // Status Dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedStatus,
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['Active', 'Inactive'].map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(status),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedStatus = value;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-                items: ['Active', 'Inactive'].map((status) {
-                  return DropdownMenuItem(
-                    value: status,
-                    child: Text(status),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedStatus = value;
-                    });
-                  }
-                },
               ),
-              const SizedBox(height: 24),
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
+              // Footer with buttons (fixed at bottom)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
                     ),
-                    child: const Text('Save Changes'),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Save Changes'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

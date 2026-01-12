@@ -320,7 +320,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             ? [
                                 DataRow(
                                   cells: [
-                                    const DataCell(SizedBox.shrink()),
+                                    DataCell(Container()),
                                     DataCell(
                                       Center(
                                         child: Padding(
@@ -346,10 +346,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                         ),
                                       ),
                                     ),
-                                    const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
+                                    DataCell(Container()),
+                                    DataCell(Container()),
+                                    DataCell(Container()),
                                   ],
                                 ),
                               ]

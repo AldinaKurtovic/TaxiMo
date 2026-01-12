@@ -461,7 +461,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                                           ],
                                         ),
                                       Text(
-                                        '${finalPrice.toStringAsFixed(2)} KM',
+                                        '${finalPrice.toStringAsFixed(2)} EUR',
                                         style: theme.textTheme.labelLarge?.copyWith(
                                           fontWeight: FontWeight.w700,
                                           color: Colors.black,
@@ -761,7 +761,7 @@ class _DriverCard extends StatelessWidget {
                       ),
                     ),
                   Text(
-                    '${price.toStringAsFixed(2)} KM',
+                    '${price.toStringAsFixed(2)} EUR',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: isSelected ? colorScheme.onPrimaryContainer : null,

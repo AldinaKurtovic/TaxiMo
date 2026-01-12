@@ -8,6 +8,7 @@ import '../rides/rides_screen.dart';
 import '../reviews/reviews_screen.dart';
 import '../statistics/statistics_screen.dart';
 import '../promo_codes/promo_codes_screen.dart';
+import '../payments/payments_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,6 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const StatisticsScreen();
       case '/promo-codes':
         return const PromoCodesScreen();
+      case '/payments':
+        return const PaymentsScreen();
       default:
         return const HomeScreen();
     }
@@ -209,6 +212,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.percent_outlined,
                 color: Colors.teal,
                 route: '/promo-codes',
+              ),
+              _buildQuickAccessCard(
+                context,
+                title: 'Payments',
+                icon: Icons.payment_outlined,
+                color: Colors.indigo,
+                route: '/payments',
               ),
             ],
           ),

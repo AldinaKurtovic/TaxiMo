@@ -119,9 +119,23 @@ class RideRequestModel {
     return 'Unknown Location';
   }
 
+  String get pickupCoordinates {
+    if (pickupLocation != null) {
+      return '${pickupLocation!.lat.toStringAsFixed(6)}, ${pickupLocation!.lng.toStringAsFixed(6)}';
+    }
+    return 'Unknown';
+  }
+
+  String get dropoffCoordinates {
+    if (dropoffLocation != null) {
+      return '${dropoffLocation!.lat.toStringAsFixed(6)}, ${dropoffLocation!.lng.toStringAsFixed(6)}';
+    }
+    return 'Unknown';
+  }
+
   String get formattedPrice {
     final price = fareEstimate ?? 0.0;
-    return '${price.toStringAsFixed(2)} KM';
+    return '${price.toStringAsFixed(2)} EUR';
   }
 
   String get formattedRequestTime {

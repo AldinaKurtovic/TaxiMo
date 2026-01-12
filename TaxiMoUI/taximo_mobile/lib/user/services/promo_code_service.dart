@@ -1,13 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../auth/providers/auth_provider.dart';
 import '../../config/api_config.dart';
 import '../models/promo_code_dto.dart';
 
 class PromoCodeService {
   Map<String, String> _headers() {
+    final user = AuthProvider.username;
+    final pass = AuthProvider.password;
+    
+    if (user == null || user.isEmpty || pass == null || pass.isEmpty) {
+      throw Exception('Authentication credentials are missing. Please login again.');
+    }
+    
+    final credentials = base64Encode(utf8.encode('$user:$pass'));
     return {
+      'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Basic bW9iaWxlOnRlc3Q=',
+      'Authorization': 'Basic $credentials',
     };
   }
 
@@ -18,12 +28,14 @@ class PromoCodeService {
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+      final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+      // API returns paginated response with 'data' and 'pagination' fields
+      final List<dynamic> jsonList = jsonData['data'] as List<dynamic>;
       return jsonList
           .map((json) => PromoCodeDto.fromJson(json as Map<String, dynamic>))
           .toList();
     } else {
-      throw Exception('Error loading promo codes');
+      throw Exception('Error loading promo codes: ${response.statusCode} - ${response.body}');
     }
   }
 
@@ -33,7 +45,9 @@ class PromoCodeService {
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+      final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+      // API returns paginated response with 'data' and 'pagination' fields
+      final List<dynamic> jsonList = jsonData['data'] as List<dynamic>;
       return jsonList
           .map((json) => PromoCodeDto.fromJson(json as Map<String, dynamic>))
           .toList();

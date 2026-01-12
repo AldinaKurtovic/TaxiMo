@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 
@@ -56,23 +57,18 @@ class UsersService {
   }
 
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> userData) async {
-    print('Creating user with data: $userData'); // Debug log
-    
     final response = await http.post(
       Uri.parse('$baseUrl/api/Users'),
       headers: _headers(),
       body: jsonEncode(userData),
     );
 
-    print('Create user response status: ${response.statusCode}'); // Debug log
-    print('Create user response body: ${response.body}'); // Debug log
-
     if (response.statusCode == 200 || response.statusCode == 201) {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
       return responseData['data'] as Map<String, dynamic>? ?? responseData;
     } else {
       final errorBody = response.body;
-      print('Create user error body: $errorBody'); // Debug log
+      debugPrint('Create user error - Status: ${response.statusCode}, Body: $errorBody');
       try {
         final errorData = jsonDecode(errorBody) as Map<String, dynamic>;
         String message = 'Failed to create user';
@@ -104,23 +100,18 @@ class UsersService {
   }
 
   Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> userData) async {
-    print('Updating user $id with data: $userData'); // Debug log
-    
     final response = await http.put(
       Uri.parse('$baseUrl/api/Users/$id'),
       headers: _headers(),
       body: jsonEncode(userData),
     );
 
-    print('Update user response status: ${response.statusCode}'); // Debug log
-    print('Update user response body: ${response.body}'); // Debug log
-
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
       return responseData['data'] as Map<String, dynamic>? ?? responseData;
     } else {
       final errorBody = response.body;
-      print('Update user error body: $errorBody'); // Debug log
+      debugPrint('Update user error - Status: ${response.statusCode}, Body: $errorBody');
       try {
         final errorData = jsonDecode(errorBody) as Map<String, dynamic>;
         String message = 'Failed to update user';
@@ -157,27 +148,19 @@ class UsersService {
       throw Exception('Invalid user ID: $id');
     }
     
-    print('Deleting user with ID: $id'); // Debug log
     final url = '$baseUrl/api/Users/$id';
-    print('Delete user URL: $url'); // Debug log
-    
     final headers = _headers();
-    print('Delete user headers: ${headers.keys}'); // Debug log
     
     final response = await http.delete(
       Uri.parse(url),
       headers: headers,
     );
 
-    print('Delete user response status: ${response.statusCode}'); // Debug log
-    print('Delete user response body: ${response.body}'); // Debug log
-
     if (response.statusCode == 204 || response.statusCode == 200) {
-      print('User deleted successfully'); // Debug log
       return true;
     } else {
       final errorBody = response.body;
-      print('Delete user error - Status: ${response.statusCode}, Body: $errorBody'); // Debug log
+      debugPrint('Delete user error - Status: ${response.statusCode}, Body: $errorBody');
       try {
         if (errorBody.isNotEmpty) {
           final errorData = jsonDecode(errorBody) as Map<String, dynamic>;

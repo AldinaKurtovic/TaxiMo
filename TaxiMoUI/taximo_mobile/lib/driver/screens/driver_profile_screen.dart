@@ -8,6 +8,7 @@ import '../../auth/screens/login_screen.dart';
 import 'edit_driver_profile_screen.dart';
 import 'change_driver_password_screen.dart';
 import '../widgets/driver_avatar.dart';
+import '../widgets/driver_app_bar.dart';
 
 class DriverProfileScreen extends StatefulWidget {
   const DriverProfileScreen({super.key});
@@ -127,22 +128,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () {
-              final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-              driverProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          ),
-        ],
-      ),
+      appBar: DriverAppBar(title: 'My Profile'),
       body: Consumer2<DriverProfileProvider, DriverProvider>(
         builder: (context, profileProvider, driverProvider, child) {
           final driver = profileProvider.driverProfile ?? driverProvider.currentDriver;
@@ -287,12 +273,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                             value: driver.phone!,
                           ),
                         ],
-                        const Divider(height: 32),
-                        _InfoRow(
-                          icon: Icons.badge_outlined,
-                          label: 'Driver ID',
-                          value: driver.driverId.toString(),
-                        ),
                         if (driver.roles.isNotEmpty) ...[
                           const Divider(height: 32),
                           _InfoRow(
