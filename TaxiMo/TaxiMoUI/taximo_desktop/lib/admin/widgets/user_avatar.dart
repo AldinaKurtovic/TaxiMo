@@ -26,7 +26,7 @@ class UserAvatar extends StatelessWidget {
     }
     // Remove leading slash if present to avoid double slashes
     final cleanUrl = photoUrl!.startsWith('/') ? photoUrl!.substring(1) : photoUrl!;
-    return '$baseUrl/$cleanUrl';
+    return '${UserAvatar.baseUrl}/$cleanUrl';
   }
 
   @override
@@ -49,7 +49,7 @@ class UserAvatar extends StatelessWidget {
         onBackgroundImageError: (exception, stackTrace) {
           // Image failed to load, will fall back to initial
         },
-        child: null, // Show network image if available
+        child: null,
       );
     }
     
@@ -68,4 +68,3 @@ class UserAvatar extends StatelessWidget {
     );
   }
 }
-

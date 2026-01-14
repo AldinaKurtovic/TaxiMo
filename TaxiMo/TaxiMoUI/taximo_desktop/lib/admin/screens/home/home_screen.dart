@@ -33,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToRoute(String route) {
-    Navigator.pushReplacement(
+    // Use push instead of pushReplacement for quick access to allow back navigation
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MasterScreen(

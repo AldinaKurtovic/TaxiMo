@@ -41,7 +41,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
           size: 48,
         ),
         title: const Text(
-          'Upozorenje',
+          'Warning',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -53,7 +53,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Ova akcija je nepovratna!',
+              'This action is irreversible!',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -62,7 +62,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Da li ste sigurni da želite obrisati promo kod "${promo.code}"?',
+              'Are you sure you want to delete promo code "${promo.code}"?',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF424242),
@@ -73,7 +73,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Otkaži'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -84,7 +84,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Promo kod je uspješno obrisan'),
+                      content: Text('Promo code successfully deleted'),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -94,7 +94,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Greška pri brisanju promo koda: ${e.toString()}'),
+                      content: Text('Error deleting promo code: ${e.toString()}'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -105,7 +105,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Obriši'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -147,15 +147,42 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          const Text(
-            'Promo Codes',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D2D3F),
-              letterSpacing: -0.5,
-            ),
+          // Title with Back Button (only if navigated from home page via quick access)
+          Builder(
+            builder: (context) {
+              final canPop = Navigator.canPop(context);
+              if (canPop) {
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 24),
+                      color: const Color(0xFF2D2D3F),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Back to Home',
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Promo Codes',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const Text(
+                'Promo Codes',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D2D3F),
+                  letterSpacing: -0.5,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           // Header with Add Promo Code button and Search
@@ -489,8 +516,6 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                                         ),
                                       ),
                                     ),
-                                    const DataCell(SizedBox.shrink()),
-                                    const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),
                                     const DataCell(SizedBox.shrink()),

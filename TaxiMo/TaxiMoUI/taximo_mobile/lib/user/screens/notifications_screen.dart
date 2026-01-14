@@ -13,25 +13,36 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  NotificationProvider? _notificationProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Save reference to provider when dependencies change
+    if (_notificationProvider == null) {
+      _notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
       final currentUser = authProvider.currentUser;
-      if (currentUser != null) {
-        final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-        notificationProvider.loadNotifications(currentUser.userId);
+      if (currentUser != null && _notificationProvider != null) {
+        _notificationProvider!.loadNotifications(currentUser.userId);
         // Start polling every 45 seconds
-        notificationProvider.startPolling(currentUser.userId, interval: const Duration(seconds: 45));
+        _notificationProvider!.startPolling(currentUser.userId, interval: const Duration(seconds: 45));
       }
     });
   }
 
   @override
   void dispose() {
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    notificationProvider.stopPolling();
+    // Use saved reference instead of accessing Provider through context
+    _notificationProvider?.stopPolling();
     super.dispose();
   }
 

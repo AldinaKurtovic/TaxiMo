@@ -118,7 +118,7 @@ class _AddDriverModalState extends State<AddDriverModal> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vozač je uspješno kreiran'),
+            content: Text('Driver successfully created'),
             backgroundColor: Colors.green,
           ),
         );
@@ -127,7 +127,7 @@ class _AddDriverModalState extends State<AddDriverModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Greška pri kreiranju vozača: ${e.toString()}'),
+            content: Text('Error creating driver: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -248,25 +248,25 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 decoration: const InputDecoration(
                   labelText: 'Phone',
                   border: OutlineInputBorder(),
-                  helperText: 'Format: +387 61 123 456 ili 061 123 456',
+                  helperText: 'Format: +387 61 123 456 or 061 123 456',
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Telefon je obavezan';
+                    return 'Phone is required';
                   }
                   // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
                   final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
                   if (!phoneRegex.hasMatch(value.trim())) {
-                    return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                    return 'Enter a valid phone number (digits, spaces, hyphens, parentheses and + are allowed)';
                   }
                   // Check minimum length (at least 6 digits)
                   final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
                   if (digitsOnly.length < 6) {
-                    return 'Broj telefona mora imati najmanje 6 cifara';
+                    return 'Phone number must have at least 6 digits';
                   }
                   if (digitsOnly.length > 15) {
-                    return 'Broj telefona ne može imati više od 15 cifara';
+                    return 'Phone number cannot have more than 15 digits';
                   }
                   return null;
                 },
@@ -283,12 +283,12 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Email je obavezan';
+                    return 'Email is required';
                   }
                   // Proper email regex validation
                   final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
                   if (!emailRegex.hasMatch(value.trim())) {
-                    return 'Unesite validan email format (npr. korisnik@domena.com)';
+                    return 'Please enter a valid email format (e.g. user@domain.com)';
                   }
                   return null;
                 },
@@ -363,10 +363,10 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Lozinka je obavezna';
+                    return 'Password is required';
                   }
                   if (value.length < 8) {
-                    return 'Lozinka mora imati najmanje 8 karaktera';
+                    return 'Password must have at least 8 characters';
                   }
                   return null;
                 },
@@ -382,10 +382,10 @@ class _AddDriverModalState extends State<AddDriverModal> {
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Potvrda lozinke je obavezna';
+                    return 'Password confirmation is required';
                   }
                   if (value != _passwordController.text) {
-                    return 'Lozinke se ne poklapaju';
+                    return 'Passwords do not match';
                   }
                   return null;
                 },

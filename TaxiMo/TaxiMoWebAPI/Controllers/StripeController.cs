@@ -56,15 +56,22 @@ namespace TaxiMoWebAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}",
-                    request.RideId, request.PaymentId);
-                return StatusCode(500, new { message = ex.Message });
+                _logger.LogError(ex, "Error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}, Error: {Error}",
+                    request.RideId, request.PaymentId, ex.Message);
+                return StatusCode(500, new { 
+                    message = ex.Message,
+                    details = ex.InnerException?.Message ?? "Check backend logs for more details"
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}",
-                    request.RideId, request.PaymentId);
-                return StatusCode(500, new { message = "An error occurred while creating the payment intent" });
+                _logger.LogError(ex, "Unexpected error creating PaymentIntent - RideId: {RideId}, PaymentId: {PaymentId}, Error: {Error}, StackTrace: {StackTrace}",
+                    request.RideId, request.PaymentId, ex.Message, ex.StackTrace);
+                return StatusCode(500, new { 
+                    message = "An error occurred while creating the payment intent",
+                    details = ex.Message,
+                    innerException = ex.InnerException?.Message
+                });
             }
         }
 

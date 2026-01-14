@@ -137,8 +137,7 @@ namespace TaxiMo.Services.Services
             // Use AddInclude to ensure Driver and Rider are included for photo mapping
             var query = AddInclude(DbSet)
                 .Include(r => r.Ride)
-                .Where(r => r.Ride.DriverId == driverId)
-                .OrderByDescending(r => r.CreatedAt);
+                .Where(r => r.Ride.DriverId == driverId);
             
             return await query.ToListAsync();
         }

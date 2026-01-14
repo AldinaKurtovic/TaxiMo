@@ -273,14 +273,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                             value: driver.phone!,
                           ),
                         ],
-                        if (driver.roles.isNotEmpty) ...[
-                          const Divider(height: 32),
-                          _InfoRow(
-                            icon: Icons.account_circle_outlined,
-                            label: 'Role',
-                            value: driver.roles.map((r) => r.name).join(', '),
-                          ),
-                        ],
                         if (profile != null) ...[
                           const Divider(height: 32),
                           _InfoRow(

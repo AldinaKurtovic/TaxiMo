@@ -99,14 +99,14 @@ namespace TaxiMo.Services.Database
             {
                 new { Username = "admin", FirstName = "Admin", LastName = "User", Email = "admin@taximo.ba", Phone = "38761123456", DateOfBirth = new DateTime(1985, 5, 15), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-365), UpdatedAt = baseDate.AddDays(-1) },
                 new { Username = "desktop", FirstName = "Desktop", LastName = "Operator", Email = "desktop@taximo.ba", Phone = "38761234567", DateOfBirth = new DateTime(1990, 8, 20), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-300), UpdatedAt = baseDate.AddDays(-2) },
-                new { Username = "mobile", FirstName = "Mobile", LastName = "Operator", Email = "mobile@taximo.ba", Phone = "38761345678", DateOfBirth = new DateTime(1992, 3, 10), Status = "active", PhotoUrl = "/users/user1a.png", CreatedAt = baseDate.AddDays(-280), UpdatedAt = baseDate.AddDays(-3) },
+                new { Username = "user", FirstName = "User", LastName = "Operator", Email = "user@taximo.ba", Phone = "38761345678", DateOfBirth = new DateTime(1992, 3, 10), Status = "active", PhotoUrl = "/users/user1a.png", CreatedAt = baseDate.AddDays(-280), UpdatedAt = baseDate.AddDays(-3) },
                 new { Username = "aldinakurtovic", FirstName = "Aldina", LastName = "Kurtovic", Email = "aldinakurtovic7@gmail.com", Phone = "3876181997", DateOfBirth = new DateTime(1995, 11, 25), Status = "active", PhotoUrl = "/users/user3a.png", CreatedAt = baseDate.AddDays(-200), UpdatedAt = baseDate.AddDays(-5) },
                 new { Username = "elmedinamaric", FirstName = "Elmedina", LastName = "Maric", Email = "elmedinamaric@gmail.com", Phone = "38761567890", DateOfBirth = new DateTime(1988, 7, 5), Status = "active", PhotoUrl = "/users/user2.png", CreatedAt = baseDate.AddDays(-150), UpdatedAt = baseDate.AddDays(-4) },
                 new { Username = "amirsaric", FirstName = "Amir", LastName = "Saric", Email = "amir.saric@gmail.com", Phone = "38761111222", DateOfBirth = new DateTime(1994, 2, 14), Status = "active", PhotoUrl = "/users/user4.png", CreatedAt = baseDate.AddDays(-180), UpdatedAt = baseDate.AddDays(-10) },
                 new { Username = "lejlahadzic", FirstName = "Lejla", LastName = "Hadzic", Email = "lejla.hadzic@gmail.com", Phone = "38762222333", DateOfBirth = new DateTime(1996, 6, 30), Status = "active", PhotoUrl = "/users/user5.png", CreatedAt = baseDate.AddDays(-170), UpdatedAt = baseDate.AddDays(-9) },
                 new { Username = "harisbegic", FirstName = "Haris", LastName = "Begic", Email = "haris.begic@gmail.com", Phone = "38763333444", DateOfBirth = new DateTime(1991, 9, 12), Status = "active", PhotoUrl = "/users/user6.png", CreatedAt = baseDate.AddDays(-160), UpdatedAt = baseDate.AddDays(-8) },
                 new { Username = "majaperic", FirstName = "Maja", LastName = "Peric", Email = "maja.peric@gmail.com", Phone = "38764444555", DateOfBirth = new DateTime(1998, 1, 8), Status = "active", PhotoUrl = "/users/user7.png", CreatedAt = baseDate.AddDays(-155), UpdatedAt = baseDate.AddDays(-7) },
-                new { Username = "nedimkapetanovic", FirstName = "Nedim", LastName = "Kapetanovic", Email = "nedim.k@gmail.com", Phone = "38765555666", DateOfBirth = new DateTime(1989, 4, 22), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-145), UpdatedAt = baseDate.AddDays(-6) },
+                new { Username = "nedimkapetanovic", FirstName = "Nedim", LastName = "Kapetanovic", Email = "nedim.k@gmail.com", Phone = "38765555666", DateOfBirth = new DateTime(1989, 4, 22), Status = "active", PhotoUrl = "/users/user7.png", CreatedAt = baseDate.AddDays(-145), UpdatedAt = baseDate.AddDays(-6) },
                 new { Username = "sanjakovac", FirstName = "Sanja", LastName = "Kovac", Email = "sanja.kovac@gmail.com", Phone = "38766666777", DateOfBirth = new DateTime(1993, 12, 3), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-140), UpdatedAt = baseDate.AddDays(-5) },
                 new { Username = "tarikmujic", FirstName = "Tarik", LastName = "Mujic", Email = "tarik.mujic@gmail.com", Phone = "38767777888", DateOfBirth = new DateTime(1997, 5, 19), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-130), UpdatedAt = baseDate.AddDays(-4) },
                 new { Username = "ivanamarkovic", FirstName = "Ivana", LastName = "Markovic", Email = "ivana.markovic@gmail.com", Phone = "38768888999", DateOfBirth = new DateTime(1990, 10, 27), Status = "active", PhotoUrl = (string?)null, CreatedAt = baseDate.AddDays(-125), UpdatedAt = baseDate.AddDays(-3) },
@@ -528,18 +528,18 @@ namespace TaxiMo.Services.Database
 
         private static async Task UpsertRidesAsync(TaxiMoDbContext context, DateTime baseDate)
         {
-            // Get main driver (driver) and mobile user
+            // Get main driver (driver) and user
             var mainDriver = await context.Drivers.FirstOrDefaultAsync(d => d.Username == "driver");
-            var mobileUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "mobile");
+            var userUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "user");
             
             // Get all other drivers (excluding main driver)
             var otherDrivers = await context.Drivers
                 .Where(d => d.Username != "driver")
                 .ToListAsync();
 
-            // Get all users (excluding mobile for now, will add rides for mobile separately)
+            // Get all users (excluding user for now, will add rides for user separately)
             var allUsers = await context.Users
-                .Where(u => u.Username != "mobile" && u.Username != "admin" && u.Username != "desktop")
+                .Where(u => u.Username != "user" && u.Username != "admin" && u.Username != "desktop")
                 .ToListAsync();
 
             // Get all vehicles
@@ -551,7 +551,7 @@ namespace TaxiMo.Services.Database
                 .Where(l => l.City == "Mostar")
                 .ToListAsync();
 
-            if (mainDriver == null || mobileUser == null || otherDrivers.Count == 0 || locations.Count < 2)
+            if (mainDriver == null || userUser == null || otherDrivers.Count == 0 || locations.Count < 2)
             {
                 return;
             }
@@ -586,7 +586,7 @@ namespace TaxiMo.Services.Database
                 var fare = 8.0m + (i % 15) * 1.5m;
 
                 ridesToSeed.Add((
-                    RiderId: mobileUser.UserId,
+                    RiderId: userUser.UserId,
                     DriverId: mainDriver.DriverId,
                     VehicleId: mainDriverVehicle.VehicleId,
                     PickupLocationId: pickupLoc.LocationId,
@@ -627,7 +627,7 @@ namespace TaxiMo.Services.Database
                 var fare = 9.0m + (i % 12) * 1.8m;
 
                 ridesToSeed.Add((
-                    RiderId: mobileUser.UserId,
+                    RiderId: userUser.UserId,
                     DriverId: driver.DriverId,
                     VehicleId: driverVehicle.VehicleId,
                     PickupLocationId: pickupLoc.LocationId,
@@ -811,8 +811,8 @@ namespace TaxiMo.Services.Database
 
         private static async Task UpsertPaymentsAsync(TaxiMoDbContext context, DateTime baseDate)
         {
-            // Get mobile user - will have most payments
-            var mobileUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "mobile");
+            // Get user - will have most payments
+            var userUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "user");
             
             // Get all users who can have payments
             var allUsers = await context.Users
@@ -831,17 +831,17 @@ namespace TaxiMo.Services.Database
 
             var paymentCounter = 1;
 
-            // Mobile user - most payments (for all completed rides)
-            if (mobileUser != null)
+            // User - most payments (for all completed rides)
+            if (userUser != null)
             {
-                var mobileCompletedRides = allCompletedRides
-                    .Where(r => r.RiderId == mobileUser.UserId)
+                var userCompletedRides = allCompletedRides
+                    .Where(r => r.RiderId == userUser.UserId)
                     .ToList();
 
-                foreach (var ride in mobileCompletedRides)
+                foreach (var ride in userCompletedRides)
                 {
                     var fareAmount = ride.FareFinal.Value;
-                    var rideIndex = mobileCompletedRides.IndexOf(ride);
+                    var rideIndex = userCompletedRides.IndexOf(ride);
 
                     // Most payments are completed (online or cash)
                     // 70% online, 30% cash
@@ -882,7 +882,7 @@ namespace TaxiMo.Services.Database
 
                 if (existing != null)
                 {
-                        existing.UserId = mobileUser.UserId;
+                        existing.UserId = userUser.UserId;
                         existing.Amount = fareAmount;
                         existing.Currency = "EUR";
                         existing.Method = paymentMethod;
@@ -895,7 +895,7 @@ namespace TaxiMo.Services.Database
                     context.Payments.Add(new Payment
                     {
                             RideId = ride.RideId,
-                            UserId = mobileUser.UserId,
+                            UserId = userUser.UserId,
                             Amount = fareAmount,
                             Currency = "EUR",
                             Method = paymentMethod,
@@ -909,7 +909,7 @@ namespace TaxiMo.Services.Database
 
             // Other users - payments for ALL completed rides (100%)
             var otherUsersRides = allCompletedRides
-                .Where(r => mobileUser == null || r.RiderId != mobileUser.UserId)
+                .Where(r => userUser == null || r.RiderId != userUser.UserId)
                 .GroupBy(r => r.RiderId)
                 .ToList();
 
@@ -1011,8 +1011,8 @@ namespace TaxiMo.Services.Database
 
         private static async Task UpsertReviewsAsync(TaxiMoDbContext context, DateTime baseDate)
         {
-            // Get mobile user - will leave most reviews
-            var mobileUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "mobile");
+            // Get user - will leave most reviews
+            var userUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "user");
             
             // Get all users who can leave reviews
             var allUsers = await context.Users
@@ -1059,14 +1059,14 @@ namespace TaxiMo.Services.Database
 
             if (allCompletedRides.Count == 0) return;
 
-            // Mobile user leaves reviews for all their completed rides
-            if (mobileUser != null)
+            // User leaves reviews for all their completed rides
+            if (userUser != null)
             {
-                var mobileCompletedRides = allCompletedRides
-                    .Where(r => r.RiderId == mobileUser.UserId)
+                var userCompletedRides = allCompletedRides
+                    .Where(r => r.RiderId == userUser.UserId)
                     .ToList();
 
-                foreach (var ride in mobileCompletedRides)
+                foreach (var ride in userCompletedRides)
             {
                 var existingReview = await context.Reviews.FirstOrDefaultAsync(r =>
                     r.RideId == ride.RideId &&
@@ -1078,8 +1078,8 @@ namespace TaxiMo.Services.Database
                         continue; // Skip if review already exists
                 }
 
-                    // Mobile user gives mostly high ratings with varied comments
-                    var ratingIndex = ride.RideId % mobileCompletedRides.Count;
+                    // User gives mostly high ratings with varied comments
+                    var ratingIndex = ride.RideId % userCompletedRides.Count;
                     var rating = 4.5m + (ratingIndex % 5) * 0.1m; // 4.5 to 5.0
                     var comment = positiveComments[ratingIndex % positiveComments.Length];
 
@@ -1097,7 +1097,7 @@ namespace TaxiMo.Services.Database
 
             // Other users leave reviews for some of their completed rides (not all)
             var otherUsersCompletedRides = allCompletedRides
-                .Where(r => mobileUser == null || r.RiderId != mobileUser.UserId)
+                .Where(r => userUser == null || r.RiderId != userUser.UserId)
                 .GroupBy(r => r.RiderId)
                 .ToList();
 

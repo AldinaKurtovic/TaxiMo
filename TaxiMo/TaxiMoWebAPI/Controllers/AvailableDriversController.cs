@@ -10,7 +10,7 @@ namespace TaxiMoWebAPI.Controllers
 {
     [ApiController]
     [Route("api/rides/available-drivers")]
-    [Authorize(Roles = "User")]
+    [Authorize(Roles = "User,Admin,Driver")]
     public class AvailableDriversController : ControllerBase
     {
         private readonly IDriverRecommendationService _recommendationService;

@@ -11,8 +11,6 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  final List<int> _availableYears = List.generate(5, (index) => DateTime.now().year - index);
-
   @override
   void initState() {
     super.initState();
@@ -403,11 +401,33 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Year Selector Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
+          // Title with Back Button (only if navigated from home page via quick access)
+          Builder(
+            builder: (context) {
+              final canPop = Navigator.canPop(context);
+              if (canPop) {
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 24),
+                      color: const Color(0xFF2D2D3F),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Back to Home',
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Statistics',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const Text(
                 'Statistics',
                 style: TextStyle(
                   fontSize: 32,
@@ -415,39 +435,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   color: Color(0xFF2D2D3F),
                   letterSpacing: -0.5,
                 ),
-              ),
-              // Year Selector
-              Consumer<StatisticsProvider>(
-                builder: (context, provider, _) {
-                  return Container(
-                    width: 120,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: DropdownButton<int>(
-                      value: provider.selectedYear,
-                      items: _availableYears.map((year) {
-                        return DropdownMenuItem(
-                          value: year,
-                          child: Text(year.toString()),
-                        );
-                      }).toList(),
-                      onChanged: (year) {
-                        if (year != null) {
-                          provider.setYear(year);
-                        }
-                      },
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 32),
           // Stat Cards

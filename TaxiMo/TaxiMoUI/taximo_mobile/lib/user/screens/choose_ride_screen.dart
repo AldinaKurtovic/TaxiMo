@@ -22,7 +22,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
   int? _selectedDriverId;
   final DriverService _driverService = DriverService();
   final RideService _rideService = RideService();
-  late final Future<List<DriverDto>> _driversFuture;
+  Future<List<DriverDto>>? _driversFuture;
   PromoCodeDto? _selectedPromoCode;
   bool _isNavigating = false;
   
@@ -184,10 +184,16 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     }
   }
 
+  void _refreshDrivers() {
+    setState(() {
+      _driversFuture = _driverService.getAvailableDrivers();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _driversFuture = _driverService.getAvailableDrivers();
+    _refreshDrivers();
   }
   
   @override
@@ -196,10 +202,30 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
     if (_route == null) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is RideRouteDto) {
+        // Backwards compatibility: direct RideRouteDto
+        setState(() {
         _route = args;
         _cacheRouteData(_route!);
+        });
+      } else if (args is Map<String, dynamic> && args.containsKey('route')) {
+        // New format: Map with route and optional preSelectedDriverId
+        final route = args['route'] as RideRouteDto;
+        final preSelectedDriverId = args['preSelectedDriverId'] as int?;
+        setState(() {
+          _route = route;
+          _cacheRouteData(_route!);
+          if (preSelectedDriverId != null && _selectedDriverId == null) {
+            _selectedDriverId = preSelectedDriverId;
+          }
+        });
       }
     }
+    // Refresh drivers when screen becomes visible (e.g., when returning from payment or after ride cancellation/completion)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshDrivers();
+      }
+    });
   }
 
   @override
@@ -252,6 +278,11 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                         ),
                         const Spacer(),
                         IconButton(
+                          icon: Icon(Icons.refresh, color: colorScheme.primary),
+                          onPressed: _refreshDrivers,
+                          tooltip: 'Refresh drivers',
+                        ),
+                        IconButton(
                           icon: Icon(Icons.arrow_back, color: colorScheme.onSurfaceVariant),
                           onPressed: () => Navigator.pop(context),
                         ),
@@ -259,6 +290,12 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                     ),
                   ),
                   Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _refreshDrivers();
+                        // Wait for the future to complete
+                        await _driversFuture;
+                      },
                     child: FutureBuilder<List<DriverDto>>(
                       future: _driversFuture,
                       builder: (context, snapshot) {
@@ -284,6 +321,12 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.bodyMedium,
                                   ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton.icon(
+                                      onPressed: _refreshDrivers,
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Retry'),
+                                    ),
                                 ],
                               ),
                             ),
@@ -291,7 +334,11 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                         }
 
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return Center(
+                            return SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.5,
+                                child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -311,7 +358,15 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                                     color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                              ],
+                                      const SizedBox(height: 16),
+                                      ElevatedButton.icon(
+                                        onPressed: _refreshDrivers,
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Refresh'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ),
                           );
                         }
@@ -331,6 +386,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                           },
                         );
                       },
+                      ),
                     ),
                   ),
                 ],
@@ -409,7 +465,7 @@ class _ChooseRideScreenState extends State<ChooseRideScreen> {
                       const Spacer(),
                       // Book button
                       FutureBuilder<List<DriverDto>>(
-                        future: _driversFuture,
+                        future: _driversFuture ?? _driverService.getAvailableDrivers(),
                         builder: (context, snapshot) {
                           final hasDrivers = snapshot.hasData && snapshot.data!.isNotEmpty;
                           final finalPrice = _calculateFinalPrice(route.fareEstimate, _selectedPromoCode);

@@ -5,6 +5,7 @@ import '../../models/ride_model.dart';
 import '../../models/driver_model.dart';
 import 'widgets/admin_map_widget.dart';
 import 'widgets/assign_driver_modal.dart';
+import 'widgets/assign_ride_to_driver_modal.dart';
 
 class RidesScreen extends StatefulWidget {
   const RidesScreen({super.key});
@@ -17,6 +18,7 @@ class _RidesScreenState extends State<RidesScreen> {
   final _searchController = TextEditingController();
   RideModel? _selectedRide;
   DriverModel? _selectedDriver;
+  static const String _baseUrl = 'http://localhost:5244';
 
   @override
   void initState() {
@@ -30,6 +32,15 @@ class _RidesScreenState extends State<RidesScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  String? _buildImageUrl(String? photoUrl) {
+    if (photoUrl == null || photoUrl.isEmpty) {
+      return null;
+    }
+    // Remove leading slash if present to avoid double slashes
+    final cleanUrl = photoUrl.startsWith('/') ? photoUrl.substring(1) : photoUrl;
+    return '$_baseUrl/$cleanUrl';
   }
 
   Color _getStatusColor(String status) {
@@ -58,6 +69,39 @@ class _RidesScreenState extends State<RidesScreen> {
         style: const TextStyle(
           color: Colors.white,
           fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDriverAvatar({
+    required String? photoUrl,
+    required String firstName,
+    required double radius,
+  }) {
+    final imageUrl = _buildImageUrl(photoUrl);
+    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'D';
+
+    if (imageUrl != null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: Colors.grey[300],
+        backgroundImage: NetworkImage(imageUrl),
+        onBackgroundImageError: (exception, stackTrace) {
+          // Image failed to load, will fall back to initial
+        },
+        child: null,
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.grey[300],
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.black87,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -107,16 +151,10 @@ class _RidesScreenState extends State<RidesScreen> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
+                  _buildDriverAvatar(
+                    photoUrl: ride.driverPhotoUrl,
+                    firstName: ride.driverFirstName ?? '',
                     radius: 20,
-                    backgroundColor: Colors.grey[300],
-                    child: Text(
-                      ride.driverName.isNotEmpty ? ride.driverName[0].toUpperCase() : 'D',
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                   const SizedBox(width: 8),
                   Column(
@@ -257,6 +295,13 @@ class _RidesScreenState extends State<RidesScreen> {
     );
   }
 
+  void _showAssignRideToDriverModal(BuildContext context, DriverModel driver) {
+    showDialog(
+      context: context,
+      builder: (context) => AssignRideToDriverModal(driver: driver),
+    );
+  }
+
   Widget _buildFreeDriverCard(DriverModel driver) {
     final isSelected = _selectedDriver?.driverId == driver.driverId;
     // Generate vehicle code from driver ID (format: TX-XXX)
@@ -295,16 +340,10 @@ class _RidesScreenState extends State<RidesScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(
+              _buildDriverAvatar(
+                photoUrl: driver.photoUrl,
+                firstName: driver.firstName,
                 radius: 20,
-                backgroundColor: Colors.grey[300],
-                child: Text(
-                  driver.firstName.isNotEmpty ? driver.firstName[0].toUpperCase() : 'D',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
               const SizedBox(width: 8),
               Column(
@@ -351,10 +390,7 @@ class _RidesScreenState extends State<RidesScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Open assign to ride modal
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Assign ${driver.fullName} to ride - Coming soon')),
-                );
+                _showAssignRideToDriverModal(context, driver);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purple,
@@ -409,15 +445,42 @@ class _RidesScreenState extends State<RidesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          const Text(
-            'Rides',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D2D3F),
-              letterSpacing: -0.5,
-            ),
+          // Title with Back Button (only if navigated from home page via quick access)
+          Builder(
+            builder: (context) {
+              final canPop = Navigator.canPop(context);
+              if (canPop) {
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 24),
+                      color: const Color(0xFF2D2D3F),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Back to Home',
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Rides',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const Text(
+                'Rides',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D2D3F),
+                  letterSpacing: -0.5,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           // Header with Search
@@ -577,7 +640,9 @@ class _RidesScreenState extends State<RidesScreen> {
                                         .toList(),
                                   ),
                                 )
-                          : provider.filteredRides.isEmpty
+                          : (provider.currentFilter == RideFilter.all 
+                              ? (provider.freeDrivers.isEmpty && provider.filteredRides.isEmpty)
+                              : provider.filteredRides.isEmpty)
                               ? Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -602,9 +667,20 @@ class _RidesScreenState extends State<RidesScreen> {
                                   child: Wrap(
                                     spacing: 16,
                                     runSpacing: 16,
-                                    children: provider.filteredRides
-                                        .map((ride) => _buildRideCard(ride))
-                                        .toList(),
+                                    children: provider.currentFilter == RideFilter.all
+                                        ? [
+                                            // First show free drivers
+                                            ...provider.freeDrivers
+                                                .map((driver) => _buildFreeDriverCard(driver))
+                                                .toList(),
+                                            // Then show rides
+                                            ...provider.filteredRides
+                                                .map((ride) => _buildRideCard(ride))
+                                                .toList(),
+                                          ]
+                                        : provider.filteredRides
+                                            .map((ride) => _buildRideCard(ride))
+                                            .toList(),
                                   ),
                                 ),
                     ),

@@ -48,6 +48,7 @@ class UserProfileProvider with ChangeNotifier {
   }
 
   Future<bool> updateProfile({
+    required String username,
     required String firstName,
     required String lastName,
     String? phone,
@@ -70,6 +71,7 @@ class UserProfileProvider with ChangeNotifier {
 
       final updateData = <String, dynamic>{
         'userId': userId,
+        'username': username.trim(),
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
       };

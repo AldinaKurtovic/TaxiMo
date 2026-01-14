@@ -7,6 +7,8 @@ import '../widgets/driver_avatar.dart';
 import '../models/driver_dto.dart';
 import '../services/driver_service.dart';
 import '../providers/notification_provider.dart';
+import '../providers/user_active_rides_provider.dart';
+import '../models/ride_history_dto.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
@@ -19,13 +21,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load unread count when home screen loads
+    // Load unread count and active rides when home screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
       final currentUser = authProvider.currentUser;
       if (currentUser != null) {
         final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
         notificationProvider.loadUnreadCount(currentUser.userId);
+        
+        final activeRidesProvider = Provider.of<UserActiveRidesProvider>(context, listen: false);
+        activeRidesProvider.loadActiveRides(currentUser.userId);
       }
     });
   }
@@ -66,6 +71,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   ),
 
                 const SizedBox(height: 40),
+
+                // Active Ride Card (if exists)
+                Consumer<UserActiveRidesProvider>(
+                  builder: (context, activeRidesProvider, child) {
+                    final activeRide = activeRidesProvider.currentActiveRide;
+                    if (activeRide != null) {
+                      return Column(
+                        children: [
+                          _ActiveRideCard(ride: activeRide, provider: activeRidesProvider),
+                          const SizedBox(height: 24),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
                 // Primary action card
                 _PrimaryActionCard(
@@ -492,6 +513,17 @@ class _RecommendedDriverCard extends StatelessWidget {
           ),
         ],
       ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/ride-reservation',
+              arguments: {'preSelectedDriverId': driver.driverId},
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -550,7 +582,210 @@ class _RecommendedDriverCard extends StatelessWidget {
               ),
             ),
           ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Active Ride Card widget that displays current active ride with status and cancel option
+class _ActiveRideCard extends StatelessWidget {
+  final RideHistoryDto ride;
+  final UserActiveRidesProvider provider;
+
+  const _ActiveRideCard({required this.ride, required this.provider});
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'requested':
+        return 'Requested';
+      case 'accepted':
+        return 'Accepted';
+      case 'active':
+        return 'Active';
+      default:
+        return status;
+    }
+  }
+
+  Color _getStatusColor(String status, ColorScheme colorScheme) {
+    switch (status.toLowerCase()) {
+      case 'requested':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'active':
+        return Colors.blue;
+      default:
+        return colorScheme.primary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(ride.status, colorScheme).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.local_taxi,
+                    color: _getStatusColor(ride.status, colorScheme),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Active Ride',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(ride.status, colorScheme).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _getStatusText(ride.status),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: _getStatusColor(ride.status, colorScheme),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (ride.status.toLowerCase() == 'requested')
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    color: Colors.red,
+                    onPressed: () => _showCancelDialog(context, provider),
+                    tooltip: 'Cancel Ride',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (ride.pickupLocation != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 16, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pickup: ${ride.pickupLocation!.lat.toStringAsFixed(6)}, ${ride.pickupLocation!.lng.toStringAsFixed(6)}',
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (ride.dropoffLocation != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 16, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Dropoff: ${ride.dropoffLocation!.lat.toStringAsFixed(6)}, ${ride.dropoffLocation!.lng.toStringAsFixed(6)}',
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (ride.driver != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Driver: ${ride.driver!.fullName}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, UserActiveRidesProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Ride'),
+        content: const Text('Are you sure you want to cancel this ride?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await provider.cancelRide(ride.rideId);
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ride cancelled successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(provider.errorMessage ?? 'Failed to cancel ride'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
       ),
     );
   }

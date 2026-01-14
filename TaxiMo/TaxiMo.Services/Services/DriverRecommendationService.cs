@@ -78,23 +78,13 @@ namespace TaxiMo.Services.Services
                 _logger.LogInformation("Found {AvailableCount} available drivers for user {UserId}. User has {HistoryCount} total rides in history.", 
                     availableDrivers.Count, userId, userRideHistory.Count);
 
-                // LAZY TRAINING: Check if model exists, if not try to train one
+                // LAZY TRAINING: Check if model exists, if not use cold start immediately
                 if (!ModelExistsForUser(userId))
                 {
-                    _logger.LogInformation("Model does not exist for user {UserId}, attempting lazy training", userId);
-                    
-                    // Try to train a model if sufficient data exists
-                    var trainingSuccess = await TrainModelForUserIfPossible(userId);
-                    
-                    if (!trainingSuccess)
-                    {
-                        // Not enough data for training - use cold start
-                        _logger.LogInformation("Insufficient data for training model for user {UserId}, using cold start strategy", userId);
-                        return await ColdStartRecommendationWithHistory(availableDrivers, userRideHistory, userId, topN);
-                    }
-                    
-                    // Training succeeded, continue to use the model
-                    _logger.LogInformation("Successfully trained new ML model for user {UserId}", userId);
+                    // Always use cold start immediately for faster response
+                    // Model will be trained on next request if sufficient data exists (lazy training)
+                    _logger.LogInformation("Model does not exist for user {UserId}, using cold start strategy immediately.", userId);
+                    return await ColdStartRecommendationWithHistory(availableDrivers, userRideHistory, userId, topN);
                 }
                 else
                 {
@@ -118,6 +108,14 @@ namespace TaxiMo.Services.Services
                     {
                         try
                         {
+                            // Filter out drivers with whom user already had completed rides (unless rating was excellent 4.5+)
+                            if (ShouldExcludeDriver(userId, driver.DriverId, userRideHistory))
+                            {
+                                _logger.LogDebug("Excluding driver {DriverId} for user {UserId} - already had completed ride with lower rating", 
+                                    driver.DriverId, userId);
+                                continue;
+                            }
+
                             // Get ML prediction score
                             var features = ExtractFeaturesForDriver(driver, userAvgRideStats);
                             var prediction = predictionEngine.Predict(features);
@@ -302,14 +300,62 @@ namespace TaxiMo.Services.Services
                 // Train the model
                 var model = pipeline.Fit(dataView);
 
-                // Save the model
+                // Save the model with retry logic for file locking issues
                 var modelPath = GetModelPath(userId);
+                const int maxRetries = 3;
+                const int retryDelayMs = 100;
+                
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
                 _mlContext.Model.Save(model, dataView.Schema, modelPath);
 
                 _logger.LogInformation(
                     "Successfully trained and saved ML model for user {UserId} at {ModelPath} with {SampleCount} samples", 
                     userId, modelPath, trainingData.Count);
                 return true;
+                    }
+                    catch (IOException ioEx) when (attempt < maxRetries && ioEx.Message.Contains("being used by another process"))
+                    {
+                        // File is locked by another process, wait and retry
+                        _logger.LogWarning(
+                            "Model file for user {UserId} is locked, retrying ({Attempt}/{MaxRetries}) after {DelayMs}ms", 
+                            userId, attempt, maxRetries, retryDelayMs);
+                        await Task.Delay(retryDelayMs * attempt); // Exponential backoff
+                        
+                        // Check if file was saved by another process
+                        if (File.Exists(modelPath))
+                        {
+                            _logger.LogInformation(
+                                "Model file for user {UserId} was saved by another process, skipping save", userId);
+                            return true;
+                        }
+                    }
+                }
+                
+                // If all retries failed, check if file exists (another process might have saved it)
+                if (File.Exists(modelPath))
+                {
+                    _logger.LogInformation(
+                        "Model file for user {UserId} exists after save failure, assuming saved by another process", userId);
+                    return true;
+                }
+                
+                throw new IOException($"Failed to save model for user {userId} after {maxRetries} attempts");
+            }
+            catch (IOException ioEx)
+            {
+                // Check if file was saved by another process
+                var modelPath = GetModelPath(userId);
+                if (File.Exists(modelPath))
+                {
+                    _logger.LogInformation(
+                        "Model file for user {UserId} exists after IOException, assuming saved by another process", userId);
+                    return true;
+                }
+                _logger.LogError(ioEx, "Error saving model file for user {UserId}", userId);
+                return false;
             }
             catch (Exception ex)
             {
@@ -517,16 +563,54 @@ namespace TaxiMo.Services.Services
         }
 
         /// <summary>
-        /// Calculates history bonus for a driver based on user's previous experience.
-        /// History bonus is added to ML prediction score to prioritize drivers with good previous experiences.
-        /// 
-        /// Bonus rules:
-        /// - +0.3 if previous rating ≥ 4.5 (excellent experience)
-        /// - +0.1 if previous rating between 4.0-4.5 (good experience)
-        /// - 0.0 if no previous rides (neutral)
-        /// - -0.3 if previous rating < 3.0 or ride was cancelled (poor experience)
-        /// 
-        /// If user has multiple rides with the driver, uses the most recent rating.
+        /// Determines if a driver should be excluded from recommendations.
+        /// Excludes drivers with whom user already had completed rides, unless the rating was excellent (4.5+).
+        /// This encourages users to try new drivers while still allowing highly-rated previous drivers.
+        /// </summary>
+        private bool ShouldExcludeDriver(int userId, int driverId, List<Ride> userRideHistory)
+        {
+            // Get all completed rides with this specific driver
+            var completedRidesWithDriver = userRideHistory
+                .Where(r => r.DriverId == driverId && r.Status.ToLower() == "completed")
+                .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
+                .ToList();
+
+            if (!completedRidesWithDriver.Any())
+            {
+                // No completed rides with this driver - don't exclude
+                return false;
+            }
+
+            // Get the most recent completed ride with a review
+            var mostRecentRide = completedRidesWithDriver
+                .Where(r => r.Reviews.Any(rev => rev.RiderId == userId))
+                .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
+                .FirstOrDefault();
+
+            if (mostRecentRide == null)
+            {
+                // No reviews - don't exclude (maybe user didn't rate)
+                return false;
+            }
+
+            // Get the user's rating for this ride
+            var review = mostRecentRide.Reviews.FirstOrDefault(r => r.RiderId == userId);
+            if (review == null)
+            {
+                return false;
+            }
+
+            var rating = (float)review.Rating;
+
+            // Only exclude if rating was less than 4.5 (excellent)
+            // If rating is 4.5+, we want to show this driver again (they had excellent experience)
+            return rating < 4.5f;
+        }
+
+        /// <summary>
+        /// Calculates a history bonus score for a driver based on user's previous experience.
+        /// Positive bonus for good experiences, negative for poor experiences.
+        /// Enhanced to prioritize drivers with more ride history.
         /// </summary>
         private float CalculateHistoryBonus(int userId, int driverId, List<Ride> userRideHistory)
         {
@@ -550,19 +634,28 @@ namespace TaxiMo.Services.Services
                 return -0.3f;
             }
 
-            // Get the most recent completed ride with a review
-            var mostRecentRide = ridesWithDriver
+            // Get all completed rides with reviews for this driver
+            var completedRidesWithReviews = ridesWithDriver
                 .Where(r => r.Status.ToLower() == "completed" && r.Reviews.Any(rev => rev.RiderId == userId))
-                .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
-                .FirstOrDefault();
+                .ToList();
 
-            if (mostRecentRide == null)
+            if (!completedRidesWithReviews.Any())
             {
                 // No completed rides with reviews - neutral
                 return 0.0f;
             }
 
-            // Get the user's rating for this ride
+            // Get the most recent completed ride with a review for rating assessment
+            var mostRecentRide = completedRidesWithReviews
+                .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
+                .FirstOrDefault();
+
+            if (mostRecentRide == null)
+            {
+                return 0.0f;
+            }
+
+            // Get the user's rating for the most recent ride
             var review = mostRecentRide.Reviews.FirstOrDefault(r => r.RiderId == userId);
             if (review == null)
             {
@@ -570,15 +663,22 @@ namespace TaxiMo.Services.Services
             }
 
             var rating = (float)review.Rating;
+            var completedRidesCount = completedRidesWithReviews.Count;
 
-            // Apply history bonus based on rating
+            // Apply history bonus based on rating, with additional bonus for more rides
             if (rating >= 4.5f)
             {
-                return 0.3f; // Excellent experience - strong positive bonus
+                // Excellent experience: base +0.5, +0.1 per additional ride (max +1.0 total)
+                var baseBonus = 0.5f;
+                var additionalBonus = Math.Min((completedRidesCount - 1) * 0.1f, 0.5f);
+                return baseBonus + additionalBonus;
             }
             else if (rating >= 4.0f)
             {
-                return 0.1f; // Good experience - moderate positive bonus
+                // Good experience: base +0.2, +0.05 per additional ride (max +0.5 total)
+                var baseBonus = 0.2f;
+                var additionalBonus = Math.Min((completedRidesCount - 1) * 0.05f, 0.3f);
+                return baseBonus + additionalBonus;
             }
             else if (rating < 3.0f)
             {
@@ -608,8 +708,38 @@ namespace TaxiMo.Services.Services
         {
             _logger.LogInformation("Using cold start recommendation strategy with history bonus for {Count} drivers", drivers.Count);
 
+            // Log which drivers are being excluded and why
+            var excludedDrivers = drivers.Where(driver => ShouldExcludeDriver(userId, driver.DriverId, userRideHistory)).ToList();
+            if (excludedDrivers.Any())
+            {
+                foreach (var excludedDriver in excludedDrivers)
+                {
+                    var completedRidesWithDriver = userRideHistory
+                        .Where(r => r.DriverId == excludedDriver.DriverId && r.Status.ToLower() == "completed")
+                        .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
+                        .ToList();
+                    
+                    var mostRecentRide = completedRidesWithDriver
+                        .Where(r => r.Reviews.Any(rev => rev.RiderId == userId))
+                        .OrderByDescending(r => r.CompletedAt ?? r.RequestedAt)
+                        .FirstOrDefault();
+                    
+                    if (mostRecentRide != null)
+                    {
+                        var review = mostRecentRide.Reviews.FirstOrDefault(r => r.RiderId == userId);
+                        if (review != null)
+                        {
+                            _logger.LogInformation("Cold start: Excluding driver {DriverId} (username: {Username}) for user {UserId} - completed ride {RideId} with rating {Rating} (< 4.5)", 
+                                excludedDriver.DriverId, excludedDriver.Username, userId, mostRecentRide.RideId, review.Rating);
+                        }
+                    }
+                }
+            }
+
             // Calculate base score (rating + total rides) and combine with history bonus
-            var driverScores = drivers.Select(driver =>
+            var driverScores = drivers
+                .Where(driver => !ShouldExcludeDriver(userId, driver.DriverId, userRideHistory))
+                .Select(driver =>
             {
                 // Base score: normalize rating (0-5 scale) and total rides
                 var baseScore = (float)(driver.RatingAvg ?? 0m) * 0.2f + Math.Min(driver.TotalRides / 100.0f, 1.0f);

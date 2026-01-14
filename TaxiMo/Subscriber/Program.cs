@@ -5,7 +5,10 @@ Console.WriteLine("TaxiMo RabbitMQ Subscriber starting...");
 
 try
 {
-    using var bus = RabbitHutch.CreateBus("host=localhost");
+    var connectionString = Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING") 
+        ?? "host=localhost";
+    Console.WriteLine($"Connecting to RabbitMQ: {connectionString.Replace("password=", "password=***")}");
+    using var bus = RabbitHutch.CreateBus(connectionString);
 
     await bus.PubSub.SubscribeAsync<RideCreated>(
         "taximo_ride_subscriber",

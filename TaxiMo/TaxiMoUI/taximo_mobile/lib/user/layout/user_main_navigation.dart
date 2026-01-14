@@ -14,12 +14,13 @@ class UserMainNavigation extends StatefulWidget {
 
 class UserMainNavigationState extends State<UserMainNavigation> {
   int _currentIndex = 0;
+  final GlobalKey<ReviewsScreenState> _reviewsScreenKey = GlobalKey<ReviewsScreenState>();
 
-  final List<Widget> _screens = [
+  late final List<Widget> _screens = [
     const UserHomeScreen(),
     const TripHistoryScreen(),
     const PaymentHistoryScreen(),
-    const ReviewsScreen(),
+    ReviewsScreen(key: _reviewsScreenKey),
     const ProfileScreen(),
   ];
 
@@ -29,6 +30,13 @@ class UserMainNavigationState extends State<UserMainNavigation> {
         _currentIndex = index;
       });
     }
+  }
+
+  /// Refresh reviews screen (called after adding a new review)
+  void refreshReviewsScreen() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reviewsScreenKey.currentState?.refreshReviews();
+    });
   }
 
   @override
@@ -44,6 +52,13 @@ class UserMainNavigationState extends State<UserMainNavigation> {
           setState(() {
             _currentIndex = index;
           });
+          
+          // Refresh reviews screen when reviews tab is selected
+          if (index == 3) { // Reviews tab index
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _reviewsScreenKey.currentState?.refreshReviews();
+            });
+          }
         },
         destinations: const [
           NavigationDestination(

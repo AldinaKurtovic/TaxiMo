@@ -66,15 +66,42 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          const Text(
-            'Payments',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D2D3F),
-              letterSpacing: -0.5,
-            ),
+          // Title with Back Button (only if navigated from home page via quick access)
+          Builder(
+            builder: (context) {
+              final canPop = Navigator.canPop(context);
+              if (canPop) {
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 24),
+                      color: const Color(0xFF2D2D3F),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Back to Home',
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Payments',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D3F),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const Text(
+                'Payments',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D2D3F),
+                  letterSpacing: -0.5,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 32),
           // Search Bar

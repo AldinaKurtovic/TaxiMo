@@ -10,6 +10,7 @@ import 'user/screens/user_home_screen.dart';
 import 'user/layout/user_main_navigation.dart';
 import 'user/providers/user_profile_provider.dart';
 import 'user/providers/notification_provider.dart';
+import 'user/providers/user_active_rides_provider.dart';
 import 'user/screens/ride_reservation_screen.dart';
 import 'user/screens/choose_ride_screen.dart';
 import 'user/screens/voucher_screen.dart';
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
         // User providers - lazy load, created only when accessed
         ChangeNotifierProvider(create: (_) => UserProfileProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => NotificationProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => UserActiveRidesProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => DriverProfileProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider(), lazy: true),
         ChangeNotifierProvider(create: (_) => ActiveRidesProvider(), lazy: true),

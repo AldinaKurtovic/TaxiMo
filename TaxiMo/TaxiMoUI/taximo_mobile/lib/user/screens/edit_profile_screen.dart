@@ -42,7 +42,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    final user = profileProvider.userProfile ?? authProvider.currentUser;
+    
     final success = await profileProvider.updateProfile(
+      username: user?.username ?? '',
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
@@ -83,6 +87,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         title: const Text('Edit Profile'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () => _showLogoutDialog(context),
+          ),
+        ],
       ),
       body: Consumer<UserProfileProvider>(
         builder: (context, profileProvider, child) {
@@ -213,15 +224,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         // Phone validation (allows digits, spaces, hyphens, parentheses, plus)
                         final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]+$');
                         if (!phoneRegex.hasMatch(value.trim())) {
-                          return 'Unesite validan broj telefona (dozvoljeni su brojevi, razmaci, crtice, zagrade i +)';
+                          return 'Please enter a valid phone number (digits, spaces, hyphens, parentheses and + are allowed)';
                         }
                         // Check minimum length (at least 6 digits)
                         final digitsOnly = value.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
                         if (digitsOnly.length < 6) {
-                          return 'Broj telefona mora imati najmanje 6 cifara';
+                          return 'Phone number must have at least 6 digits';
                         }
                         if (digitsOnly.length > 15) {
-                          return 'Broj telefona ne može imati više od 15 cifara';
+                          return 'Phone number cannot have more than 15 digits';
                         }
                       }
                       return null;
@@ -256,6 +267,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              authProvider.logout();
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../../auth/providers/mobile_auth_provider.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -44,11 +45,20 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password changed successfully'),
+          content: Text('Password changed successfully. Please login again.'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ),
       );
-      Navigator.pop(context);
+      
+      // Logout user and navigate to login
+      final authProvider = Provider.of<MobileAuthProvider>(context, listen: false);
+      authProvider.logout();
+      
+      // Close all screens and navigate to login
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -108,7 +118,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Trenutna lozinka je obavezna';
+                        return 'Current password is required';
                       }
                       return null;
                     },
@@ -145,10 +155,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Nova lozinka je obavezna';
+                        return 'New password is required';
                       }
                       if (value.length < 8) {
-                        return 'Lozinka mora imati najmanje 8 karaktera';
+                        return 'Password must have at least 8 characters';
                       }
                       return null;
                     },
@@ -185,10 +195,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Potvrda lozinke je obavezna';
+                        return 'Password confirmation is required';
                       }
                       if (value != _newPasswordController.text) {
-                        return 'Lozinke se ne poklapaju';
+                        return 'Passwords do not match';
                       }
                       return null;
                     },

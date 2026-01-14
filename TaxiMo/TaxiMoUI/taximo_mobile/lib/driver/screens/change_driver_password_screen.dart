@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/driver_profile_provider.dart';
+import '../providers/driver_provider.dart';
 
 class ChangeDriverPasswordScreen extends StatefulWidget {
   const ChangeDriverPasswordScreen({super.key});
@@ -44,11 +45,20 @@ class _ChangeDriverPasswordScreenState extends State<ChangeDriverPasswordScreen>
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password changed successfully'),
+          content: Text('Password changed successfully. Please login again.'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ),
       );
-      Navigator.pop(context);
+      
+      // Logout driver and navigate to login
+      final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+      driverProvider.logout();
+      
+      // Close all screens and navigate to login
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -149,8 +159,8 @@ class _ChangeDriverPasswordScreenState extends State<ChangeDriverPasswordScreen>
                       if (value == null || value.trim().isEmpty) {
                         return 'New password is required';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (value.length < 8) {
+                        return 'Password must have at least 8 characters';
                       }
                       return null;
                     },
@@ -187,7 +197,7 @@ class _ChangeDriverPasswordScreenState extends State<ChangeDriverPasswordScreen>
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please confirm your new password';
+                        return 'Password confirmation is required';
                       }
                       if (value != _newPasswordController.text) {
                         return 'Passwords do not match';

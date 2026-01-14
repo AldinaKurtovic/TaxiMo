@@ -232,14 +232,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             value: user.phone!,
                           ),
                         ],
-                        const Divider(height: 32),
-                        _InfoRow(
-                          icon: Icons.account_circle_outlined,
-                          label: 'Role',
-                          value: user.roles.isNotEmpty
-                              ? user.roles.map((r) => r.name).join(', ')
-                              : 'User',
-                        ),
                       ],
                     ),
                   ),
@@ -297,10 +289,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showLogoutDialog(context, authProvider),
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(
+                        color: colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, MobileAuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              authProvider.logout();
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
     );
   }

@@ -179,5 +179,99 @@ class RideService {
     }
   }
 
+  /// Get active rides for the current user (requested, accepted, or active status)
+  Future<List<Map<String, dynamic>>> getActiveRides(int riderId) async {
+    final requestedUri = Uri.parse('${ApiConfig.baseUrl}/api/Ride').replace(
+      queryParameters: {'status': 'requested'},
+    );
+    
+    final acceptedUri = Uri.parse('${ApiConfig.baseUrl}/api/Ride').replace(
+      queryParameters: {'status': 'accepted'},
+    );
+    
+    final activeUri = Uri.parse('${ApiConfig.baseUrl}/api/Ride').replace(
+      queryParameters: {'status': 'active'},
+    );
+    
+    final requestedResponse = await http.get(requestedUri, headers: _headers());
+    final acceptedResponse = await http.get(acceptedUri, headers: _headers());
+    final activeResponse = await http.get(activeUri, headers: _headers());
+
+    List<Map<String, dynamic>> allRides = [];
+
+    // Process requested rides
+    if (requestedResponse.statusCode == 200) {
+      final jsonData = jsonDecode(requestedResponse.body);
+      List<dynamic> ridesList;
+      if (jsonData is List) {
+        ridesList = jsonData;
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        ridesList = jsonData['data'] as List;
+      } else {
+        ridesList = [];
+      }
+
+      allRides.addAll(
+        ridesList
+            .where((ride) => ride['riderId'] == riderId)
+            .cast<Map<String, dynamic>>()
+      );
+    }
+
+    // Process accepted rides
+    if (acceptedResponse.statusCode == 200) {
+      final jsonData = jsonDecode(acceptedResponse.body);
+      List<dynamic> ridesList;
+      if (jsonData is List) {
+        ridesList = jsonData;
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        ridesList = jsonData['data'] as List;
+      } else {
+        ridesList = [];
+      }
+
+      allRides.addAll(
+        ridesList
+            .where((ride) => ride['riderId'] == riderId)
+            .cast<Map<String, dynamic>>()
+      );
+    }
+
+    // Process active rides
+    if (activeResponse.statusCode == 200) {
+      final jsonData = jsonDecode(activeResponse.body);
+      List<dynamic> ridesList;
+      if (jsonData is List) {
+        ridesList = jsonData;
+      } else if (jsonData is Map && jsonData.containsKey('data')) {
+        ridesList = jsonData['data'] as List;
+      } else {
+        ridesList = [];
+      }
+
+      allRides.addAll(
+        ridesList
+            .where((ride) => ride['riderId'] == riderId)
+            .cast<Map<String, dynamic>>()
+      );
+    }
+
+    return allRides;
+  }
+
+  /// Cancel a ride
+  Future<void> cancelRide(int rideId) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/Ride/$rideId/cancel');
+    
+    final response = await http.put(uri, headers: _headers());
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final errorBody = response.body;
+      final errorJson = jsonDecode(errorBody) as Map<String, dynamic>?;
+      final errorMessage = errorJson?['message'] as String? ?? 'Failed to cancel ride';
+      throw Exception(errorMessage);
+    }
+  }
+
 }
 

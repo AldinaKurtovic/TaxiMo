@@ -87,11 +87,31 @@ class RidesProvider with ChangeNotifier {
         status = 'cancelled';
       }
       // Fetch with current search query and status filter
-      fetchRides(search: _searchQuery, status: status);
+      fetchRides(search: _searchQuery, status: status).then((_) {
+        // Also fetch free drivers when filter is "all" to show them first
+        if (filter == RideFilter.all) {
+          _fetchFreeDriversSilent();
+        }
+      });
     }
     // Always refresh active rides for the map regardless of filter
     fetchActiveRides();
     notifyListeners();
+  }
+
+  // Fetch free drivers without affecting loading state (for use when combining with rides)
+  Future<void> _fetchFreeDriversSilent() async {
+    try {
+      final driversList = await _ridesService.getFreeDrivers();
+      _freeDrivers = driversList
+          .map((json) => DriverModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching free drivers silently: $e');
+      _freeDrivers = [];
+      notifyListeners();
+    }
   }
 
   void search(String? query) {
@@ -120,7 +140,12 @@ class RidesProvider with ChangeNotifier {
       } else if (_currentFilter == RideFilter.cancelled) {
         status = 'cancelled';
       }
-      fetchRides(search: _searchQuery, status: status);
+      fetchRides(search: _searchQuery, status: status).then((_) {
+        // Also refresh free drivers when filter is "all"
+        if (_currentFilter == RideFilter.all) {
+          _fetchFreeDriversSilent();
+        }
+      });
     }
     // Always refresh active rides for the map
     fetchActiveRides();
@@ -149,6 +174,7 @@ class RidesProvider with ChangeNotifier {
   // Initial load method
   Future<void> loadRides() async {
     await fetchRides();
+    await _fetchFreeDriversSilent(); // Also fetch free drivers for "all" filter (silent to not interfere with loading state)
     await fetchActiveRides(); // Also fetch active rides for the map
   }
 

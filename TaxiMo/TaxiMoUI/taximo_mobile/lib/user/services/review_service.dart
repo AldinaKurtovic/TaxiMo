@@ -148,56 +148,10 @@ class ReviewService {
   }
 
   /// Get reviews for the current user (rider)
+  /// Uses the dedicated endpoint /api/Review/by-rider/{riderId} for better performance
   Future<List<ReviewDto>> getReviewsByUserId(int userId) async {
-    try {
-      final reviews = await getReviews();
-      final userReviews = <ReviewDto>[];
-      
-      for (final reviewJson in reviews) {
-        try {
-          // The API returns ReviewResponse with 'userId' field (mapped from RiderId)
-          // Check both 'userId' (from ReviewResponse) and 'riderId' (from ReviewDto)
-          final userIdValue = reviewJson['userId'];
-          final riderIdValue = reviewJson['riderId'];
-          
-          int? reviewUserId;
-          
-          // Try userId first (ReviewResponse format)
-          if (userIdValue != null) {
-            if (userIdValue is int) {
-              reviewUserId = userIdValue;
-            } else if (userIdValue is num) {
-              reviewUserId = userIdValue.toInt();
-            }
-          }
-          
-          // Fallback to riderId if userId not found
-          if (reviewUserId == null && riderIdValue != null) {
-            if (riderIdValue is int) {
-              reviewUserId = riderIdValue;
-            } else if (riderIdValue is num) {
-              reviewUserId = riderIdValue.toInt();
-            }
-          }
-          
-          // Compare and add if matches
-          if (reviewUserId != null && reviewUserId == userId) {
-            final review = ReviewDto.fromJson(reviewJson);
-            userReviews.add(review);
-          }
-        } catch (e) {
-          // Skip invalid review entries
-          continue;
-        }
-      }
-      
-      // Sort by created date (most recent first)
-      userReviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      
-      return userReviews;
-    } catch (e) {
-      throw Exception('Failed to fetch user reviews: $e');
-    }
+    // Use the dedicated endpoint instead of filtering all reviews
+    return await getReviewsByRider(userId);
   }
 
   /// Get reviews by rider ID (returns reviews with rideId included)

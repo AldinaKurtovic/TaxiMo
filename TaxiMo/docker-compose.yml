@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   taximo-sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -38,6 +36,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=taximo-sql,1433;Database=TaxiMoDB;User Id=sa;Password=MyStrong!Passw0rd;TrustServerCertificate=True
       - RabbitMQ__ConnectionString=host=rabbitmq;username=${RABBIT_MQ_USER};password=${RABBIT_MQ_PASS}
+      - Stripe__SecretKey=${Stripe__SecretKey}
+      - Stripe__PublishableKey=${Stripe__PublishableKey}
     ports:
       - "5244:5244"
     networks:
@@ -47,6 +47,7 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+    restart: unless-stopped
 
   taximo.subscriber:
     build:
@@ -66,3 +67,5 @@ services:
 networks:
   taximo-2025:
     driver: bridge
+
+

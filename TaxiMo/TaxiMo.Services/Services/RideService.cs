@@ -86,6 +86,8 @@ namespace TaxiMo.Services.Services
             await Context.SaveChangesAsync();
 
             // Create payment record with provided payment method
+            // Cash payments are automatically completed, online payments start as pending
+            var isCashPayment = (paymentMethod ?? "cash").ToLower() == "cash";
             var payment = new Payment
             {
                 RideId = ride.RideId,
@@ -93,9 +95,9 @@ namespace TaxiMo.Services.Services
                 Amount = ride.FareEstimate ?? 0,
                 Currency = "EUR",
                 Method = paymentMethod ?? "cash",
-                Status = "pending",
+                Status = isCashPayment ? "completed" : "pending",
                 TransactionRef = null,
-                PaidAt = null
+                PaidAt = isCashPayment ? DateTime.UtcNow : null
             };
 
             Context.Payments.Add(payment);
@@ -134,7 +136,11 @@ namespace TaxiMo.Services.Services
         {
             try
             {
-                using var bus = RabbitHutch.CreateBus("host=localhost");
+                // Get RabbitMQ connection string from environment variable or default to localhost
+                var connectionString = Environment.GetEnvironmentVariable("RabbitMQ__ConnectionString") 
+                    ?? "host=localhost;username=guest;password=guest";
+                
+                using var bus = RabbitHutch.CreateBus(connectionString);
 
                 // Load location entities to get their string representation
                 var pickupLocation = await Context.Locations.FindAsync(ride.PickupLocationId);
@@ -326,9 +332,31 @@ namespace TaxiMo.Services.Services
                 throw new TaxiMo.Model.Exceptions.UserException($"Ride with ID {rideId} not found.");
             }
 
+            // Store driver ID before cancellation (in case ride gets cancelled)
+            var driverId = ride.DriverId;
+
             var state = _stateFactory.GetState(ride.Status);
             var updatedRide = await state.CancelAsync(rideId, isAdmin);
             await Context.SaveChangesAsync();
+
+            // Create notification for driver if ride was assigned to a driver
+            if (driverId > 0)
+            {
+                try
+                {
+                    await _driverNotificationService.CreateNotificationAsync(
+                        driverId,
+                        "Ride Cancelled",
+                        $"The user has cancelled ride ID: {updatedRide.RideId}",
+                        "ride_cancelled");
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the ride cancellation
+                    Console.WriteLine($"Failed to create notification for ride cancellation: {ex.Message}");
+                }
+            }
+
             return updatedRide;
         }
 

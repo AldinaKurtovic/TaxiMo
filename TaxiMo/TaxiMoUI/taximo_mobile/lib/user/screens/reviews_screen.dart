@@ -8,13 +8,15 @@ import '../../auth/providers/mobile_auth_provider.dart';
 import '../widgets/user_app_bar.dart';
 
 class ReviewsScreen extends StatefulWidget {
-  const ReviewsScreen({super.key});
+  final GlobalKey<ReviewsScreenState>? stateKey;
+  
+  const ReviewsScreen({super.key, this.stateKey});
 
   @override
-  State<ReviewsScreen> createState() => _ReviewsScreenState();
+  State<ReviewsScreen> createState() => ReviewsScreenState();
 }
 
-class _ReviewsScreenState extends State<ReviewsScreen> {
+class ReviewsScreenState extends State<ReviewsScreen> {
   final ReviewService _reviewService = ReviewService();
   Future<List<ReviewDto>>? _reviewsFuture;
 
@@ -22,6 +24,21 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   void initState() {
     super.initState();
     _reviewsFuture = _loadReviews();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Note: We don't refresh here to avoid infinite loops
+    // Reviews will be refreshed when tab is selected or via pull-to-refresh
+  }
+
+  void refreshReviews() {
+    if (mounted) {
+      setState(() {
+        _reviewsFuture = _loadReviews();
+      });
+    }
   }
 
   Future<List<ReviewDto>> _loadReviews() async {
@@ -34,7 +51,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       }
 
       // Use the new method that properly handles ReviewResponse format
-    return await _reviewService.getReviewsByUserId(currentUser.userId);
+      final reviews = await _reviewService.getReviewsByUserId(currentUser.userId);
+      
+      // Sort by created date (most recent first)
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      return reviews;
   }
 
   String _formatDate(DateTime dateTime) {
@@ -108,7 +130,14 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             );
           }
 
-          return ListView.builder(
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _reviewsFuture = _loadReviews();
+              });
+              await _reviewsFuture;
+            },
+            child: ListView.builder(
                       padding: const EdgeInsets.all(16),
             itemCount: reviews.length,
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -116,6 +145,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               final review = reviews[index];
               return _buildReviewCard(review);
             },
+            ),
           );
                       },
                     ),
@@ -142,7 +172,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Driver name and avatar
+            // Driver name and avatar (driver who received the review)
             if (review.driverName != null && review.driverName!.isNotEmpty) ...[
               Row(
                 children: [

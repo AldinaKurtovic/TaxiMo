@@ -124,7 +124,31 @@ namespace TaxiMo.Services.Mappings
             CreateMap<RideUpdateDto, Ride>();
 
             // Review mappings
-            CreateMap<Review, ReviewDto>();
+            CreateMap<Review, ReviewDto>()
+                .ForMember(dest => dest.UserName,
+                    opt => opt.MapFrom(src =>
+                        src.Rider != null ? src.Rider.FirstName + " " + src.Rider.LastName : null))
+                .ForMember(dest => dest.UserPhotoUrl,
+                    opt => opt.MapFrom(src => 
+                        src.Rider != null
+                            ? (string.IsNullOrWhiteSpace(src.Rider.PhotoUrl) 
+                                ? "images/default-avatar.png" 
+                                : src.Rider.PhotoUrl)
+                            : null))
+                .ForMember(dest => dest.UserFirstName,
+                    opt => opt.MapFrom(src => src.Rider != null ? src.Rider.FirstName : null))
+                .ForMember(dest => dest.DriverName,
+                    opt => opt.MapFrom(src =>
+                        src.Driver != null ? src.Driver.FirstName + " " + src.Driver.LastName : null))
+                .ForMember(dest => dest.DriverPhotoUrl,
+                    opt => opt.MapFrom(src => 
+                        src.Driver != null
+                            ? (string.IsNullOrWhiteSpace(src.Driver.PhotoUrl) 
+                                ? "images/default-avatar.png" 
+                                : src.Driver.PhotoUrl)
+                            : null))
+                .ForMember(dest => dest.DriverFirstName,
+                    opt => opt.MapFrom(src => src.Driver != null ? src.Driver.FirstName : null));
             CreateMap<Review, ReviewResponse>()
                 .ForMember(dest => dest.UserId,
                     opt => opt.MapFrom(src => src.RiderId))

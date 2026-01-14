@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../auth/providers/auth_provider.dart';
 
 enum PaymentResult {
   success,
@@ -16,6 +17,22 @@ class StripeService {
   static final StripeService instance = StripeService._();
   
   StripeService._();
+
+  Map<String, String> _headers() {
+    final user = AuthProvider.username;
+    final pass = AuthProvider.password;
+    
+    if (user == null || user.isEmpty || pass == null || pass.isEmpty) {
+      throw Exception('Authentication credentials are missing. Please login again.');
+    }
+    
+    final credentials = base64Encode(utf8.encode('$user:$pass'));
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Basic $credentials',
+    };
+  }
 
   /// Initialize Stripe with publishable key from .env
   Future<void> init() async {
@@ -63,13 +80,7 @@ class StripeService {
         'paymentId': paymentId,
       });
 
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Basic bW9iaWxlOnRlc3Q=',
-      };
-
-      final response = await http.post(uri, headers: headers, body: body);
+      final response = await http.post(uri, headers: _headers(), body: body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -81,7 +92,24 @@ class StripeService {
 
         return clientSecret;
       } else {
-        throw Exception('Failed to create payment intent: ${response.statusCode}');
+        // Try to parse error message from response
+        String errorMessage = 'Failed to create payment intent: ${response.statusCode}';
+        try {
+          final errorJson = jsonDecode(response.body) as Map<String, dynamic>?;
+          if (errorJson != null) {
+            final message = errorJson['message'] as String?;
+            final details = errorJson['details'] as String?;
+            if (message != null) {
+              errorMessage = message;
+              if (details != null) {
+                errorMessage += ' - $details';
+              }
+            }
+          }
+        } catch (e) {
+          // If parsing fails, use default message
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
       if (kDebugMode) {
@@ -117,13 +145,7 @@ class StripeService {
         'paymentId': paymentId,
       });
 
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Basic bW9iaWxlOnRlc3Q=',
-      };
-
-      final response = await http.post(uri, headers: headers, body: body);
+      final response = await http.post(uri, headers: _headers(), body: body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;

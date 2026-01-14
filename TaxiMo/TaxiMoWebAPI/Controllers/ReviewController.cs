@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
+using System.Linq;
 using TaxiMo.Model.Responses;
 using TaxiMo.Services.Database.Entities;
 using TaxiMo.Services.DTOs;
@@ -110,6 +112,7 @@ namespace TaxiMoWebAPI.Controllers
             try
             {
                 var entities = await _reviewService.GetByRiderIdAsync(riderId);
+                // Map to ReviewDto which now includes driver and rider photo info
                 var dtos = Mapper.Map<List<ReviewDto>>(entities);
                 return Ok(dtos);
             }
@@ -152,30 +155,82 @@ namespace TaxiMoWebAPI.Controllers
                     return BadRequest(ModelState);
                 }
 
+                // Get authenticated user ID from claims
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int authenticatedUserId))
+                {
+                    Logger.LogWarning("Review creation failed - User ID not found in claims");
+                    return Unauthorized(new { message = "User ID not found in claims" });
+                }
+
+                // Validate that the authenticated user matches the RiderId in the request
+                if (createDto.RiderId != authenticatedUserId)
+                {
+                    Logger.LogWarning("Review creation failed - Authenticated user {AuthenticatedUserId} does not match RiderId {RiderId}", 
+                        authenticatedUserId, createDto.RiderId);
+                    return BadRequest(new { message = "You can only create reviews for your own rides" });
+                }
+
+                // Validate that the ride exists
+                var ride = await _rideService.GetByIdAsync(createDto.RideId);
+                if (ride == null)
+                {
+                    Logger.LogWarning("Review creation failed - Ride {RideId} not found", createDto.RideId);
+                    return BadRequest(new { message = $"Ride with ID {createDto.RideId} not found" });
+                }
+
+                // Validate that the ride is completed
+                if (ride.Status.ToLower() != "completed")
+                {
+                    Logger.LogWarning("Review creation failed - Ride {RideId} is not completed. Current status: {Status}", 
+                        createDto.RideId, ride.Status);
+                    return BadRequest(new { message = "You can only review completed rides. Current status: " + ride.Status });
+                }
+
+                // Validate that the RiderId matches the ride's RiderId
+                if (ride.RiderId != createDto.RiderId)
+                {
+                    Logger.LogWarning("Review creation failed - RiderId {RiderId} does not match ride's RiderId {RideRiderId}", 
+                        createDto.RiderId, ride.RiderId);
+                    return BadRequest(new { message = "RiderId in review does not match the ride's RiderId" });
+                }
+
+                // Validate that the DriverId matches the ride's DriverId
+                if (ride.DriverId != createDto.DriverId)
+                {
+                    Logger.LogWarning("Review creation failed - DriverId {DriverId} does not match ride's DriverId {RideDriverId}", 
+                        createDto.DriverId, ride.DriverId);
+                    return BadRequest(new { message = "DriverId in review does not match the ride's DriverId" });
+                }
+
+                // Check if a review already exists for this ride by this rider
+                var existingReview = await _reviewService.GetByRideIdAsync(createDto.RideId);
+                if (existingReview != null && existingReview.RiderId == createDto.RiderId)
+                {
+                    Logger.LogWarning("Review creation failed - Review already exists for ride {RideId} by rider {RiderId}", 
+                        createDto.RideId, createDto.RiderId);
+                    return BadRequest(new { message = "You have already reviewed this ride" });
+                }
+
                 var entity = Mapper.Map<Review>(createDto);
                 var createdEntity = await _reviewService.CreateAsync(entity);
                 var dto = Mapper.Map<ReviewDto>(createdEntity);
 
-                // Check if the associated ride is completed before invalidating model cache
-                var ride = await _rideService.GetByIdAsync(createdEntity.RideId);
-                if (ride != null && ride.Status.ToLower() == "completed")
+                // Invalidate model asynchronously (fire and forget)
+                // The model will be retrained lazily on the next recommendation request
+                _ = Task.Run(() =>
                 {
-                    // Invalidate model asynchronously (fire and forget)
-                    // The model will be retrained lazily on the next recommendation request
-                    _ = Task.Run(() =>
+                    try
                     {
-                        try
-                        {
-                            _recommendationService.InvalidateUserModel(createdEntity.RiderId);
-                            Logger.LogInformation("Invalidated ML model for user {UserId} after review {ReviewId} creation. Model will be retrained on next recommendation request.", 
-                                createdEntity.RiderId, createdEntity.ReviewId);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Error invalidating model for user {UserId} after review {ReviewId} creation", createdEntity.RiderId, createdEntity.ReviewId);
-                        }
-                    });
-                }
+                        _recommendationService.InvalidateUserModel(createdEntity.RiderId);
+                        Logger.LogInformation("Invalidated ML model for user {UserId} after review {ReviewId} creation. Model will be retrained on next recommendation request.", 
+                            createdEntity.RiderId, createdEntity.ReviewId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error invalidating model for user {UserId} after review {ReviewId} creation", createdEntity.RiderId, createdEntity.ReviewId);
+                    }
+                });
 
                 return CreatedAtAction(nameof(GetById), new { id = createdEntity.ReviewId }, dto);
             }

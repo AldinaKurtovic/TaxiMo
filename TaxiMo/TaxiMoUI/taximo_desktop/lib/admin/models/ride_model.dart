@@ -17,6 +17,7 @@ class RideModel {
   // Navigation properties
   final String? driverFirstName;
   final String? driverLastName;
+  final String? driverPhotoUrl;
   final String? riderFirstName;
   final String? riderLastName;
   final String? vehiclePlateNumber;
@@ -48,6 +49,7 @@ class RideModel {
     this.durationMin,
     this.driverFirstName,
     this.driverLastName,
+    this.driverPhotoUrl,
     this.riderFirstName,
     this.riderLastName,
     this.vehiclePlateNumber,
@@ -147,6 +149,7 @@ class RideModel {
       durationMin: json['durationMin'] as int?,
       driverFirstName: driver?['firstName'] as String?,
       driverLastName: driver?['lastName'] as String?,
+      driverPhotoUrl: driver?['photoUrl'] as String?,
       riderFirstName: rider?['firstName'] as String?,
       riderLastName: rider?['lastName'] as String?,
       vehiclePlateNumber: vehicle?['plateNumber'] as String?,

@@ -15,8 +15,11 @@ class DriverService {
     };
   }
 
-  Future<List<DriverDto>> getAvailableDrivers() async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/api/rides/available-drivers');
+  Future<List<DriverDto>> getAvailableDrivers({int? topN}) async {
+    // Use the /api/rides/available-drivers endpoint which uses ML recommendations
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/rides/available-drivers').replace(
+      queryParameters: topN != null ? {'topN': topN.toString()} : null,
+    );
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {

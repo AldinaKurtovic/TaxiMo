@@ -21,6 +21,7 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
   LocationSelection _selection = LocationSelection.pickup;
   LatLng? _pickup;
   LatLng? _destination;
+  int? _preSelectedDriverId;
 
   void _setSelection(LocationSelection selection) {
     setState(() => _selection = selection);
@@ -77,6 +78,18 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
     return earthRadiusKm * c;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get preSelectedDriverId from route arguments if provided
+    if (_preSelectedDriverId == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic> && args.containsKey('preSelectedDriverId')) {
+        _preSelectedDriverId = args['preSelectedDriverId'] as int?;
+      }
+    }
   }
 
   @override
@@ -246,7 +259,8 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                                 Navigator.pushNamed(
                                   context,
                                   '/choose-ride',
-                                  arguments: RideRouteDto(
+                                  arguments: {
+                                    'route': RideRouteDto(
                                     pickup: _pickup!,
                                     destination: _destination!,
                                     distanceMeters: distanceMeters,
@@ -256,6 +270,9 @@ class _RideReservationScreenState extends State<RideReservationScreen> {
                                     distanceKm: distanceKm,
                                     durationMin: durationMin,
                                   ),
+                                    if (_preSelectedDriverId != null)
+                                      'preSelectedDriverId': _preSelectedDriverId,
+                                  },
                                 );
                                   }
                                 } catch (e) {

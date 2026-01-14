@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.OpenApi.Models;
+using Stripe;
 using TaxiMo.Services.Database;
 using TaxiMo.Services.Interfaces;
 using TaxiMo.Services.Mappings;
@@ -29,7 +30,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         // Prefer the action from the derived class over the base class
         var descriptions = apiDescriptions.ToList();
-        
+
         // Find action from derived class (not BaseCRUDController)
         var derivedClassAction = descriptions.FirstOrDefault(d =>
         {
@@ -37,13 +38,13 @@ builder.Services.AddSwaggerGen(c =>
             if (actionDescriptor != null)
             {
                 var declaringType = actionDescriptor.MethodInfo.DeclaringType;
-                return declaringType != null && 
+                return declaringType != null &&
                        !declaringType.Name.Contains("BaseCRUDController") &&
                        !declaringType.Name.Contains("BaseController");
             }
             return false;
         });
-        
+
         return derivedClassAction ?? descriptions.First();
     });
 
@@ -92,6 +93,40 @@ builder.Services.AddAuthentication("BasicAuthentication")
 // Register Authorization
 builder.Services.AddAuthorization();
 
+// Configure CORS - Allow all for development
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+builder.Logging.AddConsole();
+
+// Configure Stripe API Key early (validate on startup)
+// Priority: 1) Environment variable (Docker), 2) Configuration (appsettings.json)
+var stripeSecret = Environment.GetEnvironmentVariable("Stripe__SecretKey");
+var source = "environment variable (Stripe__SecretKey)";
+if (string.IsNullOrWhiteSpace(stripeSecret))
+{
+    stripeSecret = builder.Configuration["Stripe:SecretKey"];
+    source = "configuration (appsettings.json)";
+}
+
+if (string.IsNullOrWhiteSpace(stripeSecret))
+{
+    throw new InvalidOperationException(
+        "Missing Stripe:SecretKey. " +
+        "Set Stripe__SecretKey environment variable (Docker) or configure it in appsettings.json (Stripe:SecretKey). " +
+        "Get your key from https://dashboard.stripe.com/apikeys");
+}
+
+StripeConfiguration.ApiKey = stripeSecret;
+Console.WriteLine($"[Stripe] API Key configured successfully from {source} (length: {stripeSecret.Length})");
+
 // Register Services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDriverService, DriverService>();
@@ -99,7 +134,7 @@ builder.Services.AddScoped<IRidePriceCalculator, RidePriceCalculator>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IReviewService, ReviewService>();
+    builder.Services.AddScoped<IReviewService, TaxiMo.Services.Services.ReviewService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IPromoCodeService, PromoCodeService>();
 builder.Services.AddScoped<IDriverNotificationService, DriverNotificationService>();
@@ -160,7 +195,7 @@ if (!Directory.Exists(imagesPath))
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TaxiMoDbContext>();
-    
+
     // Apply pending migrations (this will create the database if it doesn't exist)
     try
     {
@@ -227,12 +262,15 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline.
 // if (app.Environment.IsDevelopment())
+
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+
+// Enable CORS - MUST be before UseRouting and UseStaticFiles
+app.UseCors("AllowAll");
 
 // Enable static file serving for wwwroot
 app.UseStaticFiles();

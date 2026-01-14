@@ -41,14 +41,49 @@ class DriverProfileService {
     );
 
     if (response.statusCode == 200) {
+      // Handle empty response
+      if (response.body.isEmpty || response.body.trim().isEmpty) {
+        throw Exception('Empty response from server. Please try again.');
+      }
+
       final decodedBody = jsonDecode(response.body);
+      
+      // Handle case where response is a Map instead of List
+      if (decodedBody is Map<String, dynamic>) {
+        // If it's a single driver object, return it
+        if (decodedBody.containsKey('driverId')) {
+          return decodedBody;
+        }
+        // If it has a 'data' field, check if it's a list or object
+        if (decodedBody.containsKey('data')) {
+          final data = decodedBody['data'];
+          if (data is Map<String, dynamic> && data.containsKey('driverId')) {
+            return data;
+          }
+          if (data is List && data.isNotEmpty) {
+            final drivers = data as List<dynamic>;
+            return _findDriverInList(drivers, authIdentifier);
+          }
+        }
+        throw Exception('Invalid response format: unexpected response structure');
+      }
+      
       if (decodedBody is! List) {
-        throw Exception('Invalid response format: expected list of drivers');
+        throw Exception('Invalid response format: expected list of drivers, got ${decodedBody.runtimeType}');
       }
       
       final drivers = decodedBody as List<dynamic>;
       
       // Try to find driver by username or email
+      return _findDriverInList(drivers, authIdentifier);
+    } else {
+      final errorBody = response.body.isNotEmpty ? response.body : 'No error details';
+      throw Exception('Failed to load driver profile: ${response.statusCode} - $errorBody');
+    }
+  }
+
+  /// Helper method to find driver in list
+  Map<String, dynamic> _findDriverInList(List<dynamic> drivers, String authIdentifier) {
       Map<String, dynamic>? foundDriver;
       for (var driver in drivers) {
         if (driver is! Map<String, dynamic>) continue;
@@ -68,9 +103,6 @@ class DriverProfileService {
       }
 
       return foundDriver;
-    } else {
-      throw Exception('Failed to load driver profile: ${response.statusCode}');
-    }
   }
 
   /// Update driver profile

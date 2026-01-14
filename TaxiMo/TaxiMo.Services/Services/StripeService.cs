@@ -18,7 +18,8 @@ namespace TaxiMo.Services.Services
         }
 
         /// <summary>
-        /// Gets Stripe secret key from environment variables or User Secrets
+        /// Gets Stripe secret key from environment variables or configuration
+        /// Priority: 1) Stripe__SecretKey env var (Docker format), 2) STRIPE_SECRET_KEY env var, 3) Configuration (appsettings.json)
         /// </summary>
         private string GetSecretKey()
         {
@@ -27,25 +28,42 @@ namespace TaxiMo.Services.Services
                 return _secretKey;
             }
 
-            // Try environment variable first (production)
-            var secretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
-            if (!string.IsNullOrWhiteSpace(secretKey))
+            // Try Stripe__SecretKey environment variable first (Docker Compose format - ASP.NET Core automatically converts __ to :)
+            var secretKey = Environment.GetEnvironmentVariable("Stripe__SecretKey");
+            if (!string.IsNullOrWhiteSpace(secretKey) && !secretKey.Contains("your_stripe_secret_key"))
             {
                 _secretKey = secretKey;
+                _logger.LogInformation("Stripe SecretKey loaded from Stripe__SecretKey environment variable");
                 return _secretKey;
             }
 
-            // Try User Secrets or configuration (local development)
+            // Try STRIPE_SECRET_KEY environment variable (alternative format)
+            secretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+            if (!string.IsNullOrWhiteSpace(secretKey) && !secretKey.Contains("your_stripe_secret_key"))
+            {
+                _secretKey = secretKey;
+                _logger.LogInformation("Stripe SecretKey loaded from STRIPE_SECRET_KEY environment variable");
+                return _secretKey;
+            }
+
+            // Try configuration (appsettings.json or ASP.NET Core configuration which reads from Stripe__SecretKey env var)
             secretKey = _configuration["Stripe:SecretKey"];
-            if (!string.IsNullOrWhiteSpace(secretKey))
+            if (!string.IsNullOrWhiteSpace(secretKey) && !secretKey.Contains("your_stripe_secret_key"))
             {
                 _secretKey = secretKey;
+                _logger.LogInformation("Stripe SecretKey loaded from configuration (appsettings.json or env var via ASP.NET Core)");
                 return _secretKey;
             }
 
+            _logger.LogError("Stripe SecretKey is not configured or contains placeholder value. " +
+                "Current value: {SecretKeyValue}. " +
+                "Set Stripe__SecretKey or STRIPE_SECRET_KEY environment variable, or configure it in appsettings.json (Stripe:SecretKey).",
+                secretKey ?? "null");
+            
             throw new InvalidOperationException(
-                "Stripe SecretKey is not configured. " +
-                "Set STRIPE_SECRET_KEY environment variable or configure it in User Secrets (Stripe:SecretKey).");
+                "Stripe SecretKey is not configured or contains placeholder value. " +
+                "Please set a valid Stripe secret key in appsettings.json (Stripe:SecretKey) or as Stripe__SecretKey/STRIPE_SECRET_KEY environment variable. " +
+                "Get your key from https://dashboard.stripe.com/apikeys");
         }
 
         /// <summary>

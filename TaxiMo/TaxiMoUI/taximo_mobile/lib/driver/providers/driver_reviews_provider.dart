@@ -69,6 +69,8 @@ class DriverReviewsProvider extends ChangeNotifier {
 
     try {
       _reviews = await _reviewService.getReviewsByDriver(driverId);
+      // Sort by created date (most recent first)
+      _reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       print("Reviews loaded - count: ${_reviews.length}");
       _errorMessage = null;
     } catch (e) {
