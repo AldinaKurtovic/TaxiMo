@@ -164,11 +164,11 @@ This project uses RabbitMQ to send real-time in-app notifications to users and d
 
 ### 1. Prepare backend
 
-- Unpack the environment zip file (if provided)
-
-- Navigate to the `TaxiMo` folder and run: 
-
- - docker compose up
+- Unpack `fit-build-2026_env.zip`  
+- Inside the folder, run: 
+   ```bash
+  docker-compose up --build
+   ```
 
 ### 2. Mobile App
 
